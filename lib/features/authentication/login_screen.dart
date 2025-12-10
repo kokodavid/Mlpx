@@ -306,18 +306,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final response = await ref.read(loginScreenProvider.notifier).signInWithEmailAndPassword(
       _emailController.text,
       _passwordController.text,
+      ref,
     );
 
     if (response?.user != null && mounted) {
-      // Check if this is a newly verified user
+
       final isNewlyVerified = response!.user!.emailConfirmedAt != null;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            isNewlyVerified 
-              ? 'Welcome back! Your email is verified and you\'re all set.'
-              : 'Successfully signed in!'
+              isNewlyVerified
+                  ? 'Welcome back! Your email is verified and you\'re all set.'
+                  : 'Successfully signed in!'
           ),
           backgroundColor: Colors.green,
         ),
@@ -329,8 +330,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _signInWithGoogle() async {
     final success = await ref.read(loginScreenProvider.notifier).signInWithGoogle(ref);
-    
+
     if (success && mounted) {
+      // DON'T invalidate profile here - let auth listener handle it
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Successfully signed in with Google!'),

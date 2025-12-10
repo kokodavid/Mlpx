@@ -70,7 +70,11 @@ class LoginScreenNotifier extends StateNotifier<LoginScreenState> {
   }
 
   // Email/Password authentication
-  Future<AuthResponse?> signInWithEmailAndPassword(String email, String password) async {
+  Future<AuthResponse?> signInWithEmailAndPassword(
+      String email,
+      String password,
+      WidgetRef ref,
+      ) async {
     setLoading(true);
     setError(null);
 
