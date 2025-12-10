@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/supabase_config.dart';
-import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthState {
@@ -151,8 +150,20 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   AuthNotifier(this.ref) : super(const AsyncValue.loading()) {
     _initializeAuthState();
 
-    SupabaseConfig.client.auth.onAuthStateChange.listen((data) {
+    SupabaseConfig.client.auth.onAuthStateChange.listen((data) async {
       final user = data.session?.user;
+
+      // CRITICAL: Handle guest-to-authenticated transition BEFORE updating state
+      if (user != null) {
+        final wasGuest = ref.read(authStateProvider).isGuestUser;
+
+        if (wasGuest) {
+          // Migrate guest data synchronously
+          await ref.read(authStateProvider.notifier).migrateGuestDataToUser(user.id);
+        }
+      }
+
+      // Now update the auth state (this will trigger profile load ONCE)
       state = AsyncValue.data(user);
 
       if (user != null && user.emailConfirmedAt == null) {
@@ -205,10 +216,6 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       log('Sign up response: user=${response.user}');
 
       if (response.user != null) {
-        if (wasGuest) {
-          final authState = ref.read(authStateProvider.notifier);
-          await authState.migrateGuestDataToUser(response.user!.id);
-        }
 
         final userData = {
           'id': response.user!.id,
@@ -251,12 +258,11 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
 
   Future<void> checkEmailVerificationStatus() async {
     try {
-      // Get the current session from Supabase to check if email was verified
+
       final session = SupabaseConfig.client.auth.currentSession;
       final user = session?.user;
 
       if (user != null) {
-        // Update the state with the current user (which may have updated email verification status)
         state = AsyncValue.data(user);
 
         // Check if email is now verified
@@ -326,6 +332,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       );
 
       if (response.user != null && response.session != null) {
+
         final userData = {
           'id': response.user!.id,
           'email': response.user!.email,
