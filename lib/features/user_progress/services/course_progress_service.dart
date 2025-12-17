@@ -13,9 +13,10 @@ class CourseProgressService {
   /// Get or create course progress for a user and course
   /// Returns the courseProgressId (either existing or newly created)
   Future<String> getOrCreateCourseProgress(String courseId) async {
+    // Use SupabaseConfig.currentUser directly (not reactive)
     final user = SupabaseConfig.currentUser;
     final userId = user?.id;
-    
+
     if (userId == null) {
       throw Exception('User not authenticated');
     }
