@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../providers/auth_provider.dart';
 import '../widgets/loading_screen.dart';
 import 'package:go_router/go_router.dart';
+import '../../utils/auth_error_helper.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
   @override
@@ -141,10 +142,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             });
           }
 
-          String errorMessage = "There was a problem creating your account. Please try again.";
-          if (e is AuthApiException) {
-            errorMessage = e.message;
-          }
+          final errorMessage = AuthErrorHelper.message(e);
 
           showDialog(
             context: context,
