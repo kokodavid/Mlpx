@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../utils/supabase_config.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../utils/auth_error_helper.dart';
 
 // State class for login screen
 class LoginScreenState {
@@ -20,12 +21,13 @@ class LoginScreenState {
   LoginScreenState copyWith({
     bool? isLoading,
     String? error,
+    bool clearError = false,
     bool? isEmailValid,
     bool? isPasswordValid,
   }) {
     return LoginScreenState(
       isLoading: isLoading ?? this.isLoading,
-      error: error,
+      error: clearError ? null : (error ?? this.error),
       isEmailValid: isEmailValid ?? this.isEmailValid,
       isPasswordValid: isPasswordValid ?? this.isPasswordValid,
     );
@@ -41,7 +43,10 @@ class LoginScreenNotifier extends StateNotifier<LoginScreenState> {
   }
 
   void setError(String? error) {
-    state = state.copyWith(error: error);
+    state = state.copyWith(
+      error: error,
+      clearError: error == null,
+    );
   }
 
   void validateEmail(String email) {
@@ -59,14 +64,10 @@ class LoginScreenNotifier extends StateNotifier<LoginScreenState> {
   }
 
   bool get canContinue {
-    return state.isEmailValid && state.isPasswordValid && state.error == null;
-  }
-
-  bool _isNetworkError(String error) {
-    return error.toLowerCase().contains('network') ||
-           error.toLowerCase().contains('connection') ||
-           error.toLowerCase().contains('timeout') ||
-           error.toLowerCase().contains('unreachable');
+    return !state.isLoading &&
+        state.isEmailValid &&
+        state.isPasswordValid &&
+        state.error == null;
   }
 
   // Email/Password authentication
@@ -87,10 +88,10 @@ class LoginScreenNotifier extends StateNotifier<LoginScreenState> {
         return null;
       }
     } on AuthException catch (e) {
-      setError(e.message);
+      setError(AuthErrorHelper.message(e));
       return null;
     } catch (e) {
-      setError('An unexpected error occurred');
+      setError(AuthErrorHelper.message(e));
       return null;
     } finally {
       setLoading(false);
@@ -115,21 +116,14 @@ class LoginScreenNotifier extends StateNotifier<LoginScreenState> {
         return false;
       }
     } on AuthException catch (e) {
-      if (e.message.contains('OAuth')) {
-        setError('Google Sign-In is not configured properly. Please contact support.');
-      } else if (_isNetworkError(e.message)) {
-        setError('Network error. Please check your internet connection.');
-      } else {
-        setError('Google Sign-In failed: ${e.message}');
-      }
+      setError(AuthErrorHelper.message(e));
       return false;
     } catch (e) {
-      if (_isNetworkError(e.toString())) {
-        setError('Network error. Please check your internet connection.');
-      } else if (e.toString().contains('cancelled')) {
-        setError(null); // User cancelled, don't show error
+      final presentation = AuthErrorHelper.present(e);
+      if (presentation.showToUser) {
+        setError(presentation.message);
       } else {
-        setError('Google Sign-In failed. Please try again.');
+        setError(null);
       }
       return false;
     } finally {
