@@ -165,6 +165,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   void _handlePostAuthenticationNavigation() {
+
+    // force refresh auth state
+    ref.invalidate(authProvider);
     context.go('/account-created');
   }
 

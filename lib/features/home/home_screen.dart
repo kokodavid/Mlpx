@@ -25,11 +25,10 @@ class HomeScreen extends ConsumerWidget {
     final authState = ref.watch(authStateProvider);
     final profileAsync = ref.watch(profileProvider);
     final ongoingLessonAsync = ref.watch(ongoingLessonProvider);
-    final authAsync = ref.watch(authProvider); // Keep watching auth state
+    final authAsync = ref.watch(authProvider);
 
     ref.listen<AsyncValue<User?>>(authProvider, (previous, next) {
       next.whenData((user) {
-      
         if (user == null && previous?.value != null) {
           context.go('/welcome');
         }
@@ -67,7 +66,6 @@ class HomeScreen extends ConsumerWidget {
     }
 
     // If auth state is explicitly null (not loading) AND not a guest user, redirect to welcome
-    // But only if we're not in the middle of checking email verification
     if (authAsync.value == null && !authAsync.isLoading && !authState.isGuestUser) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         context.go('/welcome');
@@ -79,7 +77,6 @@ class HomeScreen extends ConsumerWidget {
         ),
       );
     }
-
     return PopScope(
       canPop: false,
       child: Scaffold(
