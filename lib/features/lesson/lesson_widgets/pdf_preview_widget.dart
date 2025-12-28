@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
@@ -37,16 +36,16 @@ class _PdfPreviewWidgetState extends State<PdfPreviewWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final pdfUri = Uri.parse(widget.pdfUrl);
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.fileName),
         actions: [
           IconButton(
-            icon: const Icon(Icons.download),
+            icon: const Icon(Icons.open_in_new),
             onPressed: () async {
-              final url = Uri.parse(widget.pdfUrl);
-              if (await canLaunchUrl(url)) {
-                await launchUrl(url, mode: LaunchMode.externalApplication);
+              if (await canLaunchUrl(pdfUri)) {
+                await launchUrl(pdfUri, mode: LaunchMode.externalApplication);
               }
             },
           ),
@@ -54,12 +53,40 @@ class _PdfPreviewWidgetState extends State<PdfPreviewWidget> {
       ),
       body: localPath == null
           ? const Center(child: CircularProgressIndicator())
-          : PDFView(
-              filePath: localPath!,
-              enableSwipe: true,
-              swipeHorizontal: false,
-              autoSpacing: true,
-              pageFling: true,
+          : Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      widget.fileName,
+                      style: Theme.of(context).textTheme.titleMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Open this PDF in an external viewer.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: () async {
+                        if (await canLaunchUrl(pdfUri)) {
+                          await launchUrl(pdfUri, mode: LaunchMode.externalApplication);
+                        }
+                      },
+                      child: const Text('Open PDF'),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      localPath!,
+                      style: Theme.of(context).textTheme.bodySmall,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
             ),
     );
   }

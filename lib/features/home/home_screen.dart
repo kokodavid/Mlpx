@@ -70,7 +70,7 @@ class HomeScreen extends ConsumerWidget {
     // But only if we're not in the middle of checking email verification
     if (authAsync.value == null && !authAsync.isLoading && !authState.isGuestUser) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        context.go('/welcome');
+        context.go('/welcome'); 
       });
       return const Scaffold(
         backgroundColor: AppColors.lightBackground,

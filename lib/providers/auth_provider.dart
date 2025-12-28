@@ -305,7 +305,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     try {
       final GoogleSignIn googleSignIn = GoogleSignIn(
         serverClientId:
-            '1082890638229-550mn2sp3q96smfv31nf3hqfbbn2f2le.apps.googleusercontent.com',
+            '980044039959-gf7e5l4u9kts65970co8vaqkb7gjt1o6.apps.googleusercontent.com',
       );
 
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
