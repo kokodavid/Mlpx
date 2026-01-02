@@ -27,8 +27,11 @@ class _CourseScreenState extends ConsumerState<CourseScreen> {
     // Initialize data fetching in microtask to avoid blocking UI
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authState = ref.read(authStateProvider);
-      final userId = authState.user?.id ?? 'guest_${authState.isGuestUser ? 'default' : 'unknown'}';
-      if (userId != null) {
+      final user = authState.user;
+
+      // Only fetch progress data if user is authenticated (not guest)
+      if (user != null && user.id != null) {
+        final userId = user.id!;
         ref.read(fetchAndCacheCourseProgressProvider(userId).future);
         ref.read(fetchAndCacheModuleProgressProvider(userId).future);
         ref.read(fetchAndCacheLessonProgressProvider(userId).future);
@@ -43,6 +46,15 @@ class _CourseScreenState extends ConsumerState<CourseScreen> {
     final user = authState.user;
     print("CourseScreen build - user: ${user?.id}, isGuest: ${authState.isGuestUser}");
 
+    // For guest users, show sign-in prompt
+    if (user == null || authState.isGuestUser) {
+      return const Scaffold(
+        body: Center(child: Text('Please sign in to access courses')),
+      );
+    }
+
+    final userId = user.id!;
+
     final activeCourseAsync = ref.watch(activeCourseWithDetailsProvider);
     print("activeCourseAsync: $activeCourseAsync");
 
@@ -51,14 +63,6 @@ class _CourseScreenState extends ConsumerState<CourseScreen> {
 
     final completedCoursesAsync = ref.watch(completedCoursesWithDetailsProvider);
     print("completedCoursesAsync: $completedCoursesAsync");
-    final userId = user?.id ?? 'guest_${authState.isGuestUser ? 'default' : 'unknown'}';
-
-    // Show loading or error if not authenticated and not guest
-    if (user == null && !authState.isGuestUser) {
-      return const Scaffold(
-        body: Center(child: Text('User not logged in')),
-      );
-    }
 
     // Watch all required providers
     final fetchCourse = ref.watch(fetchAndCacheCourseProgressProvider(userId));
