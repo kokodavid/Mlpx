@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../utils/supabase_config.dart';
 import '../../../providers/auth_provider.dart';
+import '../../course/providers/course_provider.dart';
+import '../../user_progress/providers/user_progress_providers.dart';
 
 // State class for login screen
 class LoginScreenState {
@@ -70,7 +72,11 @@ class LoginScreenNotifier extends StateNotifier<LoginScreenState> {
   }
 
   // Email/Password authentication
-  Future<AuthResponse?> signInWithEmailAndPassword(String email, String password) async {
+  Future<AuthResponse?> signInWithEmailAndPassword(
+      String email,
+      String password,
+      WidgetRef ref,
+      ) async {
     setLoading(true);
     setError(null);
 
@@ -81,6 +87,18 @@ class LoginScreenNotifier extends StateNotifier<LoginScreenState> {
       );
 
       if (response.user != null) {
+        // NEW: Fetch user data from Supabase after successful sign-in
+        final userId = response.user!.id;
+
+        await ref.read(fetchAndCacheCourseProgressProvider(userId).future);
+        await ref.read(fetchAndCacheModuleProgressProvider(userId).future);
+        await ref.read(fetchAndCacheLessonProgressProvider(userId).future);
+
+        // Invalidate providers to refresh UI
+        ref.invalidate(activeCourseWithDetailsProvider);
+        ref.invalidate(upcomingCoursesWithDetailsProvider);
+        ref.invalidate(completedCoursesWithDetailsProvider);
+
         return response;
       } else {
         setError('Authentication failed. Please check your credentials.');

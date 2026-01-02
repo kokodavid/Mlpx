@@ -1,11 +1,12 @@
 import 'dart:developer';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../features/course/providers/course_provider.dart';
 import '../utils/supabase_config.dart';
-import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../features/user_progress/providers/course_progress_providers.dart';
+import '../features/user_progress/providers/user_progress_providers.dart';
 
 class AuthState {
   final User? user;
@@ -40,7 +41,7 @@ class AuthState {
 }
 
 final authStateProvider =
-    StateNotifierProvider<AuthStateNotifier, AuthState>((ref) {
+StateNotifierProvider<AuthStateNotifier, AuthState>((ref) {
   return AuthStateNotifier();
 });
 
@@ -53,21 +54,18 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
   Future<void> _initializeGuestMode() async {
     final prefs = await SharedPreferences.getInstance();
     final isGuest = prefs.getBool('is_guest_user') ?? false;
-
     if (isGuest) {
       state = state.copyWith(isGuestUser: true);
     }
   }
 
   void _listenToAuthChanges() {
-    // Listen to auth state changes
-    SupabaseConfig.client.auth.onAuthStateChange.listen((data) {
+    SupabaseConfig.client.auth.onAuthStateChange.listen((data) async {
       final user = data.session?.user;
       final isEmailVerified = user?.emailConfirmedAt != null;
 
-      // If user is authenticated, clear guest mode
       if (user != null) {
-        _clearGuestMode();
+        await _clearGuestMode();
       }
 
       state = state.copyWith(
@@ -108,30 +106,22 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isGuestUser: false);
   }
 
-  Future<void> migrateGuestDataToUser(String userId) async {
+  Future<void> migrateGuestDataToUser(String userId, Ref ref) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-
-      // Get all guest data keys
       final keys = prefs.getKeys();
       final guestKeys = keys.where((key) => key.startsWith('guest_')).toList();
 
-      // Migrate each guest data to user data
       for (final guestKey in guestKeys) {
         final guestData = prefs.getString(guestKey);
         if (guestData != null) {
-          // Create user-specific key
           final userKey = guestKey.replaceFirst('guest_', 'user_${userId}_');
           await prefs.setString(userKey, guestData);
-
-          // Remove guest data
           await prefs.remove(guestKey);
         }
       }
 
-      // Clear guest mode
       await clearGuestMode();
-
       log('Guest data migrated successfully for user: $userId');
     } catch (e) {
       log('Error migrating guest data: $e');
@@ -141,7 +131,7 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
 }
 
 final authProvider =
-    StateNotifierProvider<AuthNotifier, AsyncValue<User?>>((ref) {
+StateNotifierProvider<AuthNotifier, AsyncValue<User?>>((ref) {
   return AuthNotifier(ref);
 });
 
@@ -150,9 +140,17 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
 
   AuthNotifier(this.ref) : super(const AsyncValue.loading()) {
     _initializeAuthState();
-
-    SupabaseConfig.client.auth.onAuthStateChange.listen((data) {
+    SupabaseConfig.client.auth.onAuthStateChange.listen((data) async {
       final user = data.session?.user;
+
+      if (user != null) {
+        final wasGuest = ref.read(authStateProvider).isGuestUser;
+        if (wasGuest) {
+          await ref.read(authStateProvider.notifier)
+              .migrateGuestDataToUser(user.id, ref);
+        }
+      }
+
       state = AsyncValue.data(user);
 
       if (user != null && user.emailConfirmedAt == null) {
@@ -165,7 +163,6 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     try {
       final session = SupabaseConfig.client.auth.currentSession;
       final user = session?.user;
-
       state = AsyncValue.data(user);
 
       if (user != null && user.emailConfirmedAt == null) {
@@ -178,8 +175,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
 
   void _showEmailVerificationMessage() {
     final authState = ref.read(authStateProvider.notifier);
-    authState
-        .showMessage('Please verify your email to complete authentication');
+    authState.showMessage('Please verify your email to complete authentication');
   }
 
   Future<void> signUp({
@@ -190,7 +186,6 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   }) async {
     try {
       state = const AsyncValue.loading();
-
       final wasGuest = ref.read(authStateProvider).isGuestUser;
 
       log('Attempting sign up for email: $email');
@@ -205,11 +200,6 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       log('Sign up response: user=${response.user}');
 
       if (response.user != null) {
-        if (wasGuest) {
-          final authState = ref.read(authStateProvider.notifier);
-          await authState.migrateGuestDataToUser(response.user!.id);
-        }
-
         final userData = {
           'id': response.user!.id,
           'email': response.user!.email,
@@ -218,20 +208,21 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
           'updated_at': DateTime.now().toIso8601String(),
         };
         try {
-          final upsertResult = await SupabaseConfig.client
-              .from('profiles')
-              .upsert(userData)
-              .select();
-          if (upsertResult == null ||
-              (upsertResult is List && upsertResult.isEmpty)) {
-            throw Exception('Profile creation failed.');
-          }
+          await SupabaseConfig.client.from('profiles').upsert(userData).select();
         } catch (upsertError) {
           log('Profile upsert failed: $upsertError');
           rethrow;
         }
 
+        if (wasGuest) {
+          await ref.read(authStateProvider.notifier)
+              .migrateGuestDataToUser(response.user!.id, ref);
+        }
+
         state = AsyncValue.data(response.user);
+
+        // Invalidate all user-dependent providers
+        _invalidateUserProviders();
 
         if (response.user!.emailConfirmedAt == null) {
           _showEmailVerificationMessage();
@@ -244,80 +235,21 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     }
   }
 
-  Future<bool> isEmailVerified() async {
-    final user = state.value;
-    return user?.emailConfirmedAt != null;
-  }
-
-  Future<void> checkEmailVerificationStatus() async {
-    try {
-      // Get the current session from Supabase to check if email was verified
-      final session = SupabaseConfig.client.auth.currentSession;
-      final user = session?.user;
-
-      if (user != null) {
-        // Update the state with the current user (which may have updated email verification status)
-        state = AsyncValue.data(user);
-
-        // Check if email is now verified
-        if (user.emailConfirmedAt != null) {
-          // Email is verified, clear any verification messages
-          final authState = ref.read(authStateProvider.notifier);
-          authState.clearMessage();
-        } else {
-          // Email is still not verified
-          _showEmailVerificationMessage();
-        }
-      }
-    } catch (e, st) {
-      // If there's an error, don't change the current state
-      log('Error checking email verification status: $e');
-    }
-  }
-
-  Future<void> resendVerificationEmail() async {
-    try {
-      final user = state.value;
-      if (user != null && user.email != null) {
-        await SupabaseConfig.client.auth.resend(
-          type: OtpType.signup,
-          email: user.email!,
-        );
-
-        final authState = ref.read(authStateProvider.notifier);
-        authState
-            .showMessage('Verification email sent! Please check your inbox.');
-      }
-    } catch (e) {
-      final authState = ref.read(authStateProvider.notifier);
-      authState
-          .showMessage('Failed to send verification email. Please try again.');
-    }
-  }
-
   Future<void> signInWithGoogle() async {
     try {
       final GoogleSignIn googleSignIn = GoogleSignIn(
         scopes: ['email', 'profile'],
-        serverClientId:
-            '1082890638229-cngrhi1tt6na7t5slca3o70mmn0p44gh.apps.googleusercontent.com',
+        serverClientId: '1082890638229-cngrhi1tt6na7t5slca3o70mmn0p44gh.apps.googleusercontent.com',
       );
 
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      if (googleUser == null) return;
 
-      if (googleUser == null) {
-        return;
-      }
-
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       final idToken = googleAuth.idToken;
       final accessToken = googleAuth.accessToken;
 
-      if (idToken == null) {
-        throw Exception('Google ID token is null');
-      }
+      if (idToken == null) throw Exception('Google ID token is null');
 
       final response = await Supabase.instance.client.auth.signInWithIdToken(
         provider: OAuthProvider.google,
@@ -335,16 +267,22 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
         };
 
         log('User data: $userData');
-
         await SupabaseConfig.client.from('profiles').upsert(userData).select();
+
+        final wasGuest = ref.read(authStateProvider).isGuestUser;
+        if (wasGuest) {
+          await ref.read(authStateProvider.notifier)
+              .migrateGuestDataToUser(response.user!.id, ref);
+        }
 
         state = AsyncValue.data(response.user);
 
+        // Invalidate all user-dependent providers
+        _invalidateUserProviders();
+
         final authState = ref.read(authStateProvider.notifier);
         authState.showMessage('Successfully signed in with Google!');
-
         await Future.delayed(const Duration(seconds: 2));
-
         authState.clearMessage();
       } else {
         throw Exception('Google Sign-In failed: No user or session returned');
@@ -371,15 +309,66 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   Future<void> signOut() async {
     try {
       state = const AsyncValue.loading();
-
-      // Clear all data from Supabase
       await SupabaseConfig.client.auth.signOut();
 
-      // Reset the state
+      // Invalidate all user-dependent providers
+      _invalidateUserProviders();
+
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
+  }
+
+  Future<bool> isEmailVerified() async {
+    final user = state.value;
+    return user?.emailConfirmedAt != null;
+  }
+
+  Future<void> checkEmailVerificationStatus() async {
+    try {
+      final session = SupabaseConfig.client.auth.currentSession;
+      final user = session?.user;
+
+      if (user != null) {
+        state = AsyncValue.data(user);
+        if (user.emailConfirmedAt != null) {
+          final authState = ref.read(authStateProvider.notifier);
+          authState.clearMessage();
+        } else {
+          _showEmailVerificationMessage();
+        }
+      }
+    } catch (e, st) {
+      log('Error checking email verification status: $e');
+    }
+  }
+
+  Future<void> resendVerificationEmail() async {
+    try {
+      final user = state.value;
+      if (user != null && user.email != null) {
+        await SupabaseConfig.client.auth.resend(
+          type: OtpType.signup,
+          email: user.email!,
+        );
+
+        final authState = ref.read(authStateProvider.notifier);
+        authState.showMessage('Verification email sent! Please check your inbox.');
+      }
+    } catch (e) {
+      final authState = ref.read(authStateProvider.notifier);
+      authState.showMessage('Failed to send verification email. Please try again.');
+    }
+  }
+
+  void _invalidateUserProviders() {
+    ref.invalidate(fetchAndCacheCourseProgressProvider);
+    ref.invalidate(fetchAndCacheModuleProgressProvider);
+    ref.invalidate(fetchAndCacheLessonProgressProvider);
+    ref.invalidate(activeCourseWithDetailsProvider);
+    ref.invalidate(upcomingCoursesWithDetailsProvider);
+    ref.invalidate(completedCoursesWithDetailsProvider);
   }
 }
 
