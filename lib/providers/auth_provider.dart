@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/supabase_config.dart';
-import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/auth_error_helper.dart';
 
 class AuthState {
   final User? user;
@@ -182,6 +182,12 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
         .showMessage('Please verify your email to complete authentication');
   }
 
+  void _showTransientMessage(String message) {
+    final authState = ref.read(authStateProvider.notifier);
+    authState.showMessage(message);
+    Future.delayed(const Duration(seconds: 4), authState.clearMessage);
+  }
+
   Future<void> signUp({
     required String email,
     required String password,
@@ -222,8 +228,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
               .from('profiles')
               .upsert(userData)
               .select();
-          if (upsertResult == null ||
-              (upsertResult is List && upsertResult.isEmpty)) {
+          if (upsertResult.isEmpty) {
             throw Exception('Profile creation failed.');
           }
         } catch (upsertError) {
@@ -239,6 +244,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       }
     } catch (e, st) {
       log('Sign up failed: $e');
+      _showTransientMessage(AuthErrorHelper.message(e));
       state = AsyncValue.error(e, st);
       rethrow;
     }
@@ -269,7 +275,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
           _showEmailVerificationMessage();
         }
       }
-    } catch (e, st) {
+    } catch (e) {
       // If there's an error, don't change the current state
       log('Error checking email verification status: $e');
     }
@@ -298,9 +304,8 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   Future<void> signInWithGoogle() async {
     try {
       final GoogleSignIn googleSignIn = GoogleSignIn(
-        scopes: ['email', 'profile'],
         serverClientId:
-            '1082890638229-cngrhi1tt6na7t5slca3o70mmn0p44gh.apps.googleusercontent.com',
+            '980044039959-gf7e5l4u9kts65970co8vaqkb7gjt1o6.apps.googleusercontent.com',
       );
 
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
@@ -351,6 +356,10 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       }
     } catch (e, st) {
       log('Google sign-in failed: $e');
+      final presentation = AuthErrorHelper.present(e);
+      if (presentation.showToUser) {
+        _showTransientMessage(presentation.message);
+      }
       state = AsyncValue.error(e, st);
       rethrow;
     }
@@ -364,6 +373,10 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
         redirectTo: 'io.supabase.milpress://login-callback/',
       );
     } catch (e, st) {
+      final presentation = AuthErrorHelper.present(e);
+      if (presentation.showToUser) {
+        _showTransientMessage(presentation.message);
+      }
       state = AsyncValue.error(e, st);
     }
   }

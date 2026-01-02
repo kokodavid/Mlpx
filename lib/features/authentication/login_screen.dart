@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:milpress/features/home/home_screen.dart';
 import 'package:milpress/utils/app_colors.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:milpress/features/widgets/custom_button.dart';
 import 'forgot_password_screen.dart';
-import '../../utils/supabase_config.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../widgets/loading_screen.dart';
 import '../../providers/auth_provider.dart';
 import 'package:milpress/features/on_boarding/providers/recommended_course_provider.dart';
 import 'providers/login_provider.dart';
