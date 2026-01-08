@@ -198,7 +198,7 @@ class CourseCard extends ConsumerWidget {
                 CustomButton(
                   text: isCompleted
                       ? 'Review Level $level'
-                      : 'Start Level $level',
+                      : (completedLessons > 0 ? 'Continue Course' : 'Start Level $level'),
                   onPressed: locked ? null : onStart,
                   fillColor: locked
                       ? Colors.grey
