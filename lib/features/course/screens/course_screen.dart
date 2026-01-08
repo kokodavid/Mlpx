@@ -134,7 +134,7 @@ class _CourseScreenState extends ConsumerState<CourseScreen> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error from first tab : $error')),
+        error: (error, stack) => Center(child: Text('Error: $error')),
       );
     } else if (selectedTab == 1) {
       // Upcoming Tab
@@ -202,7 +202,7 @@ class _CourseScreenState extends ConsumerState<CourseScreen> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error from second ta: $error')),
+        error: (error, stack) => Center(child: Text('Error: $error')),
       );
     } else {
       // Completed Tab
@@ -295,7 +295,7 @@ class _CourseScreenState extends ConsumerState<CourseScreen> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error from third tab: $error')),
+        error: (error, stack) => Center(child: Text('Error: $error')),
       );
     }
 
