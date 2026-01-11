@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../features/widgets/email_verification_banner.dart';
+import '../features/authentication/email_verification_screen.dart';
 
 class AuthGuard {
   static Widget Function(BuildContext, GoRouterState) requireAuth({
@@ -13,7 +14,7 @@ class AuthGuard {
       return Consumer(
         builder: (context, ref, child) {
           final user = ref.watch(authProvider);
-          
+
           return user.when(
             data: (user) {
               if (user == null) {
@@ -30,7 +31,7 @@ class AuthGuard {
 
               if (requireEmailVerification) {
                 final authState = ref.watch(authStateProvider);
-                
+
                 if (!authState.isEmailVerified) {
                   // User authenticated but email not verified
                   return Scaffold(
@@ -142,16 +143,32 @@ class AuthGuard {
       return Consumer(
         builder: (context, ref, child) {
           final authState = ref.watch(authStateProvider);
-          
-          print('AuthGuard allowGuest - user: ${authState.user != null}, isGuest: ${authState.isGuestUser}');
-          
+          final isHandlingEmailVerification = ref.watch(isHandlingEmailVerificationProvider);
+
+          // If user is verified, clear the flag immediately
+          if (authState.user != null && authState.isEmailVerified && isHandlingEmailVerification) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              ref.read(isHandlingEmailVerificationProvider.notifier).state = false;
+            });
+          }
+
+          // If handling email verification and user not yet verified, show loading
+          if (isHandlingEmailVerification && (!authState.isEmailVerified || authState.user == null)) {
+            return const Scaffold(
+              backgroundColor: Colors.white,
+              body: Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE85D04)),
+                ),
+              ),
+            );
+          }
+
           // Allow access if authenticated OR guest user
           if (authState.user != null || authState.isGuestUser) {
-            print('AuthGuard allowGuest - allowing access');
             return builder(context, state);
           }
-          
-          print('AuthGuard allowGuest - redirecting to login');
+
           // Redirect to login if neither authenticated nor guest
           WidgetsBinding.instance.addPostFrameCallback((_) {
             context.go('/login');
@@ -173,12 +190,12 @@ class AuthGuard {
       return Consumer(
         builder: (context, ref, child) {
           final authState = ref.watch(authStateProvider);
-          
+
           // Only allow access if user is authenticated (not guest)
           if (authState.user != null) {
             return builder(context, state);
           }
-          
+
           // Redirect to login if not authenticated
           WidgetsBinding.instance.addPostFrameCallback((_) {
             context.go('/login');
@@ -192,4 +209,4 @@ class AuthGuard {
       );
     };
   }
-} 
+}

@@ -11,9 +11,19 @@ class SupabaseConfig {
     await Supabase.initialize(
       url: supabaseUrl,
       anonKey: supabaseAnonKey,
+      authOptions: FlutterAuthClientOptions(
+        authFlowType: AuthFlowType.pkce,
+
+      ),
+
+      debug: true,
     );
-    
+
     profileService = ProfileService(client);
+
+    // Log initial auth state
+    final session = client.auth.currentSession;
+    print('Supabase initialized. Current session: ${session?.user?.email}, verified: ${session?.user?.emailConfirmedAt}');
   }
 
   static SupabaseClient get client => Supabase.instance.client;
@@ -27,6 +37,8 @@ class SupabaseConfig {
       email: email,
       password: password,
       data: data,
+      // IMPORTANT: This tells Supabase where to redirect after email verification
+      emailRedirectTo: 'io.supabase.milpress://email-callback/',
     );
 
     if (response.user != null) {
@@ -60,4 +72,4 @@ class SupabaseConfig {
   }
 
   static User? get currentUser => client.auth.currentUser;
-} 
+}
