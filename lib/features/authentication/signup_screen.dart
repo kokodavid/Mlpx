@@ -125,7 +125,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         );
         if (mounted) {
           if (_isLoadingDialogShowing && Navigator.of(context).canPop()) {
-            Navigator.of(context).pop(); 
+            Navigator.of(context).pop();
             setState(() {
               _isLoadingDialogShowing = false;
             });
@@ -135,7 +135,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       } catch (e) {
         if (mounted) {
           if (_isLoadingDialogShowing && Navigator.of(context).canPop()) {
-            Navigator.of(context).pop(); 
+            Navigator.of(context).pop();
             setState(() {
               _isLoadingDialogShowing = false;
             });
@@ -165,12 +165,19 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   void _handlePostAuthenticationNavigation() {
+    // Don't invalidate - the auth state is already updated from the signUp method
+    // ref.invalidate(authProvider);
 
-    // force refresh auth state
-    ref.invalidate(authProvider);
-    context.go('/account-created');
+    // Check if email verification is needed
+    final user = ref.read(authProvider).value;
+    if (user != null && user.emailConfirmedAt == null) {
+      // Email not verified, go to verification screen
+      context.go('/email-verification');
+    } else if (user != null && user.emailConfirmedAt != null) {
+      // Email already verified (e.g., Google sign-in), go to home
+      context.go('/');
+    }
   }
-
   Future<void> _signUpWithGoogle() async {
     try {
       await ref.read(authProvider.notifier).signInWithGoogle();

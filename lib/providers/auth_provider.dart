@@ -189,6 +189,8 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       final wasGuest = ref.read(authStateProvider).isGuestUser;
 
       log('Attempting sign up for email: $email');
+
+      // Sign up with email redirect URL for verification
       final response = await SupabaseConfig.client.auth.signUp(
         email: email,
         password: password,
@@ -196,7 +198,10 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
           'first_name': firstName,
           'last_name': lastName,
         },
+        // CRITICAL: This tells Supabase where to redirect after email verification
+        emailRedirectTo: 'io.supabase.milpress://email-callback/',
       );
+
       log('Sign up response: user=${response.user}');
 
       if (response.user != null) {
@@ -223,10 +228,6 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
 
         // Invalidate all user-dependent providers
         _invalidateUserProviders();
-
-        if (response.user!.emailConfirmedAt == null) {
-          _showEmailVerificationMessage();
-        }
       }
     } catch (e, st) {
       log('Sign up failed: $e');
@@ -327,20 +328,28 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
 
   Future<void> checkEmailVerificationStatus() async {
     try {
-      final session = SupabaseConfig.client.auth.currentSession;
-      final user = session?.user;
+      log('Refreshing session from Supabase server...');
+
+      // CRITICAL FIX: Refresh session from server to get latest user data
+      final response = await SupabaseConfig.client.auth.refreshSession();
+      final user = response.session?.user;
+
+      log('Refreshed user data: emailConfirmedAt=${user?.emailConfirmedAt}');
 
       if (user != null) {
         state = AsyncValue.data(user);
         if (user.emailConfirmedAt != null) {
+          log('Email is verified!');
           final authState = ref.read(authStateProvider.notifier);
           authState.clearMessage();
         } else {
+          log('Email still not verified');
           _showEmailVerificationMessage();
         }
       }
     } catch (e, st) {
       log('Error checking email verification status: $e');
+      // Don't rethrow - just log the error and keep current state
     }
   }
 
