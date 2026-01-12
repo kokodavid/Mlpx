@@ -51,6 +51,24 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/splash',
     debugLogDiagnostics: true,
+    redirect: (context, state) {
+      final uri = state.uri;
+
+      if (uri.scheme == 'milpress') {
+        if (uri.host == 'password-reset-success' ||
+            uri.path == '/password-reset-success') {
+          return '/login';
+        }
+      }
+
+      if (uri.scheme == 'https' &&
+          uri.host == 'reset-password.milpress.org' &&
+          uri.path == '/password-reset-success') {
+        return '/login';
+      }
+
+      return null;
+    },
     routes: [
       // Splash screen route
       GoRoute(
@@ -72,6 +90,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/login',
         name: AppRoute.login.name,
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/password-reset-success',
+        name: 'passwordResetSuccess',
         builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(

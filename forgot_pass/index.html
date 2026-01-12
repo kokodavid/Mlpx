@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Reset Password | Milpress</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background-color: #f4f6f8;
+      color: #1f2937;
+    }
+
+    .container {
+      position: relative;
+      max-width: 420px;
+      margin: 60px auto;
+      background: #ffffff;
+      padding: 32px;
+      border-radius: 10px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    }
+
+    h1 {
+      font-size: 22px;
+      margin-bottom: 12px;
+    }
+
+    p {
+      font-size: 15px;
+      line-height: 1.5;
+      margin-bottom: 24px;
+      color: #4b5563;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 6px;
+      font-weight: bold;
+    }
+
+    .input-group {
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 12px 44px 12px 12px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    .toggle {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6b7280;
+    }
+
+    .toggle:hover {
+      color: #111827;
+    }
+
+    .toggle svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    button[type="submit"] {
+      width: 100%;
+      padding: 14px;
+      background-color: #16a34a;
+      color: #ffffff;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      background-color: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    .message {
+      margin-top: 16px;
+      font-size: 14px;
+    }
+
+    .error {
+      color: #dc2626;
+    }
+
+    .success {
+      color: #16a34a;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    .status-panel {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      background: rgba(255, 255, 255, 0.96);
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .status-panel.active {
+      display: flex;
+    }
+
+    .status-card {
+      width: 100%;
+      max-width: 320px;
+      padding: 28px 22px;
+      border-radius: 12px;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+      background: #f9fafb;
+    }
+
+    .status-card h2 {
+      margin: 12px 0 8px;
+      font-size: 20px;
+      color: #111827;
+    }
+
+    .status-card p {
+      margin: 0;
+      font-size: 15px;
+      color: #4b5563;
+    }
+
+    .status-icon {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 28px;
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+
+    .status-card.success .status-icon {
+      background: #dcfce7;
+      color: #16a34a;
+    }
+
+    .status-card.error .status-icon {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+
+    .status-actions {
+      margin-top: 18px;
+    }
+
+    .status-actions button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 6px;
+      border: none;
+      font-size: 15px;
+      cursor: pointer;
+      background: #111827;
+      color: #ffffff;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <!-- Logo -->
+    <div style="text-align:center; margin-bottom:20px;">
+      <img
+        src="https://bdlfghvrbjjzybuexdwe.supabase.co/storage/v1/object/public/thumbnails/milpresslogo.png"
+        alt="Milpress"
+        width="120"
+        style="display:inline-block; max-width:100%; height:auto;"
+      />
+    </div>
+
+    <h1>Reset your password</h1>
+    <p>Create a new password to continue using Milpress.</p>
+
+    <form id="reset-form">
+      <label for="password">New password</label>
+      <div class="input-group">
+        <input id="password" type="password" autocomplete="new-password" required />
+        <button type="button" class="toggle" data-target="password">
+          👁
+        </button>
+      </div>
+
+      <label for="confirm">Confirm password</label>
+      <div class="input-group">
+        <input id="confirm" type="password" autocomplete="new-password" required />
+        <button type="button" class="toggle" data-target="confirm">
+          👁
+        </button>
+      </div>
+
+      <button type="submit">Update password</button>
+    </form>
+
+    <div id="message" class="message"></div>
+    <div class="footer">© Milpress</div>
+
+    <div id="status-panel" class="status-panel" aria-live="polite">
+      <div id="status-card" class="status-card">
+        <div id="status-icon" class="status-icon">✓</div>
+        <h2 id="status-title">Success</h2>
+        <p id="status-message">Password updated successfully.</p>
+        <div class="status-actions">
+          <button id="status-action" type="button">Back to app</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1️⃣ Load Supabase SDK -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <!-- 2️⃣ Create Supabase client -->
+  <script>
+    const SUPABASE_URL = 'https://bdlfghvrbjjzybuexdwe.supabase.co';
+    const SUPABASE_ANON_KEY =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkbGZnaHZyYmpqenlidWV4ZHdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3Mjg3MzEsImV4cCI6MjA3NDMwNDczMX0.Mv9FL54DFsa3AqQNPU7sLhTLzWY-ck31JwrMAElghio';
+
+    const supabaseClient = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY
+    );
+  </script>
+
+  <!-- 3️⃣ Recovery + UI logic -->
+  <script>
+    const form = document.getElementById('reset-form');
+    const messageEl = document.getElementById('message');
+    const submitButton = form.querySelector('button[type="submit"]');
+    const APP_DEEPLINK_FALLBACK =
+      'https://reset-password.milpress.org/password-reset-success';
+    let appDeepLink = '';
+
+    let recoveryReady = false;
+    submitButton.disabled = true;
+
+    const statusPanel = document.getElementById('status-panel');
+    const statusCard = document.getElementById('status-card');
+    const statusIcon = document.getElementById('status-icon');
+    const statusTitle = document.getElementById('status-title');
+    const statusMessage = document.getElementById('status-message');
+    const statusAction = document.getElementById('status-action');
+
+    function showStatus(type, title, msg) {
+      statusCard.className = `status-card ${type}`;
+      statusIcon.textContent = type === 'success' ? '✓' : '!';
+      statusTitle.textContent = title;
+      statusMessage.textContent = msg;
+      statusPanel.classList.add('active');
+      messageEl.textContent = '';
+      messageEl.className = 'message';
+    }
+
+    function hideStatus() {
+      statusPanel.classList.remove('active');
+    }
+
+    function showError(msg) {
+      showStatus('error', 'Something went wrong', msg);
+      statusAction.textContent = 'Try again';
+      statusAction.onclick = () => {
+        hideStatus();
+      };
+    }
+
+    function showSuccess(msg) {
+      showStatus('success', 'Password updated', msg);
+      statusAction.textContent = 'Return to app';
+      statusAction.onclick = () => {
+        if (appDeepLink) {
+          window.location.href = appDeepLink;
+          return;
+        }
+        window.close();
+      };
+    }
+
+    async function initRecovery() {
+      const params = new URLSearchParams(window.location.search);
+      const tokenHash = params.get('token_hash');
+      const type = params.get('type');
+      const appLinkParam = params.get('app_link');
+      const redirectParam = params.get('redirect_to');
+
+      appDeepLink = appLinkParam || redirectParam || APP_DEEPLINK_FALLBACK;
+
+      if (!tokenHash || type !== 'recovery') {
+        showError('This password reset link is invalid or has expired.');
+        form.style.display = 'none';
+        return;
+      }
+
+      const { error } = await supabaseClient.auth.verifyOtp({
+        type: 'recovery',
+        token_hash: tokenHash,
+      });
+
+      if (error) {
+        showError('This password reset link is invalid or has expired.');
+        form.style.display = 'none';
+        return;
+      }
+
+      recoveryReady = true;
+      submitButton.disabled = false;
+    }
+
+    initRecovery();
+
+    // Toggle visibility
+    document.querySelectorAll('.toggle').forEach((btn) => {
+      btn.onclick = () => {
+        const input = document.getElementById(btn.dataset.target);
+        input.type = input.type === 'password' ? 'text' : 'password';
+      };
+    });
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+
+      if (!recoveryReady) return;
+
+      submitButton.disabled = true;
+
+      const passwordInput = document.getElementById('password');
+      const confirmInput = document.getElementById('confirm');
+      const password = passwordInput.value;
+      const confirm = confirmInput.value;
+
+      if (password.length < 6) {
+        showError('Password must be at least 6 characters.');
+        submitButton.disabled = false;
+        return;
+      }
+
+      if (password !== confirm) {
+        showError('Passwords do not match.');
+        submitButton.disabled = false;
+        return;
+      }
+
+      const { error } = await supabaseClient.auth.updateUser({ password });
+
+      if (error) {
+        showError(error.message);
+        submitButton.disabled = false;
+        return;
+      }
+
+      showSuccess('Password updated successfully. You may now return to the app.');
+    };
+  </script>
+</body>
+</html>
