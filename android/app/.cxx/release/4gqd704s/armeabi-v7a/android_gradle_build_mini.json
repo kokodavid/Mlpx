@@ -1,0 +1,20 @@
+{
+  "buildFiles": [
+    "/Users/davidmochoge/Documents/flutter/packages/flutter_tools/gradle/src/main/scripts/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/Users/davidmochoge/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/Users/davidmochoge/Documents/GitHub/millpress-main/android/app/.cxx/release/4gqd704s/armeabi-v7a",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/Users/davidmochoge/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/Users/davidmochoge/Documents/GitHub/millpress-main/android/app/.cxx/release/4gqd704s/armeabi-v7a",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {}
+}

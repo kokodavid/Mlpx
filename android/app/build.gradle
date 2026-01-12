@@ -15,7 +15,7 @@ if (useReleaseKeys) {
 
 android {
     namespace = "com.milpress.edu"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -30,9 +30,9 @@ android {
     defaultConfig {
         applicationId = "com.milpress.edu"
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
-        versionCode = 8
-        versionName = "1.0.6"
+        targetSdk = 36
+        versionCode = 13
+        versionName = "1.0.8"
     }
 
     signingConfigs {

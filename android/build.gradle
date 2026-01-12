@@ -16,11 +16,19 @@ allprojects {
 }
 
 rootProject.buildDir = "../build"
-subprojects {
+subprojects { project ->
     project.buildDir = "${rootProject.buildDir}/${project.name}"
-}
-subprojects {
     project.evaluationDependsOn(":app")
+    project.plugins.withId("com.android.application") {
+        project.android {
+            compileSdk 36
+        }
+    }
+    project.plugins.withId("com.android.library") {
+        project.android {
+            compileSdk 36
+        }
+    }
 }
 
 tasks.register("clean", Delete) {

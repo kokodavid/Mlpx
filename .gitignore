@@ -11,6 +11,11 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+*.jks
+*.keystore
+*.p12
+*.pem
+*.mobileprovision
 
 # IntelliJ related
 *.iml
@@ -30,7 +35,9 @@ migrate_working_dir/
 .packages
 .pub/
 build/
+coverage/
 android/key.properties
+android/local.properties
 
 
 # Symbolication related
@@ -52,6 +59,10 @@ android/app/build/
 ios/Pods/
 ios/Runner.xcworkspace/
 ios/Flutter/Flutter.podspec
+ios/Flutter/ephemeral/
+ios/Flutter/Flutter.framework/
+ios/Flutter/App.framework/
+ios/Flutter/Generated.xcconfig
 
 # Web
 web/.dart_tool/
@@ -68,6 +79,7 @@ linux/flutter/generated_plugin_registrant.cc
 linux/flutter/generated_plugin_registrant.h
 linux/flutter/generated_plugins.cmake
 macos/Flutter/GeneratedPluginRegistrant.swift
+macos/Flutter/ephemeral/
 windows/flutter/generated_plugin_registrant.cc
 windows/flutter/generated_plugin_registrant.h
 windows/flutter/generated_plugins.cmake

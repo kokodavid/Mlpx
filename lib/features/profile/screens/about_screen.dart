@@ -1,31 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import '../../../utils/app_colors.dart';
 
-class AboutScreen extends StatefulWidget {
+class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
-
-  @override
-  State<AboutScreen> createState() => _AboutScreenState();
-}
-
-class _AboutScreenState extends State<AboutScreen> {
-  PackageInfo? _packageInfo;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadPackageInfo();
-  }
-
-  Future<void> _loadPackageInfo() async {
-    final packageInfo = await PackageInfo.fromPlatform();
-    setState(() {
-      _packageInfo = packageInfo;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -111,13 +89,9 @@ class _AboutScreenState extends State<AboutScreen> {
           const SizedBox(height: 16),
           
           // Version Info
-          if (_packageInfo != null) ...[
-            _buildInfoRow('Version', _packageInfo!.version),
-            const SizedBox(height: 8),
-            _buildInfoRow('Build Number', _packageInfo!.buildNumber),
-          ] else ...[
-            const CircularProgressIndicator(),
-          ],
+          // _buildInfoRow('Version', 'N/A'),
+          // const SizedBox(height: 8),
+          // _buildInfoRow('Build Number', 'N/A'),
         ],
       ),
     );
@@ -315,7 +289,7 @@ class _AboutScreenState extends State<AboutScreen> {
     );
   }
 
-  String _getPlatformInfo() {
+  String _getPlatformInfo(BuildContext context) {
     if (Theme.of(context).platform == TargetPlatform.iOS) {
       return 'iOS';
     } else if (Theme.of(context).platform == TargetPlatform.android) {

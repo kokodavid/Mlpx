@@ -1,0 +1,2 @@
+/Users/davidmochoge/Documents/GitHub/millpress-main/android/app/.cxx/release/4gqd704s/x86_64/CMakeFiles/edit_cache.dir
+/Users/davidmochoge/Documents/GitHub/millpress-main/android/app/.cxx/release/4gqd704s/x86_64/CMakeFiles/rebuild_cache.dir

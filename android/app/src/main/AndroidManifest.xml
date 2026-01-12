@@ -44,6 +44,7 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="milpress" android:host="password-reset-success"/>
+            </intent-filter>
             <!-- Deep link for email verification -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
