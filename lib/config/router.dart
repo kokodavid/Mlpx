@@ -23,6 +23,7 @@ import 'package:milpress/features/lesson/lesson_complete_screen.dart';
 import 'package:milpress/features/on_boarding/profile_checker.dart';
 import 'package:milpress/features/profile/profile_page.dart';
 import 'package:milpress/features/profile/screens/about_screen.dart';
+import '../features/authentication/email_verification_screen.dart';
 import 'auth_guard.dart';
 
 enum AppRoute {
@@ -100,6 +101,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/signup',
         name: AppRoute.signup.name,
         builder: (context, state) => SignupScreen(),
+      ),
+      GoRoute(
+        path: '/email-verification',
+        name: 'emailVerification',
+        builder: (context, state) => const EmailVerificationScreen(),
       ),
       GoRoute(
         path: '/account-created',
