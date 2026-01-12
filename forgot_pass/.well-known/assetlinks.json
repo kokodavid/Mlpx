@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.milpress.edu",
+      "sha256_cert_fingerprints": [
+        "62:31:17:76:F9:DE:80:35:00:98:50:86:34:DD:EE:74:6B:21:36:A9:A7:F6:8E:B6:BA:C8:C7:76:88:AC:01:76"
+      ]
+    }
+  }
+]
