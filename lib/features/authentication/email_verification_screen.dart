@@ -20,6 +20,9 @@ class EmailVerificationScreen extends ConsumerStatefulWidget {
   ConsumerState<EmailVerificationScreen> createState() => _EmailVerificationScreenState();
 }
 
+// FILE 1: email_verification_screen.dart
+// Replace the entire _EmailVerificationScreenState class from line 18 onwards
+
 class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScreen> with WidgetsBindingObserver {
   StreamSubscription<AuthState>? _authSubscription;
   bool _hasNavigated = false;
@@ -28,14 +31,6 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-
-    // Set flag immediately to prevent redirects while on this screen
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        ref.read(isHandlingEmailVerificationProvider.notifier).state = true;
-      }
-    });
-
     _setupAuthListener();
   }
 
@@ -48,49 +43,38 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
 
   void _setupAuthListener() {
     // Listen for auth state changes from the deep link
-    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      if (!mounted) return;
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
+      if (!mounted || _hasNavigated) return;
 
       final event = data.event;
       final session = data.session;
 
       // Only proceed if user is verified
-      if (session != null && session.user.emailConfirmedAt != null && !_hasNavigated) {
-        // Deep link has completed verification
-        // Clear flag immediately so router can proceed
-        ref.read(isHandlingEmailVerificationProvider.notifier).state = false;
+      if (session != null && session.user.emailConfirmedAt != null) {
+        _hasNavigated = true;
 
-        // Then navigate
-        _navigateToHome();
+        // CRITICAL: Sign out immediately to prevent auto-navigation to home
+        await Supabase.instance.client.auth.signOut();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Email verified successfully! Please log in to continue.'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+
+          context.go('/login');
+        }
       }
     });
-  }
-
-  void _navigateToHome() {
-    if (_hasNavigated || !mounted) return;
-
-    _hasNavigated = true;
-
-    // Clear flag before navigation
-    ref.read(isHandlingEmailVerificationProvider.notifier).state = false;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Email verified successfully! Welcome!'),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
-      ),
-    );
-
-    context.go('/');
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-
-    // When user returns from email app, just wait for auth listener to fire
-    // No need to manually check - the deep link will trigger auth state change
+    // No need to manually check - the auth listener handles everything
   }
 
   Future<void> _openEmailApp(BuildContext context) async {
@@ -162,7 +146,6 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () {
-            ref.read(isHandlingEmailVerificationProvider.notifier).state = false;
             context.go('/login');
           },
         ),
