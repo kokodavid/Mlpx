@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milpress/features/lesson/providers/lesson_download_provider.dart';
 import 'package:milpress/features/course/providers/module_provider.dart';
-import 'package:milpress/features/course/course_models/lesson_model.dart';
 
 class DownloadedLessonsScreen extends ConsumerWidget {
   const DownloadedLessonsScreen({Key? key}) : super(key: key);
@@ -120,15 +119,20 @@ class _DownloadedLessonCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final lessonAsync = ref.watch(lessonFromHiveProvider(lessonId));
+    final offlineLessonAsync = ref.watch(offlineLessonProvider(lessonId));
+    final onlineLessonAsync = ref.watch(lessonFromSupabaseProvider(lessonId));
 
-    return lessonAsync.when(
-      data: (lesson) {
-        if (lesson == null) {
-          return _buildErrorCard('Lesson not found');
-        }
+    return offlineLessonAsync.when(
+      data: (offlineLesson) {
+        return onlineLessonAsync.when(
+          data: (onlineLesson) {
+            final lesson = offlineLesson ?? onlineLesson;
+            final hasOffline = offlineLesson != null;
+            if (lesson == null) {
+              return _buildErrorCard('Lesson not found');
+            }
 
-        return Container(
+            return Container(
           margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -203,7 +207,16 @@ class _DownloadedLessonCard extends ConsumerWidget {
                 switch (value) {
                   case 'view':
                     // Navigate to lesson screen
-                    context.push('/lesson/${lesson.id}');
+                    if (hasOffline) {
+                      context.push('/offline-lesson/${lesson.id}');
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Offline data missing. Re-download the lesson.'),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                    }
                     break;
                   case 'remove':
                     // Show confirmation dialog
@@ -264,9 +277,22 @@ class _DownloadedLessonCard extends ConsumerWidget {
             ),
             onTap: () {
               // Navigate to lesson screen
-              context.push('/lesson/${lesson.id}');
+              if (hasOffline) {
+                context.push('/offline-lesson/${lesson.id}');
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Offline data missing. Re-download the lesson.'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              }
             },
           ),
+        );
+          },
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => _buildErrorCard('Error loading lesson'),
         );
       },
       loading: () => Container(

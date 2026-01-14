@@ -14,10 +14,5 @@ final lessonHistoryProvider = FutureProvider<List<LessonProgressModel>>((ref) as
 });
 
 final unsyncedLessonsProvider = FutureProvider<List<LessonProgressModel>>((ref) async {
-  final user = SupabaseConfig.currentUser;
-  final userId = user?.id;
-  if (userId == null) return [];
-  final service = ref.watch(lessonHistoryServiceProvider);
-  final all = await service.getCompletedLessons(userId);
-  return all.where((lp) => lp.needsSync == true).toList();
+  return [];
 }); 

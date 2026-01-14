@@ -22,10 +22,10 @@ class BookmarksScreen extends ConsumerWidget {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
-          'Bookmarked Lessons',
+          'Saved Lessons',
           style: TextStyle(
             color: Color(0xFF232B3A),
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.normal,
           ),
         ),
         centerTitle: true,

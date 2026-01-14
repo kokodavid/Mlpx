@@ -68,7 +68,7 @@ class BookmarkModel extends HiveObject {
       bookmarkedAt: DateTime.parse(json['bookmarked_at'] as String),
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
-      needsSync: json['needs_sync'] as bool? ?? false,
+      needsSync: false,
     );
   }
 
@@ -85,7 +85,6 @@ class BookmarkModel extends HiveObject {
       'bookmarked_at': bookmarkedAt.toIso8601String(),
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
-      'needs_sync': needsSync,
     };
   }
 

@@ -45,6 +45,7 @@ class ModuleProgressBridge {
             lessonScore,
             userId,
             courseProgressId,
+            moduleId,
           );
         }
       }
@@ -94,6 +95,7 @@ class ModuleProgressBridge {
             lessonScore,
             userId,
             courseProgressId,
+            moduleId,
           );
         }
       }
@@ -163,6 +165,7 @@ class ModuleProgressBridge {
     LessonQuizScore lessonScore,
     String userId,
     String courseProgressId,
+    String moduleId,
   ) async {
     try {
       // Try to get existing lesson progress
@@ -191,6 +194,7 @@ class ModuleProgressBridge {
         userId: userId,
         lessonId: lessonId,
         courseProgressId: courseProgressId,
+        moduleId: moduleId,
         status: 'completed',
         startedAt: lessonScore.completedAt,
         completedAt: lessonScore.completedAt,
@@ -204,8 +208,7 @@ class ModuleProgressBridge {
         needsSync: false, // Will be synced immediately
       );
 
-      // Save locally and sync to Firebase
-      await _userProgressService.saveLessonProgressLocally(lessonProgress);
+      // Sync to Supabase
       final success = await _userProgressService.uploadLessonProgressToSupabase(lessonProgress);
       
       if (success) {

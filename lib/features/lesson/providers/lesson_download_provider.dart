@@ -1,8 +1,8 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:dio/dio.dart';
-import 'package:hive/hive.dart';
 import 'package:milpress/features/course/course_models/lesson_model.dart';
 
 class LessonDownloadState {
@@ -93,7 +93,7 @@ class LessonDownloadNotifier extends StateNotifier<LessonDownloadState> {
   Future<void> _saveLessonData(LessonModel lesson, Directory lessonDir) async {
     final lessonDataFile = File('${lessonDir.path}/lesson_data.json');
     final lessonData = lesson.toJson();
-    await lessonDataFile.writeAsString(lessonData.toString());
+    await lessonDataFile.writeAsString(jsonEncode(lessonData));
   }
 
   Future<void> _downloadVideo(String videoUrl, Directory lessonDir) async {
@@ -178,9 +178,53 @@ class LessonDownloadNotifier extends StateNotifier<LessonDownloadState> {
       
       if (await lessonDataFile.exists()) {
         final lessonData = await lessonDataFile.readAsString();
-        // Parse the lesson data and return LessonModel
-        // This would need proper JSON parsing based on your LessonModel structure
-        return null; // Placeholder
+        Map<String, dynamic> decoded;
+        try {
+          decoded = jsonDecode(lessonData) as Map<String, dynamic>;
+        } catch (e) {
+          // Fallback for legacy Map.toString() format
+          final normalized = lessonData
+              .replaceAll("'", '"')
+              .replaceAllMapped(
+                RegExp(r'([,{]\s*)([A-Za-z0-9_]+)\s*:'),
+                (m) => '${m.group(1)}"${m.group(2)}":',
+              );
+          decoded = jsonDecode(normalized) as Map<String, dynamic>;
+        }
+        final videoFile = File('${lessonDir.path}/video.mp4');
+        if (await videoFile.exists()) {
+          decoded['video_url'] = videoFile.path;
+        }
+        final audioFile = File('${lessonDir.path}/audio.mp3');
+        if (await audioFile.exists()) {
+          decoded['audio_url'] = audioFile.path;
+        }
+        final pdfFile = File('${lessonDir.path}/content.pdf');
+        if (await pdfFile.exists()) {
+          decoded['content'] = pdfFile.path;
+        }
+
+        final quizzes = decoded['quizzes'];
+        if (quizzes is List) {
+          final updatedQuizzes = <Map<String, dynamic>>[];
+          for (final quiz in quizzes) {
+            if (quiz is Map<String, dynamic>) {
+              final soundUrl = quiz['sound_file_url'] as String?;
+              if (soundUrl != null && soundUrl.isNotEmpty) {
+                final fileName = soundUrl.split('/').last;
+                final localAudioFile =
+                    File('${lessonDir.path}/quiz_audio/$fileName');
+                if (await localAudioFile.exists()) {
+                  quiz['sound_file_url'] = localAudioFile.path;
+                }
+              }
+              updatedQuizzes.add(quiz);
+            }
+          }
+          decoded['quizzes'] = updatedQuizzes;
+        }
+
+        return LessonModel.fromJson(decoded);
       }
       return null;
     } catch (e) {

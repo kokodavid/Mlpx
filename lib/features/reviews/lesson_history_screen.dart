@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:milpress/features/reviews/providers/lesson_history_provider.dart';
 import 'package:milpress/features/user_progress/models/lesson_progress_model.dart';
+import 'package:go_router/go_router.dart';
 
 class LessonHistoryScreen extends ConsumerWidget {
   const LessonHistoryScreen({Key? key}) : super(key: key);
@@ -51,24 +52,36 @@ class _LessonHistoryCard extends StatelessWidget {
     final dateStr = lesson.completedAt != null
         ? DateFormat('MMM d, yyyy • h:mm a').format(lesson.completedAt!)
         : 'Unknown date';
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 0),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.green.withOpacity(0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.green.withOpacity(0.04),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () {
+        if (lesson.lessonId.isEmpty) return;
+        context.push('/lesson/${lesson.lessonId}', extra: {
+          'courseContext': {
+            'courseId': '',
+            'moduleId': lesson.moduleId,
+            'isFromBookmark': true,
+          },
+        });
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 0),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.green.withOpacity(0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.green.withOpacity(0.04),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           Row(
             children: [
               Icon(
@@ -123,7 +136,8 @@ class _LessonHistoryCard extends StatelessWidget {
               ),
             ),
           ],
-        ],
+          ],
+        ),
       ),
     );
   }

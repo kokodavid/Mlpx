@@ -13,6 +13,7 @@ class CustomButton extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final double borderWidth;
   final TextStyle? textStyle;
+  final bool isLoading;
 
   const CustomButton({
     super.key,
@@ -26,6 +27,7 @@ class CustomButton extends StatelessWidget {
     this.padding = const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
     this.borderWidth = 2.0,
     this.textStyle,
+    this.isLoading = false,
   });
 
   @override
@@ -41,7 +43,7 @@ class CustomButton extends StatelessWidget {
     final Color effectiveBorderColor = outlineColor ?? AppColors.primaryColor;
 
     return GestureDetector(
-      onTap: onPressed,
+      onTap: isLoading ? null : onPressed,
       child: Container(
         padding: padding,
         decoration: BoxDecoration(
@@ -65,15 +67,26 @@ class CustomButton extends StatelessWidget {
           //     : null,
         ),
         child: Center(
-          child: Text(
-            text,
-            style: textStyle ??
-                TextStyle(
-                  color: effectiveTextColor,
-                  fontWeight: FontWeight.w400,
-                  fontSize: 16,
+          child: isLoading
+              ? SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      effectiveTextColor,
+                    ),
+                  ),
+                )
+              : Text(
+                  text,
+                  style: textStyle ??
+                      TextStyle(
+                        color: effectiveTextColor,
+                        fontWeight: FontWeight.w400,
+                        fontSize: 16,
+                      ),
                 ),
-          ),
         ),
       ),
     );

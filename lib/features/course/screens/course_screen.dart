@@ -24,16 +24,6 @@ class _CourseScreenState extends ConsumerState<CourseScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize data fetching in microtask to avoid blocking UI
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authState = ref.read(authStateProvider);
-      final userId = authState.user?.id ?? 'guest_${authState.isGuestUser ? 'default' : 'unknown'}';
-      if (userId != null) {
-        ref.read(fetchAndCacheCourseProgressProvider(userId).future);
-        ref.read(fetchAndCacheModuleProgressProvider(userId).future);
-        ref.read(fetchAndCacheLessonProgressProvider(userId).future);
-      }
-    });
   }
 
   @override
@@ -60,28 +50,7 @@ class _CourseScreenState extends ConsumerState<CourseScreen> {
       );
     }
 
-    // Watch all required providers
-    final fetchCourse = ref.watch(fetchAndCacheCourseProgressProvider(userId));
-    final fetchModule = ref.watch(fetchAndCacheModuleProgressProvider(userId));
-    final fetchLesson = ref.watch(fetchAndCacheLessonProgressProvider(userId));
-
-    // Show loading while data is being fetched
-    if (fetchCourse.isLoading || fetchModule.isLoading || fetchLesson.isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    // Handle errors
-    if (fetchCourse.hasError || fetchModule.hasError || fetchLesson.hasError) {
-      return Scaffold(
-        body: Center(
-          child: Text(
-            'Error: ${fetchCourse.error ?? fetchModule.error ?? fetchLesson.error}',
-          ),
-        ),
-      );
-    }
+    // Supabase is source of truth; no cache priming needed here.
 
     // Build tab content
     Widget tabContent;

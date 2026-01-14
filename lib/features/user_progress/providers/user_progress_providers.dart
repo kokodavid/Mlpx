@@ -6,7 +6,6 @@ import '../models/lesson_progress_model.dart';
 import '../models/course_progress_model.dart';
 import 'package:milpress/features/course/providers/module_provider.dart';
 import 'package:milpress/features/user_progress/models/module_progress_model.dart';
-import 'package:hive/hive.dart';
 import 'package:milpress/features/course/providers/course_provider.dart';
 import 'package:milpress/utils/supabase_config.dart';
 import 'course_progress_providers.dart';
@@ -25,11 +24,14 @@ final moduleProgressBridgeProvider = Provider<ModuleProgressBridge>((ref) {
   return ModuleProgressBridge(userProgressService, supabase);
 });
 
-// Save/update lesson progress locally
+// Save/update lesson progress in Supabase
 final saveLessonProgressProvider =
     FutureProvider.family<void, LessonProgressModel>((ref, progress) async {
   final service = ref.read(userProgressServiceProvider);
-  await service.saveLessonProgressLocally(progress);
+  final success = await service.uploadLessonProgressToSupabase(progress);
+  if (!success) {
+    throw Exception('Failed to upload lesson progress to Supabase');
+  }
 });
 
 // Save/update course progress locally
@@ -157,18 +159,28 @@ final fetchAndCacheLessonProgressProvider = FutureProvider.family<void, String>(
   await bookmarkService.fetchBookmarksFromCloud(userId);
 });
 
-// Count completed lessons for a course from Hive
+// Count completed lessons for a course from Supabase
 final courseCompletedLessonsProvider = FutureProvider.family<int, String>((ref, courseId) async {
   // Get the courseProgressId for this course
   final courseProgressId = await ref.watch(getOrCreateCourseProgressProvider(courseId).future);
   if (courseProgressId.isEmpty) return 0;
-  
-  final box = await Hive.openBox<LessonProgressModel>('lesson_progress');
-  // Count lessons with courseProgressId matching and status == 'completed'
-  return box.values.where((lp) => lp.courseProgressId == courseProgressId && lp.status == 'completed').length;
+
+  try {
+    final response = await Supabase.instance.client
+        .from('lesson_progress')
+        .select('id')
+        .eq('course_progress_id', courseProgressId)
+        .eq('status', 'completed');
+
+    if (response is! List) return 0;
+    return response.length;
+  } catch (e) {
+    print('Error fetching completed lessons from Supabase: $e');
+    return 0;
+  }
 });
 
-// Fraction of unique lessons in Hive for a course divided by total lessons in the course
+// Fraction of unique lessons in Supabase for a course divided by total lessons in the course
 final courseLessonProgressValueProvider = FutureProvider.family<double, String>((ref, courseId) async {
   print('\n=== courseLessonProgressValueProvider Debug ===');
   print('Course ID: $courseId');
@@ -180,42 +192,30 @@ final courseLessonProgressValueProvider = FutureProvider.family<double, String>(
     print('Course Progress ID is empty, returning 0.0');
     return 0.0;
   }
-  
-  final box = await Hive.openBox<LessonProgressModel>('lesson_progress');
-  
-  // Log ALL lessons in Hive
-  print('\n--- ALL Lessons in Hive ---');
-  for (final lesson in box.values) {
-    print('Lesson ID: ${lesson.lessonId}');
-    print('  Course Progress ID: ${lesson.courseProgressId}');
-    print('  Status: ${lesson.status}');
-    print('  Title: ${lesson.lessonTitle}');
-    print('  User ID: ${lesson.userId}');
-    print('  ---');
+
+  Set<String> uniqueLessonIds = {};
+  try {
+    final response = await Supabase.instance.client
+        .from('lesson_progress')
+        .select('lesson_id')
+        .eq('course_progress_id', courseProgressId);
+
+    if (response is List) {
+      uniqueLessonIds = response
+          .map((row) => row['lesson_id'] as String?)
+          .whereType<String>()
+          .toSet();
+    }
+  } catch (e) {
+    print('Error fetching lesson progress from Supabase: $e');
   }
-  
-  // Get all lesson progress for this course (any status)
-  final lessons = box.values.where((lp) => lp.courseProgressId == courseProgressId);
-  print('\n--- Filtered Lessons (matching courseProgressId: $courseProgressId) ---');
-  for (final lesson in lessons) {
-    print('Lesson ID: ${lesson.lessonId}');
-    print('  Status: ${lesson.status}');
-    print('  Title: ${lesson.lessonTitle}');
-    print('  ---');
-  }
-  
-  // Count unique lesson IDs
-  final uniqueLessonIds = lessons.map((lp) => lp.lessonId).toSet();
-  print('\n--- Unique Lesson IDs ---');
+
+  print('\n--- Unique Lesson IDs (Supabase) ---');
   print('Unique lesson IDs: ${uniqueLessonIds.toList()}');
   print('Count: ${uniqueLessonIds.length}');
 
   // Get total lessons for this course from course data
   final completeCourse = await ref.watch(completeCourseProvider(courseId).future);
-  if (completeCourse == null) {
-    print('Complete course is null, returning 0.0');
-    return 0.0;
-  }
   final totalLessons = completeCourse.modules.fold<int>(0, (sum, m) => sum + m.lessons.length);
   print('\n--- Course Structure ---');
   print('Total lessons in course: $totalLessons');
@@ -240,7 +240,7 @@ final courseLessonProgressValueProvider = FutureProvider.family<double, String>(
   return progressValue;
 });
 
-// Count completed modules for a course from Hive
+// Count completed modules for a course from Supabase
 final courseCompletedModulesProvider = FutureProvider.family<int, String>((ref, courseId) async {
   print('\n=== courseCompletedModulesProvider Debug ===');
   print('Course ID: $courseId');
@@ -253,37 +253,28 @@ final courseCompletedModulesProvider = FutureProvider.family<int, String>((ref, 
     return 0;
   }
   
-  final box = await Hive.openBox<ModuleProgressModel>('module_progress');
-  
-  // Log ALL modules in Hive
-  print('\n--- ALL Modules in Hive ---');
-  for (final module in box.values) {
-    print('Module ID: ${module.moduleId}');
-    print('  Course Progress ID: ${module.courseProgressId}');
-    print('  Status: ${module.status}');
-    print('  Completed Lessons: ${module.completedLessons}/${module.totalLessons}');
-    print('  ---');
+  try {
+    final response = await Supabase.instance.client
+        .from('module_progress')
+        .select('module_id')
+        .eq('course_progress_id', courseProgressId)
+        .eq('status', 'completed');
+
+    if (response is! List) {
+      print('Completed modules: 0');
+      print('=====================================\n');
+      return 0;
+    }
+
+    final count = response.length;
+    print('Completed modules: $count');
+    print('=====================================\n');
+    return count;
+  } catch (e) {
+    print('Error fetching completed modules from Supabase: $e');
+    print('=====================================\n');
+    return 0;
   }
-  
-  // Count modules with courseProgressId matching and status == 'completed'
-  final completedModules = box.values.where((mp) => 
-    mp.courseProgressId == courseProgressId && mp.status == 'completed'
-  );
-  
-  print('\n--- Completed Modules ---');
-  for (final module in completedModules) {
-    print('Module ID: ${module.moduleId}');
-    print('  Status: ${module.status}');
-    print('  Completed Lessons: ${module.completedLessons}/${module.totalLessons}');
-    print('  ---');
-  }
-  
-  final count = completedModules.length;
-  print('\n--- Final Count ---');
-  print('Completed modules: $count');
-  print('=====================================\n');
-  
-  return count;
 });
 
 // Manual trigger for module progress sync (for testing)
@@ -325,16 +316,41 @@ class ModuleProgressNotifier extends StateNotifier<ModuleProgressModel?> {
   }
 
   Future<void> _loadModuleProgress() async {
-    final box = await Hive.openBox<ModuleProgressModel>('module_progress');
-    final matches = box.values.where((p) => p.moduleId == moduleId);
-    final progress = matches.isNotEmpty ? matches.first : null;
-    state = progress;
+    try {
+      final user = SupabaseConfig.currentUser;
+      final userId = user?.id;
+      if (userId == null) {
+        state = null;
+        return;
+      }
+      final response = await Supabase.instance.client
+          .from('module_progress')
+          .select()
+          .eq('user_id', userId)
+          .eq('module_id', moduleId)
+          .limit(1);
+      if (response is List && response.isNotEmpty) {
+        state = ModuleProgressModel.fromJson(
+          response.first as Map<String, dynamic>,
+        );
+      } else {
+        state = null;
+      }
+    } catch (e) {
+      print('Error loading module progress from Supabase: $e');
+      state = null;
+    }
   }
 
   Future<void> updateModuleProgress(ModuleProgressModel updated) async {
-    final box = await Hive.openBox<ModuleProgressModel>('module_progress');
-    await box.put(updated.id, updated);
-    state = updated;
+    try {
+      await Supabase.instance.client
+          .from('module_progress')
+          .upsert(updated.toJson(), onConflict: 'id');
+      state = updated;
+    } catch (e) {
+      print('Error updating module progress in Supabase: $e');
+    }
   }
 
   Future<void> syncModuleProgress() async {

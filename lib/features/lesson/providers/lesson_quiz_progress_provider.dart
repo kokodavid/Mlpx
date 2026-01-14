@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive/hive.dart';
+import 'package:milpress/features/course/services/course_service.dart';
 import 'package:milpress/features/course/course_models/complete_course_model.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LessonQuizProgress {
   final bool completed;
@@ -127,7 +128,7 @@ class LessonCompletionData {
 class LessonCompletionDataNotifier extends StateNotifier<LessonCompletionData?> {
   LessonCompletionDataNotifier() : super(null);
 
-  void calculateCompletionData(String lessonId, Map<String, dynamic>? courseContext, LessonQuizProgress quizProgress, int totalQuizzes) {
+  Future<void> calculateCompletionData(String lessonId, Map<String, dynamic>? courseContext, LessonQuizProgress quizProgress, int totalQuizzes) async {
     if (courseContext == null) {
       state = null;
       return;
@@ -140,13 +141,9 @@ class LessonCompletionDataNotifier extends StateNotifier<LessonCompletionData?> 
         return;
       }
 
-      // Get the complete course data from cache
-      final box = Hive.box<CompleteCourseModel>('complete_courses');
-      final course = box.get(courseId);
-      if (course == null) {
-        state = null;
-        return;
-      }
+      // Get the complete course data from Supabase
+      final courseService = CourseService(Supabase.instance.client);
+      final course = await courseService.getCompleteCourse(courseId);
 
       final currentLessonIndex = courseContext['currentLessonIndex'] as int? ?? 0;
       final currentModuleIndex = courseContext['currentModuleIndex'] as int? ?? 0;

@@ -17,6 +17,7 @@ import 'package:milpress/features/user_progress/providers/course_progress_provid
 import 'package:milpress/features/reviews/providers/bookmark_provider.dart';
 import 'package:milpress/features/lesson/providers/lesson_download_provider.dart';
 import 'package:milpress/providers/audio_service_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class LessonScreen extends ConsumerStatefulWidget {
   final String lessonId;
@@ -34,6 +35,7 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
   bool _isPrefetchingQuizAudio = false;
   double _prefetchProgress = 0.0;
   String? _prefetchError;
+  bool _isCompletingLesson = false;
 
   @override
   void initState() {
@@ -151,7 +153,7 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final lessonAsync = ref.watch(lessonFromHiveProvider(widget.lessonId));
+    final lessonAsync = ref.watch(lessonFromSupabaseProvider(widget.lessonId));
     
     return lessonAsync.when(
       data: (lesson) {
@@ -188,7 +190,18 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
                 elevation: 0,
                 leading: IconButton(
                   icon: const Icon(Icons.arrow_back, color: Colors.black),
-                  onPressed: () => context.pop(),
+                  onPressed: () {
+                    final extra = GoRouterState.of(context).extra
+                        as Map<String, dynamic>?;
+                    final courseContext =
+                        extra?['courseContext'] as Map<String, dynamic>?;
+                    final courseId = courseContext?['courseId'] as String?;
+                    if (courseId != null && courseId.isNotEmpty) {
+                      context.go('/course/$courseId');
+                    } else {
+                      context.pop();
+                    }
+                  },
                 ),
                 actions: [
                   IconButton(
@@ -364,6 +377,10 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
                               return isBookmarkedAsync.when(
                                 data: (isBookmarked) => LessonActionButton(
                                   icon: isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                                  iconColor: isBookmarked
+                                      ? AppColors.correctAnswerColor
+                                      : null,
+                                  
                                   label: isBookmarked ? 'Saved' : 'Save',
                                   onTap: () async {
                                     try {
@@ -439,7 +456,27 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
                             },
                           ),
                           LessonActionButton(
-                              icon: Icons.share, label: 'Share', onTap: () {}),
+                            icon: Icons.share,
+                            label: 'Share',
+                            onTap: () {
+                              const appLink =
+                                  'https://play.google.com/store/apps/details?id=com.milpress.edu';
+                              final courseContext =
+                                  extra?['courseContext'] as Map<String, dynamic>?;
+                              final courseTitle = courseContext?['courseTitle'] as String?;
+                              final moduleTitle = courseContext?['moduleTitle'] as String?;
+                              final contextText = [
+                                if (courseTitle != null && courseTitle.isNotEmpty)
+                                  courseTitle,
+                                if (moduleTitle != null && moduleTitle.isNotEmpty)
+                                  moduleTitle,
+                              ].join(' • ');
+                              final shareText = contextText.isEmpty
+                                  ? 'I just completed "${lesson.title}" on Millpress. Download the app: $appLink'
+                                  : 'I just completed "${lesson.title}" in $contextText on Millpress. Download the app: $appLink';
+                              SharePlus.instance.share(ShareParams(text: shareText));
+                            },
+                          ),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -654,9 +691,17 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
                           return Column(
                             children: [
                               CustomButton(
-                                onPressed: (lesson.quizzes.isNotEmpty && !isQuizCompleted)
+                                onPressed: (_isCompletingLesson ||
+                                        (lesson.quizzes.isNotEmpty && !isQuizCompleted))
                                     ? null
                                     : () async {
+                                        if (_isCompletingLesson) {
+                                          return;
+                                        }
+                                        setState(() {
+                                          _isCompletingLesson = true;
+                                        });
+                                        try {
                                         final extra = GoRouterState.of(context).extra
                                             as Map<String, dynamic>?;
                                         final courseContext =
@@ -708,12 +753,23 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
                                             try {
                                               courseProgressId = await ref.read(getOrCreateCourseProgressProvider(courseId).future);
                                             } catch (e) {
-                                              if (courseContext != null && courseContext['courseProgressId'] is String && (courseContext['courseProgressId'] as String).isNotEmpty) {
-                                                courseProgressId = courseContext['courseProgressId'] as String;
-                                              } else if (extra != null && extra['courseProgressId'] is String && (extra['courseProgressId'] as String).isNotEmpty) {
-                                                courseProgressId = extra['courseProgressId'] as String;
-                                              }
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Text('Error creating course progress: $e'),
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                              );
+                                              return;
                                             }
+                                          }
+                                          if (courseProgressId.isEmpty) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(
+                                                content: Text('Error: Missing course progress.'),
+                                                backgroundColor: Colors.red,
+                                              ),
+                                            );
+                                            return;
                                           }
                                           
                                           final lessonProgress = LessonProgressModel(
@@ -721,6 +777,7 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
                                             userId: userId,
                                             lessonId: lesson.id,
                                             courseProgressId: courseProgressId,
+                                            moduleId: moduleId,
                                             status: 'completed',
                                             startedAt: null,
                                             completedAt: now,
@@ -772,6 +829,7 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
                                             userId: userId,
                                             lessonId: lesson.id,
                                             courseProgressId: '', // No course context for Jump In
+                                            moduleId: moduleId,
                                             status: 'completed',
                                             startedAt: null,
                                             completedAt: now,
@@ -801,13 +859,23 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
                                             context.pop();
                                           }
                                         }
+                                        } finally {
+                                          if (mounted) {
+                                            setState(() {
+                                              _isCompletingLesson = false;
+                                            });
+                                          }
+                                        }
                                       },
                                 text: (lesson.quizzes.isNotEmpty && !isQuizCompleted)
                                     ? 'Complete Quiz First'
                                     : 'Complete Lesson',
-                                fillColor: (lesson.quizzes.isNotEmpty && !isQuizCompleted)
-                                    ? AppColors.textColor.withOpacity(0.5)
-                                    : AppColors.primaryColor,
+                                isLoading: _isCompletingLesson,
+                                fillColor: _isCompletingLesson
+                                    ? Colors.grey
+                                    : (lesson.quizzes.isNotEmpty && !isQuizCompleted)
+                                        ? AppColors.textColor.withOpacity(0.5)
+                                        : AppColors.primaryColor,
                               ),
                               if (lesson.quizzes.isNotEmpty && !isQuizCompleted) ...[
                                 const SizedBox(height: 8),

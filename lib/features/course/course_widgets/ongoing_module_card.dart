@@ -5,23 +5,27 @@ class OngoingModuleCard extends StatelessWidget {
   final IconData icon;
   final Color iconBgColor;
   final String title;
+  final String lessonTitle;
   final String subtitle;
   final VoidCallback onTap;
+  final bool isLoading;
 
   const OngoingModuleCard({
     Key? key,
     required this.icon,
     required this.iconBgColor,
     required this.title,
+    required this.lessonTitle,
     required this.subtitle,
     required this.onTap,
+    this.isLoading = false,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
+      onTap: isLoading ? null : onTap,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -46,11 +50,20 @@ class OngoingModuleCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
+                    lessonTitle,
                     style: const TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF192841),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -65,7 +78,14 @@ class OngoingModuleCard extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: Colors.black45, size: 26),
+            if (isLoading)
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else
+              const Icon(Icons.chevron_right, color: Colors.black45, size: 26),
           ],
         ),
       ),

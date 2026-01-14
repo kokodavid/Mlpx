@@ -51,6 +51,9 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
             final isCompleted = widget.completedModules[module.module.id] ?? false;
             final isOngoing = widget.ongoingModuleId == module.module.id;
             final expanded = _expanded[index];
+            final completedLessonIdsAsync = ref.watch(
+              completedLessonIdsProvider(module.module.id),
+            );
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6),
               child: GestureDetector(
@@ -83,17 +86,17 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[300],
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Text(
-                                    'Module ${index + 1}',
-                                    style: const TextStyle(fontSize: 13, color: Colors.black54),
-                                  ),
-                                ),
+                                // Container(
+                                //   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                //   decoration: BoxDecoration(
+                                //     color: Colors.grey[300],
+                                //     borderRadius: BorderRadius.circular(10),
+                                //   ),
+                                //   child: Text(
+                                //     'Module ${index + 1}',
+                                //     style: const TextStyle(fontSize: 13, color: Colors.black54),
+                                //   ),
+                                // ),
                                 const SizedBox(height: 8),
                                 Text(
                                   module.module.description,
@@ -131,8 +134,10 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
                             children: [
                               ...List.generate(module.lessons.length, (lessonIdx) {
                                 final lesson = module.lessons[lessonIdx];
-                                final moduleProgress = ref.watch(moduleQuizProgressProvider(module.module.id));
-                                final lessonCompleted = moduleProgress?.lessonScores.containsKey(lesson.id) ?? false;
+                                final lessonCompleted = completedLessonIdsAsync.maybeWhen(
+                                  data: (ids) => ids.contains(lesson.id),
+                                  orElse: () => false,
+                                );
                                 
                                 return Column(
                                   children: [

@@ -9,14 +9,12 @@ import 'package:milpress/features/course/course_widgets/ongoing_module_card.dart
 import 'package:milpress/utils/app_colors.dart';
 import '../providers/course_provider.dart';
 import '../providers/module_provider.dart';
-import '../course_models/complete_course_model.dart';
 import '../course_widgets/course_detail_header.dart';
 import 'package:milpress/features/lesson/lesson_screen.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hive/hive.dart';
-import 'package:milpress/features/user_progress/models/course_progress_model.dart';
 import 'package:milpress/utils/supabase_config.dart';
 import 'package:milpress/features/user_progress/providers/user_progress_providers.dart';
+import 'package:milpress/features/user_progress/providers/course_progress_providers.dart';
 
 class CourseDetailsScreen extends ConsumerStatefulWidget {
   final String courseId;
@@ -35,13 +33,13 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
     with WidgetsBindingObserver {
   
   late FocusNode _focusNode;
+  bool _isOngoingModuleLoading = false;
   
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _focusNode = FocusNode();
-    _checkAndRefreshCache();
   }
 
   @override
@@ -70,33 +68,7 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
     // Refresh progress providers when screen is focused (e.g., returning from lesson completion)
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       debugPrint('CourseDetailsScreen: didChangeDependencies called, refreshing progress providers for course ${widget.courseId}');
-      
-      // Check if cache needs refresh
-      try {
-        final box = await Hive.openBox<CompleteCourseModel>('complete_courses');
-        final cachedCourse = box.get(widget.courseId);
-        
-        if (cachedCourse != null) {
-          final cacheAge = DateTime.now().difference(cachedCourse.lastUpdated);
-          final fiveMinutes = const Duration(minutes: 5);
-          
-          if (cacheAge > fiveMinutes) {
-            // Cache is older than 5 minutes, refresh it
-            debugPrint('Cache is ${cacheAge.inMinutes} minutes old, refreshing...');
-            ref.invalidate(completeCourseProvider(widget.courseId));
-          } else {
-            debugPrint('Cache is fresh (${cacheAge.inMinutes} minutes old)');
-          }
-          
-          // Verify quiz data is properly cached
-          await ref.read(courseCacheProvider).verifyQuizData(widget.courseId);
-        } else {
-          debugPrint('No cached data found, will fetch fresh data');
-        }
-      } catch (e) {
-        debugPrint('Error checking cache: $e');
-      }
-      
+
       // Refresh progress data
       _refreshProgressData();
     });
@@ -118,13 +90,10 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
     // Ensure all module progress providers are initialized
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
-        final box = await Hive.openBox<CompleteCourseModel>('complete_courses');
-        final course = box.get(widget.courseId);
-        if (course != null) {
-          for (final module in course.modules) {
-            // Force refresh module quiz progress
-            ref.read(moduleQuizProgressProvider(module.module.id).notifier).loadModuleProgress(module.module.id);
-          }
+        final course = await ref.read(completeCourseProvider(widget.courseId).future);
+        for (final module in course.modules) {
+          // Force refresh module quiz progress
+          ref.read(moduleQuizProgressProvider(module.module.id).notifier).loadModuleProgress(module.module.id);
         }
       } catch (e) {
         debugPrint('Error refreshing module progress: $e');
@@ -132,33 +101,6 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
     });
     
     debugPrint('CourseDetailsScreen: Progress providers refreshed');
-  }
-
-  Future<void> _checkAndRefreshCache() async {
-    // Check if we have cached data and if it's older than 5 minutes
-    try {
-      final box = await Hive.openBox<CompleteCourseModel>('complete_courses');
-      final cachedCourse = box.get(widget.courseId);
-      
-      if (cachedCourse != null) {
-        final cacheAge = DateTime.now().difference(cachedCourse.lastUpdated);
-        final fiveMinutes = const Duration(minutes: 5);
-        
-        if (cacheAge > fiveMinutes) {
-          // Cache is older than 5 minutes, refresh it
-          debugPrint('Cache is ${cacheAge.inMinutes} minutes old, refreshing...');
-          // Don't invalidate provider here - do it in didChangeDependencies
-        } else {
-          debugPrint('Cache is fresh (${cacheAge.inMinutes} minutes old)');
-        }
-        
-        // Don't verify quiz data here - do it in didChangeDependencies
-      } else {
-        debugPrint('No cached data found, will fetch fresh data');
-      }
-    } catch (e) {
-      debugPrint('Error checking cache: $e');
-    }
   }
 
   @override
@@ -383,86 +325,176 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
                         ongoingModuleAsync.when(
                           data: (ongoingModule) {
                             if (ongoingModule != null) {
-                              return Column(
-                                children: [
-                                  OngoingModuleCard(
-                                    icon: Icons.menu_book,
-                                    iconBgColor: AppColors.primaryColor,
-                                    title: ongoingModule.module.description,
-                                    subtitle: '${ongoingModule.lessons.length} Lessons',
-                                    onTap: () async {
-                                      if (ongoingModule.lessons.isNotEmpty) {
-                                        final module = ongoingModule;
-                                        final firstLesson = module.lessons.first;
-
-                                        // Debug logging to verify quiz data is cached
-                                        debugPrint('\n=== Ongoing Module Card Debug ===');
-                                        debugPrint('Module: ${module.module.description}');
-                                        debugPrint('Total lessons in module: ${module.lessons.length}');
-                                        debugPrint('First lesson: ${firstLesson.title}');
-                                        debugPrint('First lesson quizzes: ${firstLesson.quizzes.length}');
-                                        
-                                        // Log quiz details for the first lesson
-                                        for (int i = 0; i < firstLesson.quizzes.length; i++) {
-                                          final quiz = firstLesson.quizzes[i];
-                                          debugPrint('Quiz $i:');
-                                          debugPrint('  - Stage: ${quiz.stage}');
-                                          debugPrint('  - Question Type: ${quiz.questionType}');
-                                          debugPrint('  - Has Audio: ${quiz.soundFileUrl != null && quiz.soundFileUrl!.isNotEmpty}');
-                                          debugPrint('  - Options: ${quiz.options.length}');
-                                        }
-                                        
-                                        // Check all lessons in the module for quizzes
-                                        int totalQuizzes = 0;
-                                        for (final lesson in module.lessons) {
-                                          totalQuizzes += lesson.quizzes.length;
-                                        }
-                                        debugPrint('Total quizzes in module: $totalQuizzes');
-                                        debugPrint('=====================================\n');
-
-                                        // Pre-fetch module data to ensure it's available
-                                        await ref.read(
-                                            moduleFromHiveProvider(module.module.id).future);
-
-                                        // Look up courseProgressId for this user and course
-                                        String? courseProgressId;
-                                        final user = SupabaseConfig.currentUser;
-                                        final userId = user?.id;
-                                        if (userId != null) {
-                                          final box = await Hive.openBox<CourseProgressModel>('course_progress');
-                                          try {
-                                            final existing = box.values.cast<CourseProgressModel>().firstWhere(
-                                              (cp) => cp.userId == userId && cp.courseId == completeCourse.course.id,
-                                            );
-                                            courseProgressId = existing.id;
-                                          } catch (_) {
-                                            courseProgressId = null;
+                              final sortedLessons = List.of(ongoingModule.lessons)
+                                ..sort((a, b) {
+                                  final positionCompare =
+                                      a.position.compareTo(b.position);
+                                  if (positionCompare != 0) {
+                                    return positionCompare;
+                                  }
+                                  return a.id.compareTo(b.id);
+                                });
+                              final completedLessonIdsAsync = ref.watch(
+                                completedLessonIdsProvider(ongoingModule.module.id),
+                              );
+                              return completedLessonIdsAsync.when(
+                                data: (completedLessonIds) {
+                                  final nextLessonForCard = sortedLessons.isNotEmpty
+                                      ? sortedLessons.firstWhere(
+                                          (lesson) =>
+                                              !completedLessonIds.contains(lesson.id),
+                                          orElse: () => sortedLessons.first,
+                                        )
+                                      : null;
+                                  return Column(
+                                    children: [
+                                      OngoingModuleCard(
+                                        icon: Icons.menu_book,
+                                        iconBgColor: AppColors.primaryColor,
+                                        title: ongoingModule.module.description,
+                                        lessonTitle: nextLessonForCard?.title ?? '',
+                                        subtitle:
+                                            '${ongoingModule.lessons.length} Lessons',
+                                        isLoading: _isOngoingModuleLoading,
+                                        onTap: () async {
+                                          if (_isOngoingModuleLoading) {
+                                            return;
                                           }
-                                        }
-
-                                        // Navigate to the lesson with course context
-                                        if (context.mounted) {
-                                          context.push('/lesson/${firstLesson.id}', extra: {
-                                            'courseContext': {
-                                              'courseId': completeCourse.course.id,
-                                              'courseTitle': completeCourse.course.title,
-                                              'moduleId': module.module.id,
-                                              'moduleTitle': module.module.description,
-                                              'totalModules': completeCourse.modules.length,
-                                              'totalLessons': completeCourse.modules
-                                                  .fold(0, (sum, m) => sum + m.lessons.length),
-                                              'currentLessonIndex': module.lessons.indexOf(firstLesson),
-                                              'currentModuleIndex': completeCourse.modules.indexOf(module),
-                                              'moduleLessonsCount': module.lessons.length,
-                                              'courseProgressId': courseProgressId ?? '',
-                                            },
+                                          setState(() {
+                                            _isOngoingModuleLoading = true;
                                           });
-                                        }
-                                      }
-                                    },
-                                  ),
-                                  const SizedBox(height: 24),
-                                ],
+                                          if (ongoingModule.lessons.isNotEmpty) {
+                                            final module = ongoingModule;
+ 
+                                            // Debug logging to verify quiz data is cached
+                                            debugPrint('\n=== Ongoing Module Card Debug ===');
+                                            debugPrint('Module: ${module.module.description}');
+                                            debugPrint('Total lessons in module: ${sortedLessons.length}');
+                                            debugPrint('First lesson: ${sortedLessons.first.title}');
+                                            debugPrint('First lesson quizzes: ${sortedLessons.first.quizzes.length}');
+                                            
+                                            // Log quiz details for the first lesson
+                                            for (int i = 0; i < sortedLessons.first.quizzes.length; i++) {
+                                              final quiz = sortedLessons.first.quizzes[i];
+                                              debugPrint('Quiz $i:');
+                                              debugPrint('  - Stage: ${quiz.stage}');
+                                              debugPrint('  - Question Type: ${quiz.questionType}');
+                                              debugPrint('  - Has Audio: ${quiz.soundFileUrl != null && quiz.soundFileUrl!.isNotEmpty}');
+                                              debugPrint('  - Options: ${quiz.options.length}');
+                                            }
+                                            
+                                            // Check all lessons in the module for quizzes
+                                            int totalQuizzes = 0;
+                                            for (final lesson in module.lessons) {
+                                              totalQuizzes += lesson.quizzes.length;
+                                            }
+                                            debugPrint('Total quizzes in module: $totalQuizzes');
+                                            debugPrint('=====================================\n');
+
+                                            // Ensure courseProgressId exists in Supabase
+                                            String? courseProgressId;
+                                            Set<String> completedLessonIds = {};
+                                            final user = SupabaseConfig.currentUser;
+                                            final userId = user?.id;
+                                            if (userId != null) {
+                                              try {
+                                                courseProgressId = await ref.read(
+                                                  getOrCreateCourseProgressProvider(
+                                                    completeCourse.course.id,
+                                                  ).future,
+                                                );
+                                                final completedLessonResponse = await SupabaseConfig.client
+                                                    .from('lesson_progress')
+                                                    .select('lesson_id')
+                                                    .eq('user_id', userId)
+                                                    .eq('module_id', module.module.id)
+                                                    .eq('status', 'completed');
+
+                                                if (completedLessonResponse is List) {
+                                                  completedLessonIds = completedLessonResponse
+                                                      .map((row) => row['lesson_id'] as String?)
+                                                      .whereType<String>()
+                                                      .toSet();
+                                                }
+                                              } catch (e) {
+                                                debugPrint('Error ensuring course progress ID: $e');
+                                              }
+                                            }
+
+                                            final nextLesson = sortedLessons.firstWhere(
+                                              (lesson) => !completedLessonIds.contains(lesson.id),
+                                              orElse: () => sortedLessons.first,
+                                            );
+                                            final nextLessonIndex = sortedLessons.indexOf(nextLesson);
+
+                                            try {
+                                              await ref.read(
+                                                lessonFromSupabaseProvider(nextLesson.id).future,
+                                              );
+                                            } catch (e) {
+                                              debugPrint('Error prefetching lesson: $e');
+                                            }
+                                            // Navigate to the lesson with course context
+                                            if (context.mounted) {
+                                              await context.push('/lesson/${nextLesson.id}', extra: {
+                                                'courseContext': {
+                                                  'courseId': completeCourse.course.id,
+                                                  'courseTitle': completeCourse.course.title,
+                                                  'moduleId': module.module.id,
+                                                  'moduleTitle': module.module.description,
+                                                  'totalModules': completeCourse.modules.length,
+                                                  'totalLessons': completeCourse.modules
+                                                      .fold(0, (sum, m) => sum + m.lessons.length),
+                                                  'currentLessonIndex': nextLessonIndex,
+                                                  'currentModuleIndex': completeCourse.modules.indexOf(module),
+                                                  'moduleLessonsCount': sortedLessons.length,
+                                                  'courseProgressId': courseProgressId ?? '',
+                                                },
+                                                'lessonId': nextLesson.id,
+                                              });
+                                            }
+                                          }
+                                          if (mounted) {
+                                            setState(() {
+                                              _isOngoingModuleLoading = false;
+                                            });
+                                          }
+                                        },
+                                      ),
+                                      const SizedBox(height: 24),
+                                    ],
+                                  );
+                                },
+                                loading: () => Column(
+                                  children: [
+                                    OngoingModuleCard(
+                                      icon: Icons.menu_book,
+                                      iconBgColor: AppColors.primaryColor,
+                                      title: ongoingModule.module.description,
+                                      lessonTitle: 'Loading lesson...',
+                                      subtitle:
+                                          '${ongoingModule.lessons.length} Lessons',
+                                      isLoading: true,
+                                      onTap: () {},
+                                    ),
+                                    const SizedBox(height: 24),
+                                  ],
+                                ),
+                                error: (_, __) => Column(
+                                  children: [
+                                    OngoingModuleCard(
+                                      icon: Icons.menu_book,
+                                      iconBgColor: AppColors.primaryColor,
+                                      title: ongoingModule.module.description,
+                                      lessonTitle: 'Loading lesson...',
+                                      subtitle:
+                                          '${ongoingModule.lessons.length} Lessons',
+                                      isLoading: false,
+                                      onTap: () {},
+                                    ),
+                                    const SizedBox(height: 24),
+                                  ],
+                                ),
                               );
                             }
                             return const SizedBox.shrink();

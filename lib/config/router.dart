@@ -20,9 +20,11 @@ import 'package:milpress/features/on_boarding/welcome_screen.dart';
 import 'package:milpress/features/on_boarding/course_prep.dart';
 import 'package:milpress/features/on_boarding/result_screen.dart';
 import 'package:milpress/features/lesson/lesson_complete_screen.dart';
+import 'package:milpress/features/lesson/offline_lesson_screen.dart';
 import 'package:milpress/features/on_boarding/profile_checker.dart';
 import 'package:milpress/features/profile/profile_page.dart';
 import 'package:milpress/features/profile/screens/about_screen.dart';
+import 'package:milpress/features/weekly_goal/screens/weekly_goal_screen.dart';
 import '../features/authentication/email_verification_screen.dart';
 import 'auth_guard.dart';
 
@@ -39,12 +41,14 @@ enum AppRoute {
   courseDetails,
   review,
   lesson,
+  offlineLesson,
   assessment,
   assessmentResult,
   lessonComplete,
   profile,
   about,
   lessonHistory,
+  weeklyGoal,
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -196,6 +200,16 @@ final routerProvider = Provider<GoRouter>((ref) {
           },
         ),
       ),
+      GoRoute(
+        path: '/offline-lesson/:lessonId',
+        name: AppRoute.offlineLesson.name,
+        builder: AuthGuard.requireAuthenticatedUser(
+          builder: (context, state) {
+            final lessonId = state.pathParameters['lessonId']!;
+            return OfflineLessonScreen(lessonId: lessonId);
+          },
+        ),
+      ),
       // Bookmarks route - requires authenticated user (not guest)
       GoRoute(
         path: '/bookmarks',
@@ -307,6 +321,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: AppRoute.profile.name,
         builder: AuthGuard.requireAuthenticatedUser(
           builder: (context, state) => const ProfilePage(),
+        ),
+      ),
+      GoRoute(
+        path: '/weekly-goal',
+        name: AppRoute.weeklyGoal.name,
+        builder: AuthGuard.requireAuthenticatedUser(
+          builder: (context, state) => const WeeklyGoalScreen(),
         ),
       ),
       // Profile checker - PUBLIC (no auth required for onboarding)

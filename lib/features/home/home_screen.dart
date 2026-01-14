@@ -4,7 +4,9 @@ import 'package:milpress/features/home/course_card.dart';
 import 'package:milpress/features/home/courses_section.dart';
 import 'package:milpress/features/home/ongoing_lesson_card.dart';
 import 'package:milpress/features/home/progress_goal_section.dart'
-    show ProgressGoalSection;
+    show ProgressGoalSection, WeeklyGoalProgressCard;
+import 'package:milpress/features/weekly_goal/providers/user_goal_providers.dart';
+import 'package:milpress/features/weekly_goal/providers/weekly_goal_progress_providers.dart';
 import 'package:milpress/utils/app_colors.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import '../../providers/auth_provider.dart';
@@ -14,6 +16,7 @@ import 'home_header.dart';
 import 'promotion_card.dart';
 import 'jump_in_lesson_section.dart';
 import 'providers/ongoing_lesson_provider.dart';
+import 'package:milpress/features/user_progress/providers/course_progress_providers.dart';
 import 'package:go_router/go_router.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -26,6 +29,8 @@ class HomeScreen extends ConsumerWidget {
     final profileAsync = ref.watch(profileProvider);
     final ongoingLessonAsync = ref.watch(ongoingLessonProvider);
     final authAsync = ref.watch(authProvider);
+    final weeklyGoalAsync = ref.watch(activeWeeklyGoalProvider);
+    final weeklyProgressAsync = ref.watch(weeklyGoalProgressProvider);
 
     ref.listen<AsyncValue<User?>>(authProvider, (previous, next) {
       next.whenData((user) {
@@ -104,30 +109,71 @@ class HomeScreen extends ConsumerWidget {
                             error: (_, __) => 'https://i.pravatar.cc/150?img=3',
                           ),
                   ),
-                  // Email verification banner
                   const EmailVerificationBanner(),
-                  const ProgressGoalSection(coins: 230),
+                  ProgressGoalSection(
+                    onTap: () => context.push('/weekly-goal'),
+                    goalChild: weeklyGoalAsync.when(
+                      data: (goal) {
+                        if (goal == null) return null;
+                        return weeklyProgressAsync.when(
+                          data: (progress) => WeeklyGoalProgressCard(
+                            completed: progress.completedLessons,
+                            target: goal.goalValue,
+                            onTap: () => context.push('/weekly-goal'),
+                          ),
+                          loading: () => WeeklyGoalProgressCard(
+                            completed: 0,
+                            target: goal.goalValue,
+                            onTap: () => context.push('/weekly-goal'),
+                          ),
+                          error: (_, __) => WeeklyGoalProgressCard(
+                            completed: 0,
+                            target: goal.goalValue,
+                            onTap: () => context.push('/weekly-goal'),
+                          ),
+                        );
+                      },
+                      loading: () => null,
+                      error: (_, __) => null,
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   ongoingLessonAsync.when(
                     data: (ongoingLesson) {
                       if (ongoingLesson == null) {
                         return const SizedBox
-                            .shrink(); // Hide card if no ongoing lesson
+                            .shrink(); 
                       }
                       return OngoingLessonCard(
                         title: ongoingLesson.title,
                         progressPercentage: ongoingLesson.progressPercentage,
                         studyTime: ongoingLesson.studyTime,
                         timeLeft: ongoingLesson.timeLeft,
-                        onTap: () {
-                          // Navigate to the ongoing lesson
+                        onTap: () async {
                           if (ongoingLesson.lessonId != null &&
                               ongoingLesson.courseId != null) {
+                            String courseProgressId = '';
+                            try {
+                              courseProgressId = await ref.read(
+                                getOrCreateCourseProgressProvider(
+                                  ongoingLesson.courseId!,
+                                ).future,
+                              );
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error creating course progress: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
                             context.push('/lesson/${ongoingLesson.lessonId}',
                                 extra: {
                                   'courseContext': {
                                     'courseId': ongoingLesson.courseId,
                                     'moduleId': ongoingLesson.moduleId,
+                                    'courseProgressId': courseProgressId,
                                   },
                                 });
                           }
@@ -158,7 +204,7 @@ class HomeScreen extends ConsumerWidget {
                   const SizedBox(height: 10),
                   const JumpInLessonSection(),
                   const SizedBox(height: 24),
-                  const CoursesSection(),
+                  // const CoursesSection(),
                   const SizedBox(height: 24),
                 ],
               ),
@@ -169,5 +215,3 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 }
-
-
