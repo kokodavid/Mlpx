@@ -107,76 +107,84 @@ class CourseService {
           .toList();
       debugPrint('Fetched ${modules.length} modules');
 
-      // Fetch lessons for each module
-      final modulesWithLessons = await Future.wait(
-        modules.map((module) async {
-          try {
-            final lessonsResponse = await _supabase
-                .from('lessons')
-                .select()
-                .eq('module_id', module.id)
-                .order('position')
-                .order('id');
+      final modulesById = {for (final module in modules) module.id: module};
+      final moduleIds = modulesById.keys.where((id) => id.isNotEmpty).toList();
 
-            final lessons =
-                await Future.wait((lessonsResponse as List).map((lesson) async {
-              // Fetch quizzes for this lesson
-              final quizzesResponse = await _supabase
-                  .from('lesson_quiz')
-                  .select()
-                  .eq('lesson_id', lesson['id']);
-              final quizzes = (quizzesResponse as List)
-                  .map((quiz) => LessonQuizModel.fromJson(quiz))
-                  .toList();
-              
-              // Debug logging for quiz data
-              debugPrint('Lesson ${lesson['title']}: fetched ${quizzes.length} quizzes');
-              for (int i = 0; i < quizzes.length; i++) {
-                final quiz = quizzes[i];
-                debugPrint('  Quiz $i: ${quiz.stage} - ${quiz.questionType}');
-              }
-              
-              return LessonModel.fromJson({
-                ...lesson,
-                'duration_minutes': lesson['duration_minutes'] ?? 0,
-                'title': lesson['title'] ?? 'Untitled Lesson',
-                'description': lesson['description'] ?? '',
-                'module_id': lesson['module_id'] ?? module.id,
-                'id': lesson['id'] ?? '',
-                'position': lesson['position'] ?? 0,
-                'content': lesson['content'] ?? '',
-                'audio_url': lesson['audio_url'],
-                'video_url': lesson['video_url'],
-                'thumbnail_url': lesson['thumbnails'],
-                'category': lesson['category'],
-                'level': lesson['level'],
-                'quizzes': quizzes.map((q) => q.toJson()).toList(),
-              });
-            }).toList());
-            debugPrint(
-                'Module [33m[1m${module.description}[0m: fetched ${lessons.length} lessons');
+      List<Map<String, dynamic>> lessonsResponse = [];
+      if (moduleIds.isNotEmpty) {
+        final lessonsRaw = await _supabase
+            .from('lessons')
+            .select()
+            .inFilter('module_id', moduleIds)
+            .order('position')
+            .order('id');
+        lessonsResponse = (lessonsRaw as List)
+            .map((lesson) => Map<String, dynamic>.from(lesson as Map))
+            .toList();
+      }
 
-            return ModuleWithLessons(
-              module: module,
-              lessons: lessons,
-            );
-          } catch (e) {
-            debugPrint('Error fetching lessons for module ${module.description}: $e');
-            return ModuleWithLessons(
-              module: module,
-              lessons: [],
-            );
-          }
-        }),
-      );
+      final lessonIds = lessonsResponse
+          .map((lesson) => lesson['id'] as String?)
+          .whereType<String>()
+          .toList();
 
-      // Filter out any modules that failed to load lessons
-      final validModulesWithLessons = modulesWithLessons.where((mwl) => mwl.lessons.isNotEmpty).toList();
-      debugPrint('Found ${validModulesWithLessons.length} valid modules with lessons');
+      final Map<String, List<LessonQuizModel>> quizzesByLessonId = {};
+      if (lessonIds.isNotEmpty) {
+        final quizzesRaw = await _supabase
+            .from('lesson_quiz')
+            .select()
+            .inFilter('lesson_id', lessonIds);
+        final quizzesResponse = (quizzesRaw as List)
+            .map((quiz) => Map<String, dynamic>.from(quiz as Map))
+            .toList();
+        for (final quiz in quizzesResponse) {
+          final lessonId = quiz['lesson_id'] as String?;
+          if (lessonId == null) continue;
+          quizzesByLessonId
+              .putIfAbsent(lessonId, () => <LessonQuizModel>[])
+              .add(LessonQuizModel.fromJson(quiz));
+        }
+      }
+
+      final Map<String, List<LessonModel>> lessonsByModuleId = {};
+      for (final lesson in lessonsResponse) {
+        final moduleId = lesson['module_id'] as String? ?? '';
+        if (moduleId.isEmpty) continue;
+        final lessonId = lesson['id'] as String? ?? '';
+        final quizzes = quizzesByLessonId[lessonId] ?? <LessonQuizModel>[];
+        lessonsByModuleId
+            .putIfAbsent(moduleId, () => <LessonModel>[])
+            .add(LessonModel.fromJson({
+          ...lesson,
+          'duration_minutes': lesson['duration_minutes'] ?? 0,
+          'title': lesson['title'] ?? 'Untitled Lesson',
+          'description': lesson['description'] ?? '',
+          'module_id': moduleId,
+          'id': lessonId,
+          'position': lesson['position'] ?? 0,
+          'content': lesson['content'] ?? '',
+          'audio_url': lesson['audio_url'],
+          'video_url': lesson['video_url'],
+          'thumbnail_url': lesson['thumbnails'],
+          'category': lesson['category'],
+          'level': lesson['level'],
+          'quizzes': quizzes.map((q) => q.toJson()).toList(),
+        }));
+      }
+
+      final modulesWithLessons = modules.map((module) {
+        final lessons = lessonsByModuleId[module.id] ?? <LessonModel>[];
+        debugPrint(
+            'Module \u001b[33m\u001b[1m${module.description}\u001b[0m: fetched ${lessons.length} lessons');
+        return ModuleWithLessons(
+          module: module,
+          lessons: lessons,
+        );
+      }).toList();
 
       final completeCourse = CompleteCourseModel(
         course: course,
-        modules: validModulesWithLessons,
+        modules: modulesWithLessons,
         lastUpdated: DateTime.now(),
       );
 

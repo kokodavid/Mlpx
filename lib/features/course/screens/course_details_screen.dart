@@ -7,6 +7,7 @@ import 'package:milpress/features/course/course_widgets/course_progress_card.dar
 import 'package:milpress/features/course/course_widgets/description_section.dart';
 import 'package:milpress/features/course/course_widgets/ongoing_module_card.dart';
 import 'package:milpress/utils/app_colors.dart';
+import '../course_models/complete_course_model.dart';
 import '../providers/course_provider.dart';
 import '../providers/module_provider.dart';
 import '../course_widgets/course_detail_header.dart';
@@ -34,6 +35,8 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
   
   late FocusNode _focusNode;
   bool _isOngoingModuleLoading = false;
+  ModuleWithLessons? _cachedOngoingModule;
+  final Map<String, Set<String>> _cachedCompletedLessonIds = {};
   
   @override
   void initState() {
@@ -76,6 +79,11 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
 
   void _refreshProgressData() {
     debugPrint('CourseDetailsScreen: Refreshing all progress data for course ${widget.courseId}');
+    if (mounted && _isOngoingModuleLoading) {
+      setState(() {
+        _isOngoingModuleLoading = false;
+      });
+    }
     
     // Invalidate all relevant providers
     ref.invalidate(courseCompletedLessonsProvider(widget.courseId));
@@ -122,6 +130,25 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
     
     // Watch the stream-based refresh for immediate updates
     ref.watch(courseProgressRefreshStreamProvider(widget.courseId));
+    ref.listen<AsyncValue<ModuleWithLessons?>>(
+      ongoingModuleProvider(widget.courseId),
+      (previous, next) {
+        next.whenData((module) {
+          if (!mounted || module == null) {
+            return;
+          }
+          final cached = _cachedOngoingModule;
+          final hasChanged = cached == null ||
+              cached.module.id != module.module.id ||
+              cached.lessons.length != module.lessons.length;
+          if (hasChanged) {
+            setState(() {
+              _cachedOngoingModule = module;
+            });
+          }
+        });
+      },
+    );
 
     return Focus(
       focusNode: _focusNode,
@@ -158,6 +185,16 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
         ),
         body: completeCourseAsync.when(
           data: (completeCourse) {
+            final totalModules = completeCourse.modules.length;
+            final totalLessons = completeCourse.modules
+                .fold<int>(0, (sum, m) => sum + m.lessons.length);
+            final allModulesCompleted = completedModulesAsync.maybeWhen(
+              data: (completedModules) =>
+                  totalModules > 0 &&
+                  completedModules.values.where((completed) => completed).length >=
+                      totalModules,
+              orElse: () => false,
+            );
             return RefreshIndicator(
               onRefresh: () async {
                 // Force refresh the course data
@@ -180,8 +217,7 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
                         courseTitle: completeCourse.course.title,
                         level: completeCourse.course.level,
                         totalModules: completeCourse.modules.length,
-                        totalLessons: completeCourse.modules
-                            .fold(0, (sum, m) => sum + m.lessons.length),
+                        totalLessons: totalLessons,
                       ),
                       const SizedBox(height: 24),
                       
@@ -234,7 +270,7 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'Congratulations! You have successfully completed Level ${completeCourse.course.level}',
+                                      'Congratulations! You have successfully completed ${completeCourse.course.title}',
                                       style: TextStyle(
                                         color: Colors.white.withOpacity(0.9),
                                         fontSize: 14,
@@ -251,22 +287,19 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
                         data: (completedLessons) => courseCompletedModulesAsync.when(
                           data: (completedModules) => CourseProgressCard(
                             totalModules: completeCourse.modules.length,
-                            totalLessons: completeCourse.modules
-                                .fold(0, (sum, m) => sum + m.lessons.length),
+                            totalLessons: totalLessons,
                             completedLessons: completedLessons,
                             completedModules: completedModules,
                           ),
                           loading: () => CourseProgressCard(
                             totalModules: completeCourse.modules.length,
-                            totalLessons: completeCourse.modules
-                                .fold(0, (sum, m) => sum + m.lessons.length),
+                            totalLessons: totalLessons,
                             completedLessons: completedLessons,
                             completedModules: 0,
                           ),
                           error: (_, __) => CourseProgressCard(
                             totalModules: completeCourse.modules.length,
-                            totalLessons: completeCourse.modules
-                                .fold(0, (sum, m) => sum + m.lessons.length),
+                            totalLessons: totalLessons,
                             completedLessons: completedLessons,
                             completedModules: 0,
                           ),
@@ -274,22 +307,19 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
                         loading: () => courseCompletedModulesAsync.when(
                           data: (completedModules) => CourseProgressCard(
                             totalModules: completeCourse.modules.length,
-                            totalLessons: completeCourse.modules
-                                .fold(0, (sum, m) => sum + m.lessons.length),
+                            totalLessons: totalLessons,
                             completedLessons: 0,
                             completedModules: completedModules,
                           ),
                           loading: () => CourseProgressCard(
                             totalModules: completeCourse.modules.length,
-                            totalLessons: completeCourse.modules
-                                .fold(0, (sum, m) => sum + m.lessons.length),
+                            totalLessons: totalLessons,
                             completedLessons: 0,
                             completedModules: 0,
                           ),
                           error: (_, __) => CourseProgressCard(
                             totalModules: completeCourse.modules.length,
-                            totalLessons: completeCourse.modules
-                                .fold(0, (sum, m) => sum + m.lessons.length),
+                            totalLessons: totalLessons,
                             completedLessons: 0,
                             completedModules: 0,
                           ),
@@ -297,22 +327,19 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
                         error: (_, __) => courseCompletedModulesAsync.when(
                           data: (completedModules) => CourseProgressCard(
                             totalModules: completeCourse.modules.length,
-                            totalLessons: completeCourse.modules
-                                .fold(0, (sum, m) => sum + m.lessons.length),
+                            totalLessons: totalLessons,
                             completedLessons: 0,
                             completedModules: completedModules,
                           ),
                           loading: () => CourseProgressCard(
                             totalModules: completeCourse.modules.length,
-                            totalLessons: completeCourse.modules
-                                .fold(0, (sum, m) => sum + m.lessons.length),
+                            totalLessons: totalLessons,
                             completedLessons: 0,
                             completedModules: 0,
                           ),
                           error: (_, __) => CourseProgressCard(
                             totalModules: completeCourse.modules.length,
-                            totalLessons: completeCourse.modules
-                                .fold(0, (sum, m) => sum + m.lessons.length),
+                            totalLessons: totalLessons,
                             completedLessons: 0,
                             completedModules: 0,
                           ),
@@ -322,10 +349,56 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
                       
                       // Only show ongoing module for non-completed courses
                       if (!isCompletedCourse) ...[
-                        ongoingModuleAsync.when(
-                          data: (ongoingModule) {
-                            if (ongoingModule != null) {
-                              final sortedLessons = List.of(ongoingModule.lessons)
+                        Builder(builder: (context) {
+                          if (allModulesCompleted) {
+                            return Column(
+                              children: [
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 22, horizontal: 18),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(18),
+                                    border: Border.all(
+                                      color: Colors.green.withOpacity(0.2),
+                                    ),
+                                  ),
+                                  child: const Column(
+                                    children: [
+                                      Icon(Icons.check_circle,
+                                          color: Colors.green, size: 32),
+                                      SizedBox(height: 10),
+                                      Text(
+                                        'All modules completed',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF232B3A),
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      SizedBox(height: 6),
+                                      Text(
+                                        'You have completed this course.',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                              ],
+                            );
+                          }
+                          final ongoingModule = ongoingModuleAsync.value ?? _cachedOngoingModule;
+                          if (ongoingModule == null) {
+                            return const SizedBox.shrink();
+                          }
+                          final sortedLessons = List.of(ongoingModule.lessons)
                                 ..sort((a, b) {
                                   final positionCompare =
                                       a.position.compareTo(b.position);
@@ -334,276 +407,173 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
                                   }
                                   return a.id.compareTo(b.id);
                                 });
-                              final completedLessonIdsAsync = ref.watch(
-                                completedLessonIdsProvider(ongoingModule.module.id),
-                              );
-                              return completedLessonIdsAsync.when(
-                                data: (completedLessonIds) {
-                                  final nextLessonForCard = sortedLessons.isNotEmpty
-                                      ? sortedLessons.firstWhere(
-                                          (lesson) =>
-                                              !completedLessonIds.contains(lesson.id),
-                                          orElse: () => sortedLessons.first,
-                                        )
-                                      : null;
-                                  return Column(
-                                    children: [
-                                      OngoingModuleCard(
-                                        icon: Icons.menu_book,
-                                        iconBgColor: AppColors.primaryColor,
-                                        title: ongoingModule.module.description,
-                                        lessonTitle: nextLessonForCard?.title ?? '',
-                                        subtitle:
-                                            '${ongoingModule.lessons.length} Lessons',
-                                        isLoading: _isOngoingModuleLoading,
-                                        onTap: () async {
-                                          if (_isOngoingModuleLoading) {
-                                            return;
+                          final completedLessonIdsAsync = ref.watch(
+                            completedLessonIdsProvider(ongoingModule.module.id),
+                          );
+                          final cachedLessonIds =
+                              _cachedCompletedLessonIds[ongoingModule.module.id] ??
+                                  <String>{};
+                          final completedLessonIds =
+                              completedLessonIdsAsync.value ?? cachedLessonIds;
+                          if (completedLessonIdsAsync.hasValue) {
+                            _cachedCompletedLessonIds[ongoingModule.module.id] =
+                                completedLessonIdsAsync.value ?? <String>{};
+                          }
+                          final nextLessonForCard = sortedLessons.isNotEmpty
+                              ? sortedLessons.firstWhere(
+                                  (lesson) =>
+                                      !completedLessonIds.contains(lesson.id),
+                                  orElse: () => sortedLessons.first,
+                                )
+                              : null;
+                          final isProgressLoading = completedLessonIdsAsync.isLoading &&
+                              completedLessonIds.isEmpty;
+                          return Column(
+                            children: [
+                              OngoingModuleCard(
+                                icon: Icons.menu_book,
+                                iconBgColor: AppColors.primaryColor,
+                                title: ongoingModule.module.description,
+                                lessonTitle: isProgressLoading
+                                    ? 'Loading lesson...'
+                                    : (nextLessonForCard?.title ?? ''),
+                                subtitle:
+                                    '${ongoingModule.lessons.length} Lessons',
+                                isLoading:
+                                    _isOngoingModuleLoading || isProgressLoading,
+                                onTap: () async {
+                                  if (_isOngoingModuleLoading) {
+                                    return;
+                                  }
+                                  setState(() {
+                                    _isOngoingModuleLoading = true;
+                                  });
+                                  try {
+                                    if (ongoingModule.lessons.isNotEmpty) {
+                                      final module = ongoingModule;
+
+                                      // Check all lessons in the module for quizzes
+                                      int totalQuizzes = 0;
+                                      for (final lesson in module.lessons) {
+                                        totalQuizzes += lesson.quizzes.length;
+                                      }
+                                      debugPrint('Total quizzes in module: $totalQuizzes');
+                                      debugPrint('=====================================\n');
+
+                                      // Ensure courseProgressId exists in Supabase
+                                      String? courseProgressId;
+                                      Set<String> completedLessonIds = {};
+                                      final user = SupabaseConfig.currentUser;
+                                      final userId = user?.id;
+                                      if (userId != null) {
+                                        try {
+                                          courseProgressId = await ref.read(
+                                            getOrCreateCourseProgressProvider(
+                                              completeCourse.course.id,
+                                            ).future,
+                                          );
+                                          final completedLessonResponse = await SupabaseConfig.client
+                                              .from('lesson_progress')
+                                              .select('lesson_id')
+                                              .eq('user_id', userId)
+                                              .eq('module_id', module.module.id)
+                                              .eq('status', 'completed');
+
+                                          if (completedLessonResponse is List) {
+                                            completedLessonIds = completedLessonResponse
+                                                .map((row) => row['lesson_id'] as String?)
+                                                .whereType<String>()
+                                                .toSet();
                                           }
-                                          setState(() {
-                                            _isOngoingModuleLoading = true;
-                                          });
-                                          if (ongoingModule.lessons.isNotEmpty) {
-                                            final module = ongoingModule;
- 
-                                            // Debug logging to verify quiz data is cached
-                                            debugPrint('\n=== Ongoing Module Card Debug ===');
-                                            debugPrint('Module: ${module.module.description}');
-                                            debugPrint('Total lessons in module: ${sortedLessons.length}');
-                                            debugPrint('First lesson: ${sortedLessons.first.title}');
-                                            debugPrint('First lesson quizzes: ${sortedLessons.first.quizzes.length}');
-                                            
-                                            // Log quiz details for the first lesson
-                                            for (int i = 0; i < sortedLessons.first.quizzes.length; i++) {
-                                              final quiz = sortedLessons.first.quizzes[i];
-                                              debugPrint('Quiz $i:');
-                                              debugPrint('  - Stage: ${quiz.stage}');
-                                              debugPrint('  - Question Type: ${quiz.questionType}');
-                                              debugPrint('  - Has Audio: ${quiz.soundFileUrl != null && quiz.soundFileUrl!.isNotEmpty}');
-                                              debugPrint('  - Options: ${quiz.options.length}');
-                                            }
-                                            
-                                            // Check all lessons in the module for quizzes
-                                            int totalQuizzes = 0;
-                                            for (final lesson in module.lessons) {
-                                              totalQuizzes += lesson.quizzes.length;
-                                            }
-                                            debugPrint('Total quizzes in module: $totalQuizzes');
-                                            debugPrint('=====================================\n');
+                                        } catch (e) {
+                                          debugPrint('Error ensuring course progress ID: $e');
+                                        }
+                                      }
 
-                                            // Ensure courseProgressId exists in Supabase
-                                            String? courseProgressId;
-                                            Set<String> completedLessonIds = {};
-                                            final user = SupabaseConfig.currentUser;
-                                            final userId = user?.id;
-                                            if (userId != null) {
-                                              try {
-                                                courseProgressId = await ref.read(
-                                                  getOrCreateCourseProgressProvider(
-                                                    completeCourse.course.id,
-                                                  ).future,
-                                                );
-                                                final completedLessonResponse = await SupabaseConfig.client
-                                                    .from('lesson_progress')
-                                                    .select('lesson_id')
-                                                    .eq('user_id', userId)
-                                                    .eq('module_id', module.module.id)
-                                                    .eq('status', 'completed');
+                                      final nextLesson = sortedLessons.firstWhere(
+                                        (lesson) => !completedLessonIds.contains(lesson.id),
+                                        orElse: () => sortedLessons.first,
+                                      );
+                                      final nextLessonIndex = sortedLessons.indexOf(nextLesson);
 
-                                                if (completedLessonResponse is List) {
-                                                  completedLessonIds = completedLessonResponse
-                                                      .map((row) => row['lesson_id'] as String?)
-                                                      .whereType<String>()
-                                                      .toSet();
-                                                }
-                                              } catch (e) {
-                                                debugPrint('Error ensuring course progress ID: $e');
-                                              }
-                                            }
-
-                                            final nextLesson = sortedLessons.firstWhere(
-                                              (lesson) => !completedLessonIds.contains(lesson.id),
-                                              orElse: () => sortedLessons.first,
-                                            );
-                                            final nextLessonIndex = sortedLessons.indexOf(nextLesson);
-
-                                            try {
-                                              await ref.read(
-                                                lessonFromSupabaseProvider(nextLesson.id).future,
-                                              );
-                                            } catch (e) {
-                                              debugPrint('Error prefetching lesson: $e');
-                                            }
-                                            // Navigate to the lesson with course context
-                                            if (context.mounted) {
-                                              await context.push('/lesson/${nextLesson.id}', extra: {
-                                                'courseContext': {
-                                                  'courseId': completeCourse.course.id,
-                                                  'courseTitle': completeCourse.course.title,
-                                                  'moduleId': module.module.id,
-                                                  'moduleTitle': module.module.description,
-                                                  'totalModules': completeCourse.modules.length,
-                                                  'totalLessons': completeCourse.modules
-                                                      .fold(0, (sum, m) => sum + m.lessons.length),
-                                                  'currentLessonIndex': nextLessonIndex,
-                                                  'currentModuleIndex': completeCourse.modules.indexOf(module),
-                                                  'moduleLessonsCount': sortedLessons.length,
-                                                  'courseProgressId': courseProgressId ?? '',
-                                                },
-                                                'lessonId': nextLesson.id,
-                                              });
-                                            }
-                                          }
-                                          if (mounted) {
-                                            setState(() {
-                                              _isOngoingModuleLoading = false;
-                                            });
-                                          }
-                                        },
-                                      ),
-                                      const SizedBox(height: 24),
-                                    ],
-                                  );
+                                      try {
+                                        await ref.read(
+                                          lessonFromSupabaseProvider(nextLesson.id).future,
+                                        );
+                                      } catch (e) {
+                                        debugPrint('Error prefetching lesson: $e');
+                                      }
+                                      // Navigate to the lesson with course context
+                                      if (context.mounted) {
+                                        await context.push('/lesson/${nextLesson.id}', extra: {
+                                          'courseContext': {
+                                            'courseId': completeCourse.course.id,
+                                            'courseTitle': completeCourse.course.title,
+                                                    'moduleId': module.module.id,
+                                                    'moduleTitle': module.module.description,
+                                                    'totalModules': completeCourse.modules.length,
+                                                    'totalLessons': totalLessons,
+                                                    'currentLessonIndex': nextLessonIndex,
+                                                    'currentModuleIndex': completeCourse.modules.indexOf(module),
+                                                    'moduleLessonsCount': sortedLessons.length,
+                                                    'courseProgressId': courseProgressId ?? '',
+                                                  },
+                                          'lessonId': nextLesson.id,
+                                        });
+                                      }
+                                    }
+                                  } finally {
+                                    if (mounted) {
+                                      setState(() {
+                                        _isOngoingModuleLoading = false;
+                                      });
+                                    }
+                                  }
                                 },
-                                loading: () => Column(
-                                  children: [
-                                    OngoingModuleCard(
-                                      icon: Icons.menu_book,
-                                      iconBgColor: AppColors.primaryColor,
-                                      title: ongoingModule.module.description,
-                                      lessonTitle: 'Loading lesson...',
-                                      subtitle:
-                                          '${ongoingModule.lessons.length} Lessons',
-                                      isLoading: true,
-                                      onTap: () {},
-                                    ),
-                                    const SizedBox(height: 24),
-                                  ],
-                                ),
-                                error: (_, __) => Column(
-                                  children: [
-                                    OngoingModuleCard(
-                                      icon: Icons.menu_book,
-                                      iconBgColor: AppColors.primaryColor,
-                                      title: ongoingModule.module.description,
-                                      lessonTitle: 'Loading lesson...',
-                                      subtitle:
-                                          '${ongoingModule.lessons.length} Lessons',
-                                      isLoading: false,
-                                      onTap: () {},
-                                    ),
-                                    const SizedBox(height: 24),
-                                  ],
-                                ),
-                              );
-                            }
-                            return const SizedBox.shrink();
-                          },
-                          loading: () => const SizedBox.shrink(),
-                          error: (_, __) => const SizedBox.shrink(),
-                        ),
+                              ),
+                              const SizedBox(height: 24),
+                            ],
+                          );
+                        }),
                       ],
                       
-                      // Review button for completed courses
-                      if (isCompletedCourse) ...[
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 24),
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 2,
-                            ),
-                            onPressed: () {
-                              // Show a dialog with options to review the course
-                              showDialog(
-                                context: context,
-                                builder: (BuildContext context) {
-                                  return AlertDialog(
-                                    title: const Text('Review Course'),
-                                    content: const Text(
-                                      'Choose how you would like to review this completed course:',
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.of(context).pop();
-                                          // Navigate to first lesson for review
-                                          if (completeCourse.modules.isNotEmpty && 
-                                              completeCourse.modules.first.lessons.isNotEmpty) {
-                                            final firstModule = completeCourse.modules.first;
-                                            final firstLesson = firstModule.lessons.first;
-                                            
-                                            context.push('/lesson/${firstLesson.id}', extra: {
-                                              'courseContext': {
-                                                'courseId': completeCourse.course.id,
-                                                'courseTitle': completeCourse.course.title,
-                                                'moduleId': firstModule.module.id,
-                                                'moduleTitle': firstModule.module.description,
-                                                'totalModules': completeCourse.modules.length,
-                                                'totalLessons': completeCourse.modules
-                                                    .fold(0, (sum, m) => sum + m.lessons.length),
-                                                'currentLessonIndex': 0,
-                                                'currentModuleIndex': 0,
-                                                'moduleLessonsCount': firstModule.lessons.length,
-                                                'isReviewMode': true,
-                                              },
-                                            });
-                                          }
-                                        },
-                                        child: const Text('Start from Beginning'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.of(context).pop();
-                                          // Stay on current screen to view all modules
-                                        },
-                                        child: const Text('View All Modules'),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              );
-                            },
-                            icon: const Icon(Icons.refresh, size: 20),
-                            label: const Text(
-                              'Review Course',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
                       
                       DescriptionSection(
                           courseTitle: completeCourse.course.title,
                           level: completeCourse.course.level,
                           totalModules: completeCourse.modules.length,
-                          totalLessons: completeCourse.modules
-                              .fold(0, (sum, m) => sum + m.lessons.length),
+                          totalLessons: totalLessons,
                           description: completeCourse.course.description),
                       const SizedBox(height: 24),
                       completedModulesAsync.when(
                         data: (completedModules) => AllModulesWidget(
                           modules: completeCourse.modules,
                           completedModules: completedModules,
-                          ongoingModuleId: ongoingModuleAsync.value?.module.id,
+                          ongoingModuleId: allModulesCompleted
+                              ? null
+                              : ongoingModuleAsync.value?.module.id,
+                          courseId: completeCourse.course.id,
+                          courseTitle: completeCourse.course.title,
+                          totalModules: totalModules,
+                          totalLessons: totalLessons,
                         ),
                         loading: () => AllModulesWidget(
                           modules: completeCourse.modules,
                           completedModules: {},
                           ongoingModuleId: null,
+                          courseId: completeCourse.course.id,
+                          courseTitle: completeCourse.course.title,
+                          totalModules: totalModules,
+                          totalLessons: totalLessons,
                         ),
                         error: (_, __) => AllModulesWidget(
                           modules: completeCourse.modules,
                           completedModules: {},
                           ongoingModuleId: null,
+                          courseId: completeCourse.course.id,
+                          courseTitle: completeCourse.course.title,
+                          totalModules: totalModules,
+                          totalLessons: totalLessons,
                         ),
                       ),
                       // ...add more widgets for progress, ongoing lesson, etc.

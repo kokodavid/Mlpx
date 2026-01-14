@@ -10,6 +10,7 @@ import 'package:milpress/features/weekly_goal/providers/weekly_goal_progress_pro
 import 'package:milpress/utils/app_colors.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import '../../providers/auth_provider.dart';
+import '../../providers/connectivity_provider.dart';
 import '../profile/providers/profile_provider.dart';
 import '../widgets/email_verification_banner.dart';
 import 'home_header.dart';
@@ -31,6 +32,11 @@ class HomeScreen extends ConsumerWidget {
     final authAsync = ref.watch(authProvider);
     final weeklyGoalAsync = ref.watch(activeWeeklyGoalProvider);
     final weeklyProgressAsync = ref.watch(weeklyGoalProgressProvider);
+    final connectivityAsync = ref.watch(connectivityProvider);
+    final isOffline = connectivityAsync.maybeWhen(
+      data: isOfflineResult,
+      orElse: () => false,
+    );
 
     ref.listen<AsyncValue<User?>>(authProvider, (previous, next) {
       next.whenData((user) {
@@ -97,7 +103,7 @@ class HomeScreen extends ConsumerWidget {
                     userName: authState.isGuestUser 
                         ? "Guest"
                         : profileAsync.when(
-                            data: (profile) => profile?.firstName ?? "User",
+                            data: (profile) => profile?.firstName ?? "",
                             loading: () => "User",
                             error: (_, __) => "User",
                           ),
@@ -193,9 +199,9 @@ class HomeScreen extends ConsumerWidget {
                   const SizedBox(height: 16),
                   const PromotionCard(),
                   const SizedBox(height: 10),
-                  const Text(
-                    "Jump-in lesson",
-                    style: TextStyle(
+                  Text(
+                    isOffline ? 'Downloaded lessons' : 'Jump-in lesson',
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF232B3A),

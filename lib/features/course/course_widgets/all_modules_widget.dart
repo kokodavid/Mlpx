@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../course_models/complete_course_model.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../providers/module_provider.dart';
@@ -8,12 +9,20 @@ class AllModulesWidget extends ConsumerStatefulWidget {
   final List<ModuleWithLessons> modules;
   final Map<String, bool> completedModules; // moduleId -> completed
   final String? ongoingModuleId;
+  final String? courseId;
+  final String? courseTitle;
+  final int? totalModules;
+  final int? totalLessons;
 
   const AllModulesWidget({
     Key? key,
     required this.modules,
     required this.completedModules,
     this.ongoingModuleId,
+    this.courseId,
+    this.courseTitle,
+    this.totalModules,
+    this.totalLessons,
   }) : super(key: key);
 
   @override
@@ -141,33 +150,66 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
                                 
                                 return Column(
                                   children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            lessonCompleted ? Icons.check_circle : Icons.circle_outlined,
-                                            size: 20,
-                                            color: lessonCompleted ? Colors.green : AppColors.textColor,
-                                          ),
-                                          const SizedBox(width: 10),
-                                          Expanded(
-                                            child: Text(
-                                              lesson.title,
-                                              style: TextStyle(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.w500,
-                                                color: lessonCompleted ? Colors.green : AppColors.textColor,
+                                    InkWell(
+                                      onTap: lessonCompleted
+                                          ? () {
+                                              final courseId = widget.courseId ?? module.module.courseId;
+                                              if (courseId == null || courseId.isEmpty) {
+                                                return;
+                                              }
+                                              final courseContext = <String, dynamic>{
+                                                'courseId': courseId,
+                                                if (widget.courseTitle != null)
+                                                  'courseTitle': widget.courseTitle,
+                                                'moduleId': module.module.id,
+                                                'moduleTitle': module.module.description,
+                                                if (widget.totalModules != null)
+                                                  'totalModules': widget.totalModules,
+                                                if (widget.totalLessons != null)
+                                                  'totalLessons': widget.totalLessons,
+                                                'currentLessonIndex': lessonIdx,
+                                                'currentModuleIndex': index,
+                                                'moduleLessonsCount': module.lessons.length,
+                                                'isReviewMode': true,
+                                              };
+                                              context.push(
+                                                '/lesson/${lesson.id}',
+                                                extra: {
+                                                  'courseContext': courseContext,
+                                                  'lessonId': lesson.id,
+                                                },
+                                              );
+                                            }
+                                          : null,
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              lessonCompleted ? Icons.check_circle : Icons.circle_outlined,
+                                              size: 20,
+                                              color: lessonCompleted ? Colors.green : AppColors.textColor,
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                lesson.title,
+                                                style: TextStyle(
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: lessonCompleted ? Colors.green : AppColors.textColor,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                          if (lessonCompleted)
-                                            const Icon(Icons.check, color: Colors.green, size: 16),
-                                        ],
+                                            if (lessonCompleted)
+                                              const Icon(Icons.check, color: Colors.green, size: 16),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                     if (lessonIdx < module.lessons.length - 1)

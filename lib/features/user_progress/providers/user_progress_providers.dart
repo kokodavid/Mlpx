@@ -10,6 +10,7 @@ import 'package:milpress/features/course/providers/course_provider.dart';
 import 'package:milpress/utils/supabase_config.dart';
 import 'course_progress_providers.dart';
 import 'package:milpress/features/reviews/services/bookmark_service.dart';
+import 'package:milpress/features/weekly_goal/providers/weekly_goal_progress_providers.dart';
 
 // Service provider
 final userProgressServiceProvider = Provider<UserProgressService>((ref) {
@@ -31,6 +32,22 @@ final saveLessonProgressProvider =
   final success = await service.uploadLessonProgressToSupabase(progress);
   if (!success) {
     throw Exception('Failed to upload lesson progress to Supabase');
+  }
+  ref.invalidate(weeklyGoalProgressProvider);
+  final moduleId = progress.moduleId;
+  if (moduleId != null && moduleId.isNotEmpty) {
+    ref.invalidate(completedLessonIdsProvider(moduleId));
+  }
+  final courseProgressId = progress.courseProgressId;
+  if (courseProgressId.isNotEmpty) {
+    final courseProgress =
+        await ref.read(courseProgressByIdProvider(courseProgressId).future);
+    final courseId = courseProgress?.courseId;
+    if (courseId != null && courseId.isNotEmpty) {
+      ref.invalidate(courseCompletedLessonsProvider(courseId));
+      ref.invalidate(courseLessonProgressValueProvider(courseId));
+      ref.invalidate(courseCompletedModulesProvider(courseId));
+    }
   }
 });
 
@@ -128,6 +145,7 @@ final syncAllProgressProvider = FutureProvider<Map<String, dynamic>>((ref) async
     };
     
     print('[syncAllProgressProvider] Sync completed - Synced: ${results['synced']}');
+    ref.invalidate(weeklyGoalProgressProvider);
     
     return results;
   } catch (e) {

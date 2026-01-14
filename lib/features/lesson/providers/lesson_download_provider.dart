@@ -30,10 +30,11 @@ class LessonDownloadState {
 }
 
 class LessonDownloadNotifier extends StateNotifier<LessonDownloadState> {
+  final Ref _ref;
   final String lessonId;
   final _dio = Dio();
 
-  LessonDownloadNotifier(this.lessonId) : super(LessonDownloadState()) {
+  LessonDownloadNotifier(this._ref, this.lessonId) : super(LessonDownloadState()) {
     _checkDownloadStatus();
   }
 
@@ -81,10 +82,18 @@ class LessonDownloadNotifier extends StateNotifier<LessonDownloadState> {
         await _downloadPDF(lesson.content, lessonDir);
       }
 
+      // Download thumbnail if available
+      if (lesson.thumbnailUrl != null && lesson.thumbnailUrl!.isNotEmpty) {
+        await _downloadThumbnail(lesson.thumbnailUrl!, lessonDir);
+      }
+
       // Download quiz audio files if available
       await _downloadQuizAudioFiles(lesson, lessonDir);
 
       state = state.copyWith(isDownloaded: true, isLoading: false);
+      _ref.invalidate(downloadedLessonIdsProvider);
+      _ref.invalidate(downloadedLessonsCountProvider);
+      _ref.invalidate(downloadedLessonsProvider);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: 'Download failed: $e');
     }
@@ -132,6 +141,18 @@ class LessonDownloadNotifier extends StateNotifier<LessonDownloadState> {
     }
   }
 
+  Future<void> _downloadThumbnail(String thumbnailUrl, Directory lessonDir) async {
+    try {
+      final thumbnailFile = File('${lessonDir.path}/thumbnail.jpg');
+      if (!await thumbnailFile.exists()) {
+        await _dio.download(thumbnailUrl, thumbnailFile.path);
+      }
+    } catch (e) {
+      // Thumbnail download is optional, don't fail the entire download
+      print('Failed to download thumbnail: $e');
+    }
+  }
+
   Future<void> _downloadQuizAudioFiles(LessonModel lesson, Directory lessonDir) async {
     try {
       final quizAudioDir = Directory('${lessonDir.path}/quiz_audio');
@@ -165,6 +186,9 @@ class LessonDownloadNotifier extends StateNotifier<LessonDownloadState> {
       }
       
       state = state.copyWith(isDownloaded: false);
+      _ref.invalidate(downloadedLessonIdsProvider);
+      _ref.invalidate(downloadedLessonsCountProvider);
+      _ref.invalidate(downloadedLessonsProvider);
     } catch (e) {
       state = state.copyWith(error: 'Error removing download: $e');
     }
@@ -203,6 +227,10 @@ class LessonDownloadNotifier extends StateNotifier<LessonDownloadState> {
         if (await pdfFile.exists()) {
           decoded['content'] = pdfFile.path;
         }
+        final thumbnailFile = File('${lessonDir.path}/thumbnail.jpg');
+        if (await thumbnailFile.exists()) {
+          decoded['thumbnail_url'] = thumbnailFile.path;
+        }
 
         final quizzes = decoded['quizzes'];
         if (quizzes is List) {
@@ -234,7 +262,7 @@ class LessonDownloadNotifier extends StateNotifier<LessonDownloadState> {
 }
 
 final lessonDownloadProvider = StateNotifierProvider.family<LessonDownloadNotifier, LessonDownloadState, String>(
-  (ref, lessonId) => LessonDownloadNotifier(lessonId),
+  (ref, lessonId) => LessonDownloadNotifier(ref, lessonId),
 );
 
 // Provider to get offline lesson data
@@ -285,3 +313,17 @@ final downloadedLessonIdsProvider = FutureProvider<List<String>>((ref) async {
     return [];
   }
 }); 
+
+// Provider to get a list of downloaded lessons (limited for UI previews)
+final downloadedLessonsProvider = FutureProvider<List<LessonModel>>((ref) async {
+  final ids = await ref.watch(downloadedLessonIdsProvider.future);
+  if (ids.isEmpty) {
+    return [];
+  }
+
+  final limitedIds = ids.take(4).toList();
+  final lessons = await Future.wait(
+    limitedIds.map((id) => ref.read(offlineLessonProvider(id).future)),
+  );
+  return lessons.whereType<LessonModel>().toList();
+});

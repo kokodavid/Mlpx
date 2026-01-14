@@ -14,6 +14,7 @@ import 'package:milpress/features/user_progress/models/lesson_progress_model.dar
 import 'package:milpress/features/user_progress/models/module_progress_model.dart';
 import 'package:milpress/features/reviews/models/bookmark_model.dart';
 import 'package:milpress/features/assessment/models/assessment_result_model.dart';
+import 'package:milpress/features/widgets/connectivity_sheet_listener.dart';
 import 'package:milpress/providers/auth_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'utils/supabase_config.dart';
@@ -65,8 +66,13 @@ class MyApp extends ConsumerWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
+      builder: (context, child) {
+        return ConnectivitySheetListener(
+          navigatorKey: router.routerDelegate.navigatorKey,
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       routerConfig: router,
     );
   }
 }
-

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../course_widgets/course_card.dart';
 import '../course_widgets/tab_button.dart';
 import '../course_widgets/completed_course_card.dart';
+import '../course_widgets/offline_courses_message.dart';
 import '../providers/course_provider.dart';
 import 'package:milpress/utils/supabase_config.dart';
 import 'package:milpress/features/user_progress/providers/user_progress_providers.dart';
@@ -18,12 +19,42 @@ class CourseScreen extends ConsumerStatefulWidget {
   ConsumerState<CourseScreen> createState() => _CourseScreenState();
 }
 
-class _CourseScreenState extends ConsumerState<CourseScreen> {
+class _CourseScreenState extends ConsumerState<CourseScreen>
+    with WidgetsBindingObserver {
   int selectedTab = 0;
+  late FocusNode _focusNode;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _focusNode = FocusNode();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      _refreshActiveCourseProgress();
+    }
+  }
+
+  void _refreshActiveCourseProgress() {
+    final activeCourse = ref.read(activeCourseWithDetailsProvider).value;
+    if (activeCourse == null) {
+      return;
+    }
+    final courseId = activeCourse.course.id;
+    ref.invalidate(courseCompletedLessonsProvider(courseId));
+    ref.invalidate(courseLessonProgressValueProvider(courseId));
+    ref.invalidate(courseCompletedModulesProvider(courseId));
   }
 
   @override
@@ -93,17 +124,41 @@ class _CourseScreenState extends ConsumerState<CourseScreen> {
                   },
                 ),
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (_, __) => const Center(child: Text('Error loading modules')),
+                error: (_, __) => OfflineCoursesMessage(
+                  onRetry: () {
+                    ref.invalidate(courseCompletedModulesProvider(course.id));
+                  },
+                ),
+                skipLoadingOnReload: true,
+                skipLoadingOnRefresh: true,
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, __) => const Center(child: Text('Error loading progress')),
+              error: (_, __) => OfflineCoursesMessage(
+                onRetry: () {
+                  ref.invalidate(courseLessonProgressValueProvider(course.id));
+                },
+              ),
+              skipLoadingOnReload: true,
+              skipLoadingOnRefresh: true,
             ),
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (_, __) => const Center(child: Text('Error loading lessons')),
+            error: (_, __) => OfflineCoursesMessage(
+              onRetry: () {
+                ref.invalidate(courseCompletedLessonsProvider(course.id));
+              },
+            ),
+            skipLoadingOnReload: true,
+            skipLoadingOnRefresh: true,
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
+        error: (error, stack) => OfflineCoursesMessage(
+          onRetry: () {
+            ref.invalidate(activeCourseWithDetailsProvider);
+          },
+        ),
+        skipLoadingOnReload: true,
+        skipLoadingOnRefresh: true,
       );
     } else if (selectedTab == 1) {
       // Upcoming Tab
@@ -171,7 +226,11 @@ class _CourseScreenState extends ConsumerState<CourseScreen> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
+        error: (error, stack) => OfflineCoursesMessage(
+          onRetry: () {
+            ref.invalidate(upcomingCoursesWithDetailsProvider);
+          },
+        ),
       );
     } else {
       // Completed Tab
@@ -264,51 +323,65 @@ class _CourseScreenState extends ConsumerState<CourseScreen> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
+        error: (error, stack) => OfflineCoursesMessage(
+          onRetry: () {
+            ref.invalidate(completedCoursesWithDetailsProvider);
+          },
+        ),
       );
     }
 
     // Return the Scaffold with tabs and content
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F7),
-      body: SafeArea(
-        child: Column(
-          children: [
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Course', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w500)),
-                ],
+    return Focus(
+      focusNode: _focusNode,
+      onFocusChange: (hasFocus) {
+        if (hasFocus) {
+          _refreshActiveCourseProgress();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF7F7F7),
+        body: SafeArea(
+          child: Column(
+            children: [
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Course',
+                        style: TextStyle(
+                            fontSize: 24, fontWeight: FontWeight.w500)),
+                  ],
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  TabButton(
-                    label: 'Active',
-                    selected: selectedTab == 0,
-                    onTap: () => setState(() => selectedTab = 0),
-                  ),
-                  const SizedBox(width: 8),
-                  TabButton(
-                    label: 'Upcoming',
-                    selected: selectedTab == 1,
-                    onTap: () => setState(() => selectedTab = 1),
-                  ),
-                  const SizedBox(width: 8),
-                  TabButton(
-                    label: 'Completed',
-                    selected: selectedTab == 2,
-                    onTap: () => setState(() => selectedTab = 2),
-                  ),
-                ],
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    TabButton(
+                      label: 'Active',
+                      selected: selectedTab == 0,
+                      onTap: () => setState(() => selectedTab = 0),
+                    ),
+                    const SizedBox(width: 8),
+                    TabButton(
+                      label: 'Upcoming',
+                      selected: selectedTab == 1,
+                      onTap: () => setState(() => selectedTab = 1),
+                    ),
+                    const SizedBox(width: 8),
+                    TabButton(
+                      label: 'Completed',
+                      selected: selectedTab == 2,
+                      onTap: () => setState(() => selectedTab = 2),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Expanded(child: tabContent),
-          ],
+              Expanded(child: tabContent),
+            ],
+          ),
         ),
       ),
     );

@@ -26,7 +26,7 @@ class HomeHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Hi, $userName",
+                  "Hello $userName",
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w500,

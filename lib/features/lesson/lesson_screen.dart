@@ -683,8 +683,9 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
                           final extra = GoRouterState.of(context).extra as Map<String, dynamic>?;
                           final courseContext = extra?['courseContext'] as Map<String, dynamic>?;
                           final isFromBookmark = courseContext?['isFromBookmark'] as bool? ?? false;
+                          final isReviewMode = courseContext?['isReviewMode'] as bool? ?? false;
                           
-                          if (isFromBookmark) {
+                          if (isFromBookmark || isReviewMode) {
                             return const SizedBox.shrink();
                           }
                             

@@ -89,6 +89,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
       ref.invalidate(unsyncedLessonsProvider);
       ref.invalidate(lessonHistoryProvider);
       ref.invalidate(bookmarkCountProvider);
+      ref.invalidate(downloadedLessonIdsProvider);
+      ref.invalidate(downloadedLessonsCountProvider);
       // Reset sync state when screen opens
       ref.read(syncStateProvider.notifier).reset();
     });

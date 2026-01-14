@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:milpress/features/course/course_models/lesson_model.dart';
@@ -34,6 +36,28 @@ class EnhancedLessonCard extends StatelessWidget {
 
 
   Widget _buildFallbackImage(String url) {
+    final uri = Uri.tryParse(url);
+    final isRemote = uri != null && (uri.scheme == 'http' || uri.scheme == 'https');
+
+    if (!isRemote) {
+      return Image.file(
+        File(url),
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: Colors.grey[200],
+            child: const Center(
+              child: Icon(
+                Icons.play_circle_outline,
+                size: 48,
+                color: AppColors.primaryColor,
+              ),
+            ),
+          );
+        },
+      );
+    }
+
     return Image.network(
       url,
       fit: BoxFit.cover,

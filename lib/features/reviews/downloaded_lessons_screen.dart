@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -154,11 +156,7 @@ class _DownloadedLessonCard extends ConsumerWidget {
                 color: const Color(0xFF4A90E2).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
-                Icons.download_done,
-                color: Color(0xFF4A90E2),
-                size: 28,
-              ),
+              child: _buildThumbnail(lesson.thumbnailUrl),
             ),
             title: Text(
               lesson.title,
@@ -332,6 +330,42 @@ class _DownloadedLessonCard extends ConsumerWidget {
         ),
       ),
       error: (_, __) => _buildErrorCard('Error loading lesson'),
+    );
+  }
+
+  Widget _buildThumbnail(String? thumbnailUrl) {
+    if (thumbnailUrl == null || thumbnailUrl.isEmpty) {
+      return const Icon(
+        Icons.download_done,
+        color: Color(0xFF4A90E2),
+        size: 28,
+      );
+    }
+
+    final file = File(thumbnailUrl);
+    if (file.existsSync()) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Image.file(
+          file,
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: Image.network(
+        thumbnailUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return const Icon(
+            Icons.download_done,
+            color: Color(0xFF4A90E2),
+            size: 28,
+          );
+        },
+      ),
     );
   }
 
