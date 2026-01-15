@@ -68,7 +68,7 @@ class AboutScreen extends StatelessWidget {
           
           // App Name
           const Text(
-            'MillPress',
+            'Milpress',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,

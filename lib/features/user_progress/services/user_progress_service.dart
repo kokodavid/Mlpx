@@ -1,47 +1,36 @@
-import 'package:hive/hive.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/lesson_progress_model.dart';
 import '../models/course_progress_model.dart';
 import '../models/module_progress_model.dart';
 
 class UserProgressService {
-  static const String lessonBoxName = 'lesson_progress';
-  static const String courseBoxName = 'course_progress';
-  static const String moduleBoxName = 'module_progress';
-
   final SupabaseClient supabase;
 
   UserProgressService(this.supabase);
 
 
   Future<void> saveLessonProgressLocally(LessonProgressModel progress) async {
-    final box = await Hive.openBox<LessonProgressModel>(lessonBoxName);
-    await box.put(progress.id, progress);
+    await uploadLessonProgressToSupabase(progress);
   }
 
   Future<void> saveCourseProgressLocally(CourseProgressModel progress) async {
-    final box = await Hive.openBox<CourseProgressModel>(courseBoxName);
-    await box.put(progress.id, progress);
+    await uploadCourseProgressToSupabase(progress);
   }
 
   Future<void> saveModuleProgressLocally(ModuleProgressModel progress) async {
-    final box = await Hive.openBox<ModuleProgressModel>(moduleBoxName);
-    await box.put(progress.id, progress);
+    await uploadModuleProgressToSupabase(progress);
   }
 
   Future<List<LessonProgressModel>> getPendingLessonProgress() async {
-    final box = await Hive.openBox<LessonProgressModel>(lessonBoxName);
-    return box.values.where((p) => p.needsSync).toList();
+    return <LessonProgressModel>[];
   }
 
   Future<List<CourseProgressModel>> getPendingCourseProgress() async {
-    final box = await Hive.openBox<CourseProgressModel>(courseBoxName);
-    return box.values.where((p) => p.needsSync).toList();
+    return <CourseProgressModel>[];
   }
 
   Future<List<ModuleProgressModel>> getPendingModuleProgress() async {
-    final box = await Hive.openBox<ModuleProgressModel>(moduleBoxName);
-    return box.values.where((p) => p.needsSync).toList();
+    return <ModuleProgressModel>[];
   }
 
 
@@ -73,7 +62,6 @@ class UserProgressService {
         if (success) {
           print('[syncLessonProgress] Upload successful for id=${progress.id}');
           progress.needsSync = false;
-          await saveLessonProgressLocally(progress);
           successCount++;
         } else {
           print('[syncLessonProgress] Upload failed for id=${progress.id}');
@@ -97,7 +85,6 @@ class UserProgressService {
       if (success) {
         print('[syncModuleProgress] Upload successful for id=\\${progress.id}');
         progress.needsSync = false;
-        await saveModuleProgressLocally(progress);
       } else {
         print('[syncModuleProgress] Upload failed for id=\\${progress.id}');
       }
@@ -115,7 +102,6 @@ class UserProgressService {
       if (success) {
         print('[syncCourseProgress] Upload successful for id=\\${progress.id}');
         progress.needsSync = false;
-        await saveCourseProgressLocally(progress);
       } else {
         print('[syncCourseProgress] Upload failed for id=\\${progress.id}');
       }
@@ -134,7 +120,7 @@ class UserProgressService {
           .from('lesson_progress')
           .upsert(
             jsonData,
-            onConflict: 'id',
+            onConflict: 'user_id,lesson_id',
           );
       
       print('[uploadLessonProgressToSupabase] Supabase response: $response');
@@ -196,6 +182,7 @@ class UserProgressService {
         'video_progress': progress.videoProgress,
         'quiz_score': progress.quizScore,
         'quiz_attempted_at': progress.quizAttemptedAt?.toIso8601String(),
+        'module_id': (progress.moduleId == null || progress.moduleId!.isEmpty) ? null : progress.moduleId,
         'created_at': progress.createdAt.toIso8601String(),
         'updated_at': progress.updatedAt.toIso8601String(),
       };
@@ -231,7 +218,7 @@ class UserProgressService {
     throw Exception('Unknown progress type');
   }
 
-  /// Fetch all course progress for a user from Supabase and cache in Hive
+  /// Fetch all course progress for a user from Supabase
   Future<void> fetchAndCacheCourseProgressFromSupabase(String userId) async {
     print('[fetchAndCacheCourseProgressFromSupabase] Called for userId: $userId');
     final response = await supabase
@@ -241,20 +228,8 @@ class UserProgressService {
     print('[fetchAndCacheCourseProgressFromSupabase] Supabase response: $response');
     if (response != null && response is List) {
       print('[fetchAndCacheCourseProgressFromSupabase] Fetched \\${response.length} items from Supabase');
-      final box = await Hive.openBox<CourseProgressModel>(courseBoxName);
       if (response.isEmpty) {
         print('[fetchAndCacheCourseProgressFromSupabase] No progress found for user in Supabase.');
-      }
-      for (final item in response) {
-        print('[fetchAndCacheCourseProgressFromSupabase] Supabase item: $item');
-        final model = CourseProgressModel.fromJson(item as Map<String, dynamic>);
-        // Set needsSync to false since this record is already in Supabase
-        model.needsSync = false;
-        await box.put(model.id, model);
-        print('[fetchAndCacheCourseProgressFromSupabase] Cached to Hive: id=\\${model.id}, courseId=\\${model.courseId}, needsSync=false');
-      }
-      if (response.isNotEmpty) {
-        print('[fetchAndCacheCourseProgressFromSupabase] Hive box updated with Supabase data.');
       }
     } else {
       print('[fetchAndCacheCourseProgressFromSupabase] Error: response is not a List or is null');
@@ -270,19 +245,8 @@ class UserProgressService {
     print('[fetchAndCacheModuleProgressFromSupabase] Supabase response: $response');
     if (response != null && response is List) {
       print('[fetchAndCacheModuleProgressFromSupabase] Fetched \\${response.length} items from Supabase');
-      final box = await Hive.openBox<ModuleProgressModel>('module_progress');
       if (response.isEmpty) {
         print('[fetchAndCacheModuleProgressFromSupabase] No module progress found for user in Supabase.');
-      }
-      for (final item in response) {
-        print('[fetchAndCacheModuleProgressFromSupabase] Supabase item: $item');
-        final model = ModuleProgressModel.fromJson(item as Map<String, dynamic>);
-        model.needsSync = false;
-        await box.put(model.id, model);
-        print('[fetchAndCacheModuleProgressFromSupabase] Cached to Hive: id=\\${model.id}, moduleId=\\${model.moduleId}, needsSync=false');
-      }
-      if (response.isNotEmpty) {
-        print('[fetchAndCacheModuleProgressFromSupabase] Hive box updated with Supabase data.');
       }
     } else {
       print('[fetchAndCacheModuleProgressFromSupabase] Error: response is not a List or is null');
@@ -298,19 +262,8 @@ class UserProgressService {
     print('[fetchAndCacheLessonProgressFromSupabase] Supabase response: $response');
     if (response != null && response is List) {
       print('[fetchAndCacheLessonProgressFromSupabase] Fetched \\${response.length} items from Supabase');
-      final box = await Hive.openBox<LessonProgressModel>('lesson_progress');
       if (response.isEmpty) {
         print('[fetchAndCacheLessonProgressFromSupabase] No lesson progress found for user in Supabase.');
-      }
-      for (final item in response) {
-        print('[fetchAndCacheLessonProgressFromSupabase] Supabase item: $item');
-        final model = LessonProgressModel.fromJson(item as Map<String, dynamic>);
-        model.needsSync = false;
-        await box.put(model.id, model);
-        print('[fetchAndCacheLessonProgressFromSupabase] Cached to Hive: id=\\${model.id}, lessonId=\\${model.lessonId}, needsSync=false');
-      }
-      if (response.isNotEmpty) {
-        print('[fetchAndCacheLessonProgressFromSupabase] Hive box updated with Supabase data.');
       }
     } else {
       print('[fetchAndCacheLessonProgressFromSupabase] Error: response is not a List or is null');

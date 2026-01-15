@@ -3,19 +3,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milpress/features/lesson/providers/random_lessons_provider.dart';
 import 'package:milpress/features/course/course_models/lesson_model.dart';
+import 'package:milpress/features/lesson/providers/lesson_download_provider.dart';
+import 'package:milpress/providers/connectivity_provider.dart';
 import 'enhanced_lesson_card.dart';
 
 class JumpInLessonSection extends ConsumerWidget {
   const JumpInLessonSection({Key? key}) : super(key: key);
 
-  void _handleLessonTap(BuildContext context, LessonModel lesson) {
+  void _handleLessonTap(BuildContext context, LessonModel lesson, bool isOffline) {
     // Navigate to the lesson screen using push to maintain navigation stack
-    context.push('/lesson/${lesson.id}');
+    final route = isOffline ? '/offline-lesson/${lesson.id}' : '/lesson/${lesson.id}';
+    context.push(route);
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final lessonsAsync = ref.watch(jumpInLessonsProvider);
+    final connectivityAsync = ref.watch(connectivityProvider);
+    final isOffline = connectivityAsync.maybeWhen(
+      data: isOfflineResult,
+      orElse: () => false,
+    );
+    final lessonsAsync =
+        isOffline ? ref.watch(downloadedLessonsProvider) : ref.watch(jumpInLessonsProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,7 +69,7 @@ class JumpInLessonSection extends ConsumerWidget {
                   final lesson = lessons[index];
                   return EnhancedLessonCard(
                     lesson: lesson,
-                    onTap: () => _handleLessonTap(context, lesson),
+                    onTap: () => _handleLessonTap(context, lesson, isOffline),
                   );
                 },
               );

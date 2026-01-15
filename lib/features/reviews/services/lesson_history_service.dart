@@ -1,11 +1,27 @@
-import 'package:hive/hive.dart';
 import 'package:milpress/features/user_progress/models/lesson_progress_model.dart';
+import 'package:milpress/utils/supabase_config.dart';
 
 class LessonHistoryService {
   Future<List<LessonProgressModel>> getCompletedLessons(String userId) async {
-    final box = await Hive.openBox<LessonProgressModel>('lesson_progress');
-    final allLessons = box.values.where((lp) => lp.userId == userId && lp.status == 'completed').toList();
-    allLessons.sort((a, b) => b.completedAt?.compareTo(a.completedAt ?? DateTime(1970)) ?? 0);
-    return allLessons;
+    try {
+      final response = await SupabaseConfig.client
+          .from('lesson_progress')
+          .select()
+          .eq('user_id', userId)
+          .eq('status', 'completed')
+          .order('completed_at', ascending: false)
+          .order('updated_at', ascending: false);
+
+      if (response is! List) {
+        return [];
+      }
+
+      return response
+          .map((row) => LessonProgressModel.fromJson(row))
+          .toList();
+    } catch (e) {
+      print('Error fetching lesson history from Supabase: $e');
+      return [];
+    }
   }
 } 

@@ -49,28 +49,71 @@ class _VideoPlayerDisplayState extends State<_VideoPlayerDisplay> {
   bool _initialized = false;
   bool _isExternal = false;
 
+  void _initializeExternalController(VideoPlayerController controller) {
+    _controller = controller;
+    _isExternal = true;
+    if (_controller!.value.isInitialized) {
+      _initialized = true;
+    } else {
+      _initialized = false;
+      _controller!.initialize().then((_) {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _initialized = true;
+        });
+      });
+    }
+  }
+
+  void _initializeInternalController(String videoUrl) {
+    if (_controller != null) {
+      _controller!.dispose();
+    }
+    _controller = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
+    _isExternal = false;
+    _initialized = false;
+    _controller!.initialize().then((_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _initialized = true;
+      });
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     if (widget.externalController != null) {
-      _controller = widget.externalController;
-      _isExternal = true;
-      if (_controller!.value.isInitialized) {
-        _initialized = true;
-      } else {
-        _controller!.initialize().then((_) {
-          setState(() {
-            _initialized = true;
-          });
-        });
-      }
+      _initializeExternalController(widget.externalController!);
     } else {
-      _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
-        ..initialize().then((_) {
-          setState(() {
-            _initialized = true;
-          });
-        });
+      _initializeInternalController(widget.videoUrl);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _VideoPlayerDisplay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.externalController != oldWidget.externalController) {
+      if (oldWidget.externalController == null && _controller != null) {
+        _controller!.dispose();
+      }
+      if (widget.externalController != null) {
+        _initializeExternalController(widget.externalController!);
+      } else {
+        _initializeInternalController(widget.videoUrl);
+      }
+      return;
+    }
+
+    if (widget.externalController == null &&
+        oldWidget.externalController == null &&
+        widget.videoUrl != oldWidget.videoUrl) {
+      _initializeInternalController(widget.videoUrl);
     }
   }
 
@@ -84,6 +127,13 @@ class _VideoPlayerDisplayState extends State<_VideoPlayerDisplay> {
 
   void _openFullscreen() {
     if (_controller == null) return;
+    try {
+      if (!_controller!.value.isInitialized) {
+        return;
+      }
+    } catch (_) {
+      return;
+    }
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => _FullscreenVideoPlayer(controller: _controller!),
@@ -94,39 +144,53 @@ class _VideoPlayerDisplayState extends State<_VideoPlayerDisplay> {
 
   @override
   Widget build(BuildContext context) {
+    Widget content;
+    if (!_initialized || _controller == null) {
+      content = const Center(child: CircularProgressIndicator());
+    } else {
+      try {
+        if (!_controller!.value.isInitialized) {
+          content = const Center(child: CircularProgressIndicator());
+        } else {
+          content = Stack(
+            children: [
+              Center(
+                child: AspectRatio(
+                  aspectRatio: _controller!.value.aspectRatio,
+                  child: VideoPlayer(_controller!),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: GestureDetector(
+                  onTap: _openFullscreen,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black45,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    padding: const EdgeInsets.all(6),
+                    child:
+                        const Icon(Icons.fullscreen, color: Colors.white, size: 24),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+      } catch (_) {
+        content = const Center(child: CircularProgressIndicator());
+      }
+    }
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(widget.borderRadius),
       child: Container(
         color: Colors.black,
         height: widget.height,
         width: double.infinity,
-        child: _initialized && _controller != null
-            ? Stack(
-                children: [
-                  Center(
-                    child: AspectRatio(
-                      aspectRatio: _controller!.value.aspectRatio,
-                      child: VideoPlayer(_controller!),
-                    ),
-                  ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: GestureDetector(
-                      onTap: _openFullscreen,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.black45,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        padding: const EdgeInsets.all(6),
-                        child: const Icon(Icons.fullscreen, color: Colors.white, size: 24),
-                      ),
-                    ),
-                  ),
-                ],
-              )
-            : const Center(child: CircularProgressIndicator()),
+        child: content,
       ),
     );
   }

@@ -1,13 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive/hive.dart';
-import 'package:milpress/features/course/course_models/lesson_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../course_models/course_model.dart';
 import '../course_models/complete_course_model.dart';
 import '../services/course_service.dart';
 import 'package:flutter/foundation.dart';
-import 'module_provider.dart';
-import 'package:milpress/features/user_progress/models/module_progress_model.dart';
 import 'package:milpress/features/user_progress/providers/course_progress_providers.dart';
 import 'package:milpress/utils/supabase_config.dart';
 import 'package:milpress/features/user_progress/models/course_progress_model.dart';
@@ -31,7 +27,7 @@ final coursesWithDetailsProvider = FutureProvider<List<CourseWithDetails>>((ref)
   final coursesWithDetails = <CourseWithDetails>[];
   for (final course in courses) {
     try {
-      final completeCourse = await courseService.getCompleteCourseWithCache(course.id);
+      final completeCourse = await courseService.getCompleteCourse(course.id);
       final totalModules = completeCourse.modules.length;
       final totalLessons = completeCourse.modules.fold(0, (sum, module) => sum + module.lessons.length);
       print('  -> ${course.title}: $totalModules modules, $totalLessons lessons');
@@ -51,25 +47,6 @@ final coursesWithDetailsProvider = FutureProvider<List<CourseWithDetails>>((ref)
   }
   print('Total coursesWithDetails: ${coursesWithDetails.length}');
   return coursesWithDetails;
-});
-
-final lessonFromHiveProvider =
-    FutureProvider.family<LessonModel?, String>((ref, lessonId) async {
-  // Open the box if not already open
-  if (!Hive.isBoxOpen('complete_courses')) {
-    await Hive.openBox<CompleteCourseModel>('complete_courses');
-  }
-  final box = Hive.box<CompleteCourseModel>('complete_courses');
-  for (final course in box.values) {
-    for (final module in course.modules) {
-      for (final lesson in module.lessons) {
-        if (lesson.id == lessonId) {
-          return lesson;
-        }
-      }
-    }
-  }
-  return null; // Not found
 });
 
 // Provider for the active course with details (not completed, lowest level)
@@ -155,9 +132,9 @@ final courseByIdProvider = FutureProvider.family<CourseModel, String>((ref, id) 
 
 final completeCourseProvider = FutureProvider.family<CompleteCourseModel, String>((ref, courseId) async {
   final courseService = ref.watch(courseServiceProvider);
-  final completeCourse = await courseService.getCompleteCourseWithCache(courseId);
+  final completeCourse = await courseService.getCompleteCourse(courseId);
   
-  // Ensure modules are sorted by position when retrieved from Hive
+  // Ensure modules are sorted by position when retrieved from Supabase
   final sortedModules = List<ModuleWithLessons>.from(completeCourse.modules)
     ..sort((a, b) => a.module.position.compareTo(b.module.position));
   
@@ -171,16 +148,6 @@ final completeCourseProvider = FutureProvider.family<CompleteCourseModel, String
     modules: sortedModules,
     lastUpdated: completeCourse.lastUpdated,
   );
-});
-
-final refreshCompleteCourseProvider = FutureProvider.family<CompleteCourseModel, String>((ref, courseId) async {
-  final courseService = ref.watch(courseServiceProvider);
-  return courseService.refreshCompleteCourse(courseId);
-});
-
-final courseCacheProvider = Provider((ref) {
-  final courseService = ref.watch(courseServiceProvider);
-  return CourseCacheNotifier(courseService);
 });
 
 final courseRefreshProvider = Provider.family<void Function(), String>((ref, courseId) {
@@ -200,6 +167,28 @@ final firstModuleProvider = FutureProvider.family<ModuleWithLessons?, String>((r
   return null;
 });
 
+Future<Set<String>> _fetchCompletedModuleIds(String courseProgressId) async {
+  try {
+    final response = await Supabase.instance.client
+        .from('module_progress')
+        .select('module_id')
+        .eq('course_progress_id', courseProgressId)
+        .eq('status', 'completed');
+
+    if (response is! List) {
+      return <String>{};
+    }
+
+    return response
+        .map((row) => row['module_id'] as String?)
+        .whereType<String>()
+        .toSet();
+  } catch (e) {
+    debugPrint('Error fetching completed modules: $e');
+    return <String>{};
+  }
+}
+
 // Provider to get completed modules for a course
 final completedModulesProvider = FutureProvider.family<Map<String, bool>, String>((ref, courseId) async {
   final completeCourse = await ref.watch(completeCourseProvider(courseId).future);
@@ -208,11 +197,8 @@ final completedModulesProvider = FutureProvider.family<Map<String, bool>, String
   // Get courseProgressId for this course
   final courseProgressId = await ref.watch(getOrCreateCourseProgressProvider(courseId).future);
   
-  // Check module progress records in Hive
-  final moduleProgressBox = await Hive.openBox<ModuleProgressModel>('module_progress');
-  final moduleProgressRecords = moduleProgressBox.values.where((mp) => 
-    mp.courseProgressId == courseProgressId && mp.status == 'completed'
-  ).map((mp) => mp.moduleId).toSet();
+  // Check module progress records in Supabase
+  final moduleProgressRecords = await _fetchCompletedModuleIds(courseProgressId);
   
   print('\n=== Completed Modules Provider Debug ===');
   print('Course ID: $courseId');
@@ -220,18 +206,12 @@ final completedModulesProvider = FutureProvider.family<Map<String, bool>, String
   print('Completed modules from progress records: ${moduleProgressRecords.toList()}');
   
   for (final module in completeCourse.modules) {
-    // Check both quiz progress and module progress records
-    final moduleProgress = ref.watch(moduleQuizProgressProvider(module.module.id));
-    final isCompletedFromQuiz = moduleProgress?.isModuleComplete ?? false;
     final isCompletedFromRecord = moduleProgressRecords.contains(module.module.id);
-    final isCompleted = isCompletedFromQuiz || isCompletedFromRecord;
-    
-    completedModules[module.module.id] = isCompleted;
-    
+
+    completedModules[module.module.id] = isCompletedFromRecord;
+
     print('Module: ${module.module.description} (${module.module.id})');
-    print('  Completed from quiz: $isCompletedFromQuiz');
     print('  Completed from record: $isCompletedFromRecord');
-    print('  Overall completed: $isCompleted');
   }
   
   print('Final completed modules: ${completedModules.entries.where((e) => e.value).map((e) => e.key).toList()}');
@@ -248,30 +228,23 @@ final ongoingModuleProvider = FutureProvider.family<ModuleWithLessons?, String>(
   // Get courseProgressId for this course
   final courseProgressId = await ref.watch(getOrCreateCourseProgressProvider(courseId).future);
   
-  // Check module progress records in Hive
-  final moduleProgressBox = await Hive.openBox<ModuleProgressModel>('module_progress');
-  final moduleProgressRecords = moduleProgressBox.values.where((mp) => 
-    mp.courseProgressId == courseProgressId && mp.status == 'completed'
-  ).map((mp) => mp.moduleId).toSet();
+  // Check module progress records in Supabase
+  final moduleProgressRecords = await _fetchCompletedModuleIds(courseProgressId);
   
   print('\n=== Ongoing Module Provider Debug ===');
   print('Course ID: $courseId');
   print('Course Progress ID: $courseProgressId');
-  print('Completed modules from quiz progress: ${completedModules.keys.where((id) => completedModules[id] == true).toList()}');
+  print('Completed modules from progress records: ${moduleProgressRecords.toList()}');
   print('Completed modules from progress records: ${moduleProgressRecords.toList()}');
   
   // Find the first incomplete module
   for (final module in completeCourse.modules) {
-    final isCompletedFromQuiz = completedModules[module.module.id] ?? false;
     final isCompletedFromRecord = moduleProgressRecords.contains(module.module.id);
-    final isCompleted = isCompletedFromQuiz || isCompletedFromRecord;
-    
+
     print('Module: ${module.module.description} (${module.module.id})');
-    print('  Completed from quiz: $isCompletedFromQuiz');
     print('  Completed from record: $isCompletedFromRecord');
-    print('  Overall completed: $isCompleted');
-    
-    if (!isCompleted) {
+
+    if (!isCompletedFromRecord) {
       print('  -> Returning as ongoing module');
       print('=====================================\n');
       return module;
@@ -297,14 +270,14 @@ final courseProgressProvider = FutureProvider.family<CourseProgressStats, String
   int completedQuizzes = 0;
   
   // Calculate lesson and quiz progress
-  for (final module in completeCourse.modules) {
-    final moduleProgress = ref.watch(moduleQuizProgressProvider(module.module.id));
-    if (moduleProgress != null) {
-      completedLessons += moduleProgress.lessonScores.length;
-      totalQuizzes += moduleProgress.totalQuizzes;
-      completedQuizzes += moduleProgress.completedQuizzes;
-    }
-  }
+  // for (final module in completeCourse.modules) {
+  //   final moduleProgress = ref.watch(moduleQuizProgressProvider(module.module.id));
+  //   if (moduleProgress != null) {
+  //     completedLessons += moduleProgress.lessonScores.length;
+  //     totalQuizzes += moduleProgress.totalQuizzes;
+  //     completedQuizzes += moduleProgress.completedQuizzes;
+  //   }
+  // }
   
   return CourseProgressStats(
     totalModules: totalModules,
@@ -330,68 +303,10 @@ class CourseWithDetails {
   });
 }
 
-class CourseCacheNotifier {
-  final CourseService _courseService;
-
-  CourseCacheNotifier(this._courseService);
-
-  Future<void> clearCourseCache(String courseId) async {
-    await _courseService.clearCourseCache(courseId);
-  }
-
-  Future<void> clearAllCache() async {
-    await _courseService.clearAllCourseCache();
-  }
-
-  Future<CompleteCourseModel> refreshCourseCache(String courseId) async {
-    return await _courseService.refreshCompleteCourse(courseId);
-  }
-
-  Future<void> verifyQuizData(String courseId) async {
-    try {
-      final box = await Hive.openBox<CompleteCourseModel>('complete_courses');
-      final cachedCourse = box.get(courseId);
-      
-      if (cachedCourse != null) {
-        debugPrint('\n=== Quiz Data Verification for Course $courseId ===');
-        debugPrint('Course: ${cachedCourse.course.title}');
-        debugPrint('Modules: ${cachedCourse.modules.length}');
-        
-        int totalLessons = 0;
-        int totalQuizzes = 0;
-        
-        for (int moduleIndex = 0; moduleIndex < cachedCourse.modules.length; moduleIndex++) {
-          final module = cachedCourse.modules[moduleIndex];
-          debugPrint('\nModule $moduleIndex: ${module.module.description}');
-          debugPrint('  Lessons: ${module.lessons.length}');
-          
-          for (int lessonIndex = 0; lessonIndex < module.lessons.length; lessonIndex++) {
-            final lesson = module.lessons[lessonIndex];
-            totalLessons++;
-            totalQuizzes += lesson.quizzes.length;
-            
-            debugPrint('    Lesson $lessonIndex: ${lesson.title}');
-            debugPrint('      Quizzes: ${lesson.quizzes.length}');
-            
-            for (int quizIndex = 0; quizIndex < lesson.quizzes.length; quizIndex++) {
-              final quiz = lesson.quizzes[quizIndex];
-              debugPrint('        Quiz $quizIndex: ${quiz.stage} - ${quiz.questionType}');
-            }
-          }
-        }
-        
-        debugPrint('\nSummary:');
-        debugPrint('  Total Lessons: $totalLessons');
-        debugPrint('  Total Quizzes: $totalQuizzes');
-        debugPrint('=====================================\n');
-      } else {
-        debugPrint('No cached data found for course $courseId');
-      }
-    } catch (e) {
-      debugPrint('Error verifying quiz data: $e');
-    }
-  }
-}
+final refreshCompleteCourseProvider = FutureProvider.family<CompleteCourseModel, String>((ref, courseId) async {
+  final courseService = ref.watch(courseServiceProvider);
+  return courseService.getCompleteCourse(courseId);
+});
 
 // Course Progress Statistics Model
 class CourseProgressStats {
@@ -486,14 +401,14 @@ final courseProgressWithRefreshProvider = FutureProvider.family<CourseProgressSt
   int completedQuizzes = 0;
   
   // Calculate lesson and quiz progress
-  for (final module in completeCourse.modules) {
-    final moduleProgress = ref.watch(moduleQuizProgressProvider(module.module.id));
-    if (moduleProgress != null) {
-      completedLessons += moduleProgress.lessonScores.length;
-      totalQuizzes += moduleProgress.totalQuizzes;
-      completedQuizzes += moduleProgress.completedQuizzes;
-    }
-  }
+  // for (final module in completeCourse.modules) {
+  //   final moduleProgress = ref.watch(moduleQuizProgressProvider(module.module.id));
+  //   if (moduleProgress != null) {
+  //     completedLessons += moduleProgress.lessonScores.length;
+  //     totalQuizzes += moduleProgress.totalQuizzes;
+  //     completedQuizzes += moduleProgress.completedQuizzes;
+  //   }
+  // }
   
   return CourseProgressStats(
     totalModules: totalModules,
@@ -520,9 +435,9 @@ final autoRefreshCourseDataProvider = FutureProvider.family<void, String>((ref, 
   
   // Force refresh of all module progress
   final completeCourse = await ref.watch(completeCourseProvider(courseId).future);
-  for (final module in completeCourse.modules) {
-    ref.read(moduleQuizProgressProvider(module.module.id).notifier).loadModuleProgress(module.module.id);
-  }
+  // for (final module in completeCourse.modules) {
+  //   ref.read(moduleQuizProgressProvider(module.module.id).notifier).loadModuleProgress(module.module.id);
+  // }
   
   debugPrint('AutoRefreshCourseDataProvider: Refreshed all data for course $courseId');
 });

@@ -1,2 +1,0 @@
-/Users/davidmochoge/Documents/GitHub/millpress-main/android/app/.cxx/release/4gqd704s/armeabi-v7a/CMakeFiles/edit_cache.dir
-/Users/davidmochoge/Documents/GitHub/millpress-main/android/app/.cxx/release/4gqd704s/armeabi-v7a/CMakeFiles/rebuild_cache.dir

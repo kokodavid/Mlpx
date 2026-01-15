@@ -1,12 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milpress/features/reviews/services/bookmark_service.dart';
 import 'package:milpress/features/reviews/models/bookmark_model.dart';
+import 'package:milpress/providers/auth_provider.dart';
 import 'package:milpress/utils/supabase_config.dart';
 
 final bookmarkServiceProvider = Provider((ref) => BookmarkService());
 
 final userBookmarksProvider = FutureProvider<List<BookmarkModel>>((ref) async {
-  final user = SupabaseConfig.currentUser;
+  final authUser = ref.watch(authProvider).value;
+  final user = authUser ?? SupabaseConfig.currentUser;
   final userId = user?.id;
   if (userId == null) return [];
   
@@ -15,7 +17,8 @@ final userBookmarksProvider = FutureProvider<List<BookmarkModel>>((ref) async {
 });
 
 final unsyncedBookmarksProvider = FutureProvider<List<BookmarkModel>>((ref) async {
-  final user = SupabaseConfig.currentUser;
+  final authUser = ref.watch(authProvider).value;
+  final user = authUser ?? SupabaseConfig.currentUser;
   final userId = user?.id;
   if (userId == null) return [];
   
@@ -30,7 +33,8 @@ final bookmarkCountProvider = FutureProvider<int>((ref) async {
 
 // Provider to check if a specific lesson is bookmarked
 final isLessonBookmarkedProvider = FutureProvider.family<bool, String>((ref, lessonId) async {
-  final user = SupabaseConfig.currentUser;
+  final authUser = ref.watch(authProvider).value;
+  final user = authUser ?? SupabaseConfig.currentUser;
   final userId = user?.id;
   if (userId == null) return false;
   
@@ -40,7 +44,8 @@ final isLessonBookmarkedProvider = FutureProvider.family<bool, String>((ref, les
 
 // Provider to add a bookmark
 final addBookmarkProvider = FutureProvider.family<void, Map<String, String>>((ref, params) async {
-  final user = SupabaseConfig.currentUser;
+  final authUser = ref.watch(authProvider).value;
+  final user = authUser ?? SupabaseConfig.currentUser;
   final userId = user?.id;
   if (userId == null) throw Exception('User not logged in');
   
@@ -63,7 +68,8 @@ final addBookmarkProvider = FutureProvider.family<void, Map<String, String>>((re
 
 // Provider to remove a bookmark
 final removeBookmarkProvider = FutureProvider.family<void, String>((ref, lessonId) async {
-  final user = SupabaseConfig.currentUser;
+  final authUser = ref.watch(authProvider).value;
+  final user = authUser ?? SupabaseConfig.currentUser;
   final userId = user?.id;
   if (userId == null) throw Exception('User not logged in');
   
@@ -78,7 +84,8 @@ final removeBookmarkProvider = FutureProvider.family<void, String>((ref, lessonI
 
 // Provider to sync bookmarks
 final syncBookmarksProvider = FutureProvider<void>((ref) async {
-  final user = SupabaseConfig.currentUser;
+  final authUser = ref.watch(authProvider).value;
+  final user = authUser ?? SupabaseConfig.currentUser;
   final userId = user?.id;
   if (userId == null) throw Exception('User not logged in');
   
@@ -93,7 +100,8 @@ final syncBookmarksProvider = FutureProvider<void>((ref) async {
 
 // Provider to fetch bookmarks from cloud
 final fetchBookmarksFromCloudProvider = FutureProvider<void>((ref) async {
-  final user = SupabaseConfig.currentUser;
+  final authUser = ref.watch(authProvider).value;
+  final user = authUser ?? SupabaseConfig.currentUser;
   final userId = user?.id;
   if (userId == null) throw Exception('User not logged in');
   

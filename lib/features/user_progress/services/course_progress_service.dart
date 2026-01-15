@@ -1,11 +1,9 @@
-import 'package:hive/hive.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/course_progress_model.dart';
 import 'package:milpress/utils/supabase_config.dart';
 import 'package:uuid/uuid.dart';
 
 class CourseProgressService {
-  static const String courseBoxName = 'course_progress';
   final SupabaseClient supabase;
 
   CourseProgressService(this.supabase);
@@ -21,21 +19,6 @@ class CourseProgressService {
       throw Exception('User not authenticated');
     }
 
-    // First check Hive for existing course progress
-    final box = await Hive.openBox<CourseProgressModel>(courseBoxName);
-    CourseProgressModel? existing;
-    
-    try {
-      existing = box.values.cast<CourseProgressModel>().firstWhere(
-        (cp) => cp.userId == userId && cp.courseId == courseId,
-      );
-      print('Found existing course progress in Hive: ${existing.id}');
-      return existing.id;
-    } catch (_) {
-      // Not found in Hive, check Supabase
-      print('Course progress not found in Hive, checking Supabase...');
-    }
-
     // Check Supabase for existing course progress
     try {
       final response = await supabase
@@ -48,18 +31,6 @@ class CourseProgressService {
       if (response != null) {
         final courseProgressId = response['id'] as String;
         print('Found existing course progress in Supabase: $courseProgressId');
-        
-        // Fetch the full record and cache it in Hive
-        final fullResponse = await supabase
-            .from('course_progress')
-            .select()
-            .eq('id', courseProgressId)
-            .single();
-        
-        final courseProgress = CourseProgressModel.fromJson(fullResponse);
-        await box.put(courseProgress.id, courseProgress);
-        print('Cached course progress in Hive: ${courseProgress.id}');
-        
         return courseProgressId;
       }
     } catch (e) {
@@ -84,10 +55,6 @@ class CourseProgressService {
       needsSync: true,
     );
 
-    // Save locally first
-    await box.put(newId, courseProgress);
-    print('Created new course progress locally: $newId');
-    
     // Try to upload to Supabase with upsert to handle conflicts
     final success = await uploadCourseProgressToSupabase(courseProgress);
     
@@ -105,14 +72,6 @@ class CourseProgressService {
         final actualId = response['id'] as String;
         if (actualId != newId) {
           print('Upload resulted in different ID: expected $newId, got $actualId');
-          // Remove the local record with wrong ID
-          await box.delete(newId);
-          
-          // Cache the actual record
-          final actualCourseProgress = CourseProgressModel.fromJson(response);
-          await box.put(actualCourseProgress.id, actualCourseProgress);
-          print('Cached actual course progress in Hive: ${actualCourseProgress.id}');
-          
           return actualId;
         }
       } catch (e) {
@@ -161,15 +120,23 @@ class CourseProgressService {
     };
   }
 
-  /// Get course progress by ID from Hive
+  /// Get course progress by ID from Supabase
   Future<CourseProgressModel?> getCourseProgressById(String courseProgressId) async {
-    final box = await Hive.openBox<CourseProgressModel>(courseBoxName);
-    return box.get(courseProgressId);
+    try {
+      final response = await supabase
+          .from('course_progress')
+          .select()
+          .eq('id', courseProgressId)
+          .single();
+      return CourseProgressModel.fromJson(response);
+    } catch (e) {
+      print('Error fetching course progress by ID: $e');
+      return null;
+    }
   }
 
   /// Update course progress
   Future<void> updateCourseProgress(CourseProgressModel progress) async {
-    final box = await Hive.openBox<CourseProgressModel>(courseBoxName);
-    await box.put(progress.id, progress);
+    await uploadCourseProgressToSupabase(progress);
   }
 } 

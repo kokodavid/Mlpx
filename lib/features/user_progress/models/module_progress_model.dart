@@ -96,4 +96,22 @@ class ModuleProgressModel extends HiveObject {
       needsSync: needsSync ?? this.needsSync,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'user_id': userId,
+      'module_id': moduleId,
+      'course_progress_id':
+          courseProgressId.isEmpty ? null : courseProgressId,
+      'status': status,
+      'started_at': startedAt?.toIso8601String(),
+      'completed_at': completedAt?.toIso8601String(),
+      'average_score': averageScore,
+      'total_lessons': totalLessons,
+      'completed_lessons': completedLessons,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+    };
+  }
 } 

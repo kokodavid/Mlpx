@@ -54,6 +54,8 @@ app.*.map.json
 # Android
 android/.gradle/
 android/app/build/
+android/.cxx/
+android/app/.cxx/
 
 # iOS
 ios/Pods/

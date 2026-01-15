@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milpress/features/course/providers/course_provider.dart';
+import 'package:milpress/features/user_progress/providers/course_progress_providers.dart';
 import 'package:milpress/features/user_progress/providers/user_progress_providers.dart';
 import 'package:milpress/features/course/providers/module_provider.dart';
 import 'package:milpress/utils/supabase_config.dart';
@@ -33,10 +34,19 @@ final ongoingLessonProvider = FutureProvider<OngoingLessonData?>((ref) async {
 
     final courseId = activeCourse.course.id;
 
-    // Get the ongoing module for this course
     final ongoingModule =
         await ref.watch(ongoingModuleProvider(courseId).future);
     if (ongoingModule == null) return null;
+
+    final sortedLessons = List.of(ongoingModule.lessons)
+      ..sort((a, b) {
+        final positionCompare = a.position.compareTo(b.position);
+        if (positionCompare != 0) {
+          return positionCompare;
+        }
+        return a.id.compareTo(b.id);
+      });
+    if (sortedLessons.isEmpty) return null;
 
     // Get course progress to calculate overall progress
     final completedLessons =
@@ -46,20 +56,38 @@ final ongoingLessonProvider = FutureProvider<OngoingLessonData?>((ref) async {
         ? ((completedLessons / totalLessons) * 100).round()
         : 0;
 
-    // Get the first lesson in the ongoing module
-    final currentLesson =
-        ongoingModule.lessons.isNotEmpty ? ongoingModule.lessons.first : null;
-    if (currentLesson == null) return null;
+    // Find the next lesson based on Supabase progress for this module
+    Set<String> completedLessonIds = {};
+    final userId = SupabaseConfig.currentUser?.id;
+    if (userId != null) {
+      try {
+        final response = await SupabaseConfig.client
+            .from('lesson_progress')
+            .select('lesson_id')
+            .eq('user_id', userId)
+            .eq('module_id', ongoingModule.module.id)
+            .eq('status', 'completed');
 
-    // Calculate time left based on course duration and progress
+        if (response is List) {
+          completedLessonIds = response
+              .map((row) => row['lesson_id'] as String?)
+              .whereType<String>()
+              .toSet();
+        }
+      } catch (e) {
+        print('Error fetching lesson progress for ongoing lesson: $e');
+      }
+    }
+
+    final nextLesson = sortedLessons.firstWhere(
+      (lesson) => !completedLessonIds.contains(lesson.id),
+      orElse: () => sortedLessons.first,
+    );
+
+    // Display total course duration
     final courseDurationMinutes = activeCourse.course.durationInMinutes;
-    final remainingLessons = totalLessons - completedLessons;
-    final estimatedTimePerLesson = courseDurationMinutes / totalLessons;
-    final remainingTimeMinutes =
-        (remainingLessons * estimatedTimePerLesson).round();
-
-    final hours = remainingTimeMinutes ~/ 60;
-    final minutes = remainingTimeMinutes % 60;
+    final hours = courseDurationMinutes ~/ 60;
+    final minutes = courseDurationMinutes % 60;
     final timeLeft =
         hours > 0 ? "$hours Hours $minutes Minutes" : "$minutes Minutes";
 
@@ -69,12 +97,12 @@ final ongoingLessonProvider = FutureProvider<OngoingLessonData?>((ref) async {
     final studyTime = "$studyTimeMinutes minutes a day";
 
     return OngoingLessonData(
-      title: "${ongoingModule.module.description}: ${currentLesson.title}",
+      title: nextLesson.title,
       progressPercentage: progressPercentage,
       studyTime: studyTime,
       timeLeft: timeLeft,
       courseId: courseId,
-      lessonId: currentLesson.id,
+      lessonId: nextLesson.id,
       moduleId: ongoingModule.module.id,
     );
   } catch (e) {

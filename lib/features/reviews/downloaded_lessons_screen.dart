@@ -1,9 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milpress/features/lesson/providers/lesson_download_provider.dart';
 import 'package:milpress/features/course/providers/module_provider.dart';
-import 'package:milpress/features/course/course_models/lesson_model.dart';
 
 class DownloadedLessonsScreen extends ConsumerWidget {
   const DownloadedLessonsScreen({Key? key}) : super(key: key);
@@ -120,15 +121,20 @@ class _DownloadedLessonCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final lessonAsync = ref.watch(lessonFromHiveProvider(lessonId));
+    final offlineLessonAsync = ref.watch(offlineLessonProvider(lessonId));
+    final onlineLessonAsync = ref.watch(lessonFromSupabaseProvider(lessonId));
 
-    return lessonAsync.when(
-      data: (lesson) {
-        if (lesson == null) {
-          return _buildErrorCard('Lesson not found');
-        }
+    return offlineLessonAsync.when(
+      data: (offlineLesson) {
+        return onlineLessonAsync.when(
+          data: (onlineLesson) {
+            final lesson = offlineLesson ?? onlineLesson;
+            final hasOffline = offlineLesson != null;
+            if (lesson == null) {
+              return _buildErrorCard('Lesson not found');
+            }
 
-        return Container(
+            return Container(
           margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -150,11 +156,7 @@ class _DownloadedLessonCard extends ConsumerWidget {
                 color: const Color(0xFF4A90E2).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
-                Icons.download_done,
-                color: Color(0xFF4A90E2),
-                size: 28,
-              ),
+              child: _buildThumbnail(lesson.thumbnailUrl),
             ),
             title: Text(
               lesson.title,
@@ -203,7 +205,16 @@ class _DownloadedLessonCard extends ConsumerWidget {
                 switch (value) {
                   case 'view':
                     // Navigate to lesson screen
-                    context.push('/lesson/${lesson.id}');
+                    if (hasOffline) {
+                      context.push('/offline-lesson/${lesson.id}');
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Offline data missing. Re-download the lesson.'),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                    }
                     break;
                   case 'remove':
                     // Show confirmation dialog
@@ -264,9 +275,22 @@ class _DownloadedLessonCard extends ConsumerWidget {
             ),
             onTap: () {
               // Navigate to lesson screen
-              context.push('/lesson/${lesson.id}');
+              if (hasOffline) {
+                context.push('/offline-lesson/${lesson.id}');
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Offline data missing. Re-download the lesson.'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              }
             },
           ),
+        );
+          },
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => _buildErrorCard('Error loading lesson'),
         );
       },
       loading: () => Container(
@@ -306,6 +330,42 @@ class _DownloadedLessonCard extends ConsumerWidget {
         ),
       ),
       error: (_, __) => _buildErrorCard('Error loading lesson'),
+    );
+  }
+
+  Widget _buildThumbnail(String? thumbnailUrl) {
+    if (thumbnailUrl == null || thumbnailUrl.isEmpty) {
+      return const Icon(
+        Icons.download_done,
+        color: Color(0xFF4A90E2),
+        size: 28,
+      );
+    }
+
+    final file = File(thumbnailUrl);
+    if (file.existsSync()) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Image.file(
+          file,
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: Image.network(
+        thumbnailUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return const Icon(
+            Icons.download_done,
+            color: Color(0xFF4A90E2),
+            size: 28,
+          );
+        },
+      ),
     );
   }
 

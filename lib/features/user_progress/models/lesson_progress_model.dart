@@ -34,6 +34,8 @@ class LessonProgressModel extends HiveObject {
   int? quizTotalQuestions;
   @HiveField(14)
   String? lessonTitle;
+  @HiveField(15)
+  String? moduleId;
 
   LessonProgressModel({
     required this.id,
@@ -51,6 +53,7 @@ class LessonProgressModel extends HiveObject {
     this.needsSync = true,
     this.quizTotalQuestions,
     this.lessonTitle,
+    this.moduleId,
   });
 
   factory LessonProgressModel.fromJson(Map<String, dynamic> json) {
@@ -70,6 +73,7 @@ class LessonProgressModel extends HiveObject {
       needsSync: false, // Data from Supabase is always synced
       quizTotalQuestions: json['quiz_total_questions'] as int?,
       lessonTitle: json['lesson_title'] as String?,
+      moduleId: json['module_id'] as String?,
     );
   }
 
@@ -89,6 +93,7 @@ class LessonProgressModel extends HiveObject {
     bool? needsSync,
     int? quizTotalQuestions,
     String? lessonTitle,
+    String? moduleId,
   }) {
     return LessonProgressModel(
       id: id ?? this.id,
@@ -106,6 +111,7 @@ class LessonProgressModel extends HiveObject {
       needsSync: needsSync ?? this.needsSync,
       quizTotalQuestions: quizTotalQuestions ?? this.quizTotalQuestions,
       lessonTitle: lessonTitle ?? this.lessonTitle,
+      moduleId: moduleId ?? this.moduleId,
     );
   }
 }
