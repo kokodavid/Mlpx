@@ -4,7 +4,6 @@ import '../course_models/course_model.dart';
 import '../course_models/complete_course_model.dart';
 import '../services/course_service.dart';
 import 'package:flutter/foundation.dart';
-import 'module_provider.dart';
 import 'package:milpress/features/user_progress/providers/course_progress_providers.dart';
 import 'package:milpress/utils/supabase_config.dart';
 import 'package:milpress/features/user_progress/models/course_progress_model.dart';
@@ -207,18 +206,12 @@ final completedModulesProvider = FutureProvider.family<Map<String, bool>, String
   print('Completed modules from progress records: ${moduleProgressRecords.toList()}');
   
   for (final module in completeCourse.modules) {
-    // Check both quiz progress and module progress records
-    final moduleProgress = ref.watch(moduleQuizProgressProvider(module.module.id));
-    final isCompletedFromQuiz = moduleProgress?.isModuleComplete ?? false;
     final isCompletedFromRecord = moduleProgressRecords.contains(module.module.id);
-    final isCompleted = isCompletedFromQuiz || isCompletedFromRecord;
-    
-    completedModules[module.module.id] = isCompleted;
-    
+
+    completedModules[module.module.id] = isCompletedFromRecord;
+
     print('Module: ${module.module.description} (${module.module.id})');
-    print('  Completed from quiz: $isCompletedFromQuiz');
     print('  Completed from record: $isCompletedFromRecord');
-    print('  Overall completed: $isCompleted');
   }
   
   print('Final completed modules: ${completedModules.entries.where((e) => e.value).map((e) => e.key).toList()}');
@@ -241,21 +234,17 @@ final ongoingModuleProvider = FutureProvider.family<ModuleWithLessons?, String>(
   print('\n=== Ongoing Module Provider Debug ===');
   print('Course ID: $courseId');
   print('Course Progress ID: $courseProgressId');
-  print('Completed modules from quiz progress: ${completedModules.keys.where((id) => completedModules[id] == true).toList()}');
+  print('Completed modules from progress records: ${moduleProgressRecords.toList()}');
   print('Completed modules from progress records: ${moduleProgressRecords.toList()}');
   
   // Find the first incomplete module
   for (final module in completeCourse.modules) {
-    final isCompletedFromQuiz = completedModules[module.module.id] ?? false;
     final isCompletedFromRecord = moduleProgressRecords.contains(module.module.id);
-    final isCompleted = isCompletedFromQuiz || isCompletedFromRecord;
-    
+
     print('Module: ${module.module.description} (${module.module.id})');
-    print('  Completed from quiz: $isCompletedFromQuiz');
     print('  Completed from record: $isCompletedFromRecord');
-    print('  Overall completed: $isCompleted');
-    
-    if (!isCompleted) {
+
+    if (!isCompletedFromRecord) {
       print('  -> Returning as ongoing module');
       print('=====================================\n');
       return module;
@@ -281,14 +270,14 @@ final courseProgressProvider = FutureProvider.family<CourseProgressStats, String
   int completedQuizzes = 0;
   
   // Calculate lesson and quiz progress
-  for (final module in completeCourse.modules) {
-    final moduleProgress = ref.watch(moduleQuizProgressProvider(module.module.id));
-    if (moduleProgress != null) {
-      completedLessons += moduleProgress.lessonScores.length;
-      totalQuizzes += moduleProgress.totalQuizzes;
-      completedQuizzes += moduleProgress.completedQuizzes;
-    }
-  }
+  // for (final module in completeCourse.modules) {
+  //   final moduleProgress = ref.watch(moduleQuizProgressProvider(module.module.id));
+  //   if (moduleProgress != null) {
+  //     completedLessons += moduleProgress.lessonScores.length;
+  //     totalQuizzes += moduleProgress.totalQuizzes;
+  //     completedQuizzes += moduleProgress.completedQuizzes;
+  //   }
+  // }
   
   return CourseProgressStats(
     totalModules: totalModules,
@@ -412,14 +401,14 @@ final courseProgressWithRefreshProvider = FutureProvider.family<CourseProgressSt
   int completedQuizzes = 0;
   
   // Calculate lesson and quiz progress
-  for (final module in completeCourse.modules) {
-    final moduleProgress = ref.watch(moduleQuizProgressProvider(module.module.id));
-    if (moduleProgress != null) {
-      completedLessons += moduleProgress.lessonScores.length;
-      totalQuizzes += moduleProgress.totalQuizzes;
-      completedQuizzes += moduleProgress.completedQuizzes;
-    }
-  }
+  // for (final module in completeCourse.modules) {
+  //   final moduleProgress = ref.watch(moduleQuizProgressProvider(module.module.id));
+  //   if (moduleProgress != null) {
+  //     completedLessons += moduleProgress.lessonScores.length;
+  //     totalQuizzes += moduleProgress.totalQuizzes;
+  //     completedQuizzes += moduleProgress.completedQuizzes;
+  //   }
+  // }
   
   return CourseProgressStats(
     totalModules: totalModules,
@@ -446,9 +435,9 @@ final autoRefreshCourseDataProvider = FutureProvider.family<void, String>((ref, 
   
   // Force refresh of all module progress
   final completeCourse = await ref.watch(completeCourseProvider(courseId).future);
-  for (final module in completeCourse.modules) {
-    ref.read(moduleQuizProgressProvider(module.module.id).notifier).loadModuleProgress(module.module.id);
-  }
+  // for (final module in completeCourse.modules) {
+  //   ref.read(moduleQuizProgressProvider(module.module.id).notifier).loadModuleProgress(module.module.id);
+  // }
   
   debugPrint('AutoRefreshCourseDataProvider: Refreshed all data for course $courseId');
 });

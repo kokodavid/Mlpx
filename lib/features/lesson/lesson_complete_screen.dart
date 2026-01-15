@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milpress/utils/app_colors.dart';
 import 'package:go_router/go_router.dart';
-import 'package:milpress/features/lesson/providers/lesson_quiz_progress_provider.dart';
 import 'package:milpress/features/course/providers/module_provider.dart';
 import 'package:milpress/features/user_progress/providers/user_progress_providers.dart';
 import 'package:milpress/features/user_progress/models/module_progress_model.dart';
@@ -51,13 +50,6 @@ class _LessonCompleteScreenState extends ConsumerState<LessonCompleteScreen> {
   @override
   void initState() {
     super.initState();
-    // Handle quiz result if provided
-    if (widget.quizResult != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final score = widget.quizResult!['score'] as int;
-        ref.read(lessonQuizProgressProvider.notifier).markCompleted(score);
-      });
-    }
   }
 
   Future<void> _goToNextLesson(BuildContext context) async {
@@ -363,7 +355,6 @@ class _LessonCompleteScreenState extends ConsumerState<LessonCompleteScreen> {
                         );
                         return;
                       }
-                      ref.read(lessonQuizProgressProvider.notifier).reset();
                       context.go(
                         '/lesson/$lessonId',
                         extra: {
@@ -411,163 +402,6 @@ class _LessonCompleteScreenState extends ConsumerState<LessonCompleteScreen> {
               ),
             ),
             const SizedBox(height: 18),
-            // Module Progress Summary (only show when module is complete)
-            if (isModuleComplete && moduleId != null)
-              Consumer(
-                builder: (context, ref, child) {
-                  final moduleProgress = ref.watch(moduleQuizProgressProvider(moduleId));
-                  
-                  if (moduleProgress != null && moduleProgress.lessonScores.isNotEmpty) {
-                    return Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.green.withOpacity(0.3)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(
-                                Icons.assessment,
-                                color: Colors.green,
-                                size: 20,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Module Progress Summary',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          ...moduleProgress.lessonScores.entries.map((entry) {
-                            final lessonId = entry.key;
-                            final lessonScore = entry.value;
-                            
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[50],
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.grey[300]!),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    lessonScore.lessonTitle,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF232B3A),
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        lessonScore.isCompleted 
-                                            ? Icons.check_circle 
-                                            : Icons.circle_outlined,
-                                        size: 16,
-                                        color: lessonScore.isCompleted 
-                                            ? Colors.green 
-                                            : Colors.grey,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          'Score: ${lessonScore.score}/${lessonScore.totalQuestions}',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: lessonScore.isCompleted 
-                                                ? Colors.green 
-                                                : Colors.grey,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                      if (lessonScore.isCompleted)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.green.withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                          child: const Text(
-                                            'Completed',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              color: Colors.green,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                  if (lessonScore.completedAt != null) ...[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Completed: ${_formatDate(lessonScore.completedAt!)}',
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.trending_up,
-                                  color: Colors.green,
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Average Score: ${moduleProgress.averageScore.toStringAsFixed(1)}%',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.green,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
             const SizedBox(height: 18),
             // Upcoming lesson card (if nextLesson is available and not module complete)
             if (!isModuleComplete && nextLessonTitle != null)
@@ -845,7 +679,4 @@ class _LessonCompleteScreenState extends ConsumerState<LessonCompleteScreen> {
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year} at ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-  }
 }

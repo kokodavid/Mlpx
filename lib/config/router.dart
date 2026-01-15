@@ -19,7 +19,7 @@ import 'package:milpress/features/authentication/account_created_screen.dart';
 import 'package:milpress/features/on_boarding/welcome_screen.dart';
 import 'package:milpress/features/on_boarding/course_prep.dart';
 import 'package:milpress/features/on_boarding/result_screen.dart';
-import 'package:milpress/features/lesson/lesson_complete_screen.dart';
+import 'package:milpress/features/lesson/complete_lesson_screen.dart';
 import 'package:milpress/features/lesson/offline_lesson_screen.dart';
 import 'package:milpress/features/on_boarding/profile_checker.dart';
 import 'package:milpress/features/profile/profile_page.dart';
@@ -299,18 +299,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: AuthGuard.requireAuthenticatedUser(
           builder: (context, state) {
             final lessonId = state.pathParameters['lessonId']!;
-            final extra = state.extra as Map<String, dynamic>? ?? {};
-            return LessonCompleteScreen(
-              lessonTitle: extra['lessonTitle'] ?? '',
-              isLastLesson: extra['isLastLesson'] ?? false,
-              completedCount: extra['completedCount'] ?? 0,
-              totalCount: extra['totalCount'] ?? 0,
-              nextLessonTitle: extra['nextLessonTitle'],
-              nextLessonDuration: extra['nextLessonDuration'],
-              nextLessonId: extra['nextLessonId'],
-              courseId: extra['courseId'],
-              upcomingLessons: extra['upcomingLessons'],
-              quizResult: extra['quizResult'],
+            return CompleteLessonScreen(
+              lessonId: lessonId,
             );
           },
         ),

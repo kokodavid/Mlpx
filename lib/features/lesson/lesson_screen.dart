@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:milpress/features/course/providers/course_provider.dart';
 import 'package:milpress/features/lesson/lesson_widgets/lesson_action_button.dart';
 import 'package:milpress/features/lesson/lesson_widgets/video_player_widget.dart';
 import 'package:milpress/features/widgets/custom_button.dart';
@@ -793,20 +794,22 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
                                           );
                                           await ref.read(saveLessonProgressProvider(lessonProgress).future);
 
+                                          // Best-effort prefetch to avoid loader on completion screen.
+                                          if (mounted) {
+                                            try {
+                                              await Future.wait([
+                                                ref.read(lessonFromSupabaseProvider(lesson.id).future),
+                                                ref.read(moduleFromSupabaseProvider(moduleId!).future),
+                                                ref.read(completedLessonIdsProvider(moduleId).future),
+                                                ref.read(completeCourseProvider(courseId).future),
+                                              ]);
+                                            } catch (e) {
+                                              debugPrint('Prefetch for completion screen failed: $e');
+                                            }
+                                          }
+
                                           context.push(
                                             '/lesson-complete/${lesson.id}',
-                                            extra: {
-                                              'lessonTitle': lesson.title,
-                                              'isLastLesson': isLastLessonInModule,
-                                              'completedCount': completedCount,
-                                              'totalCount': courseContext['moduleLessonsCount'] as int? ?? 1,
-                                              'courseId': courseId,
-                                              'moduleId': moduleId,
-                                              'currentLessonIndex': currentLessonIndex,
-                                              'currentModuleIndex': currentModuleIndex,
-                                              'isModuleComplete': isLastLessonInModule,
-                                              'lessonId': lesson.id,
-                                            },
                                           );
                                         } else {
                                           // Handle Jump In navigation - save progress and return to home

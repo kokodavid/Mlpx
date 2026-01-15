@@ -230,38 +230,27 @@ class ModuleQuizProgressNotifier extends StateNotifier<ModuleQuizProgress?> {
     final averageScore =
         completedQuizzes > 0 ? totalScore / completedQuizzes : 0.0;
 
-    // Check if module is complete (all lessons have completed quizzes)
-    _getModuleData(state!.moduleId).then((module) {
-      bool isModuleComplete = false;
+    final isModuleComplete = state!.isModuleComplete;
 
-      if (module != null) {
-        final allLessonsHaveQuizzes =
-            module.lessons.every((lesson) => lesson.quizzes.isNotEmpty);
-        final allQuizzesCompleted = module.lessons.every((lesson) =>
-            lesson.quizzes.isEmpty || newLessonScores.containsKey(lesson.id));
-        isModuleComplete = allLessonsHaveQuizzes && allQuizzesCompleted;
-      }
+    state = state!.copyWith(
+      lessonScores: newLessonScores,
+      totalQuizzes: totalQuizzes,
+      completedQuizzes: completedQuizzes,
+      averageScore: averageScore,
+      isModuleComplete: isModuleComplete,
+    );
 
-      state = state!.copyWith(
-        lessonScores: newLessonScores,
-        totalQuizzes: totalQuizzes,
-        completedQuizzes: completedQuizzes,
-        averageScore: averageScore,
-        isModuleComplete: isModuleComplete,
-      );
+    print('\n=== Module Quiz Progress Updated ===');
+    print('Module ID: ${state!.moduleId}');
+    print('Total quizzes: $totalQuizzes');
+    print('Completed quizzes: $completedQuizzes');
+    print('Average score: ${averageScore.toStringAsFixed(2)}');
+    print('Module complete: $isModuleComplete');
+    print('Lesson scores: ${newLessonScores.keys}');
+    print('=====================================\n');
 
-      print('\n=== Module Quiz Progress Updated ===');
-      print('Module ID: ${state!.moduleId}');
-      print('Total quizzes: $totalQuizzes');
-      print('Completed quizzes: $completedQuizzes');
-      print('Average score: ${averageScore.toStringAsFixed(2)}');
-      print('Module complete: $isModuleComplete');
-      print('Lesson scores: ${newLessonScores.keys}');
-      print('=====================================\n');
-
-      // Save the progress locally only (no automatic Firebase sync)
-      saveModuleProgress();
-    });
+    // Save the progress locally only (no automatic Firebase sync)
+    saveModuleProgress();
   }
 
   /// Manual sync method to sync complete module data to Firebase
