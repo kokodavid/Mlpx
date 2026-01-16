@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../utils/app_colors.dart';
 import 'lesson_history_screen.dart';
 import 'bookmarks_screen.dart';
 import 'providers/lesson_history_provider.dart';
@@ -114,7 +115,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     final downloadedLessonsAsync = ref.watch(downloadedLessonsCountProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8),
+      backgroundColor: AppColors.lightBackground,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(

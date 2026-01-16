@@ -46,26 +46,19 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
     _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
       if (!mounted || _hasNavigated) return;
 
-      final event = data.event;
-      final session = data.session;
+      // CRITICAL: Only trigger when the deep link 'signs the user in'
+      if (data.event == AuthChangeEvent.signedIn) {
+        final session = data.session;
 
-      // Only proceed if user is verified
-      if (session != null && session.user.emailConfirmedAt != null) {
-        _hasNavigated = true;
+        if (session != null && session.user.emailConfirmedAt != null) {
+          _hasNavigated = true;
 
-        // CRITICAL: Sign out immediately to prevent auto-navigation to home
-        await Supabase.instance.client.auth.signOut();
+          // Sign out so they land on a clean login page
+          await Supabase.instance.client.auth.signOut();
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Email verified successfully! Please log in to continue.'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 2),
-            ),
-          );
-
-          context.go('/login');
+          if (mounted) {
+            context.go('/login');
+          }
         }
       }
     });

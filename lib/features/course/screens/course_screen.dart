@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../utils/app_colors.dart';
 import '../course_widgets/course_card.dart';
 import '../course_widgets/tab_button.dart';
 import '../course_widgets/completed_course_card.dart';
@@ -340,7 +341,7 @@ class _CourseScreenState extends ConsumerState<CourseScreen>
         }
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF7F7F7),
+        backgroundColor: AppColors.lightBackground,
         body: SafeArea(
           child: Column(
             children: [

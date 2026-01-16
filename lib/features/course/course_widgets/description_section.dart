@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../utils/app_colors.dart';
+
 class DescriptionSection extends StatelessWidget {
   final String courseTitle;
   final int level;
@@ -41,7 +43,7 @@ class DescriptionSection extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF234B7A),
+                  color: AppColors.textColor,
                 ),
               ),
               const SizedBox(height: 8),
