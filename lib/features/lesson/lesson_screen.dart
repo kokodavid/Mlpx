@@ -9,6 +9,7 @@ import 'package:milpress/utils/app_colors.dart';
 import 'package:milpress/features/lesson/providers/lesson_video_provider.dart';
 import 'package:video_player/video_player.dart';
 import 'package:milpress/features/course/providers/module_provider.dart';
+import 'package:milpress/features/course/course_models/lesson_model.dart';
 import 'package:milpress/features/assessment/models/assessment_config.dart';
 import 'package:milpress/providers/auth_provider.dart';
 import 'package:milpress/features/user_progress/models/lesson_progress_model.dart';
@@ -150,6 +151,56 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
         _prefetchError = null;
       });
     }
+  }
+
+  Future<Map<String, String>?> _resolveBookmarkContext(
+    LessonModel lesson,
+    Map<String, dynamic>? courseContext,
+  ) async {
+    final courseId = courseContext?['courseId'] as String?;
+    final courseTitle = courseContext?['courseTitle'] as String?;
+    final moduleId = courseContext?['moduleId'] as String?;
+    final moduleTitle = courseContext?['moduleTitle'] as String?;
+
+    if (courseId != null &&
+        courseTitle != null &&
+        moduleId != null &&
+        moduleTitle != null) {
+      return {
+        'courseId': courseId,
+        'courseTitle': courseTitle,
+        'moduleId': moduleId,
+        'moduleTitle': moduleTitle,
+      };
+    }
+
+    final fallbackModuleId = moduleId ?? lesson.moduleId;
+    if (fallbackModuleId.isEmpty) {
+      return null;
+    }
+
+    final module =
+        await ref.read(moduleFromSupabaseProvider(fallbackModuleId).future);
+    if (module == null) {
+      return null;
+    }
+
+    final resolvedCourseId = courseId ?? module.module.courseId;
+    if (resolvedCourseId.isEmpty) {
+      return null;
+    }
+
+    final course =
+        await ref.read(courseByIdProvider(resolvedCourseId).future);
+    final resolvedModuleTitle = moduleTitle ?? module.module.description;
+    final resolvedCourseTitle = courseTitle ?? course.title;
+
+    return {
+      'courseId': resolvedCourseId,
+      'courseTitle': resolvedCourseTitle,
+      'moduleId': fallbackModuleId,
+      'moduleTitle': resolvedModuleTitle,
+    };
   }
 
   @override
@@ -397,19 +448,17 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
                                         }
                                       } else {
                                         final courseContext = extra?['courseContext'] as Map<String, dynamic>?;
-                                        final courseId = courseContext?['courseId'] as String?;
-                                        final courseTitle = courseContext?['courseTitle'] as String?;
-                                        final moduleId = courseContext?['moduleId'] as String?;
-                                        final moduleTitle = courseContext?['moduleTitle'] as String?;
-                                        
-                                        if (courseId != null && courseTitle != null && moduleId != null && moduleTitle != null) {
+                                        final resolvedContext =
+                                            await _resolveBookmarkContext(lesson, courseContext);
+
+                                        if (resolvedContext != null) {
                                           await ref.read(addBookmarkProvider({
                                             'lessonId': lesson.id,
-                                            'courseId': courseId,
-                                            'moduleId': moduleId,
+                                            'courseId': resolvedContext['courseId']!,
+                                            'moduleId': resolvedContext['moduleId']!,
                                             'lessonTitle': lesson.title,
-                                            'courseTitle': courseTitle,
-                                            'moduleTitle': moduleTitle,
+                                            'courseTitle': resolvedContext['courseTitle']!,
+                                            'moduleTitle': resolvedContext['moduleTitle']!,
                                           }).future);
                                           
                                           if (context.mounted) {
