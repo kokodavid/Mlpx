@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../models/lesson_models.dart';
+import '../widgets/lesson_audio_buttons.dart';
 
 class AssessmentStep extends StatefulWidget {
   final LessonStepDefinition step;
@@ -60,9 +61,12 @@ class _AssessmentStepState extends State<AssessmentStep> {
         widget.step.config['prompt'] as String? ?? 'Choose the correct answers';
     final hint = widget.step.config['hint'] as String? ??
         'Select all correct answers, then tap "Check Answers".';
-    final options =
-        (widget.step.config['options'] as List<dynamic>? ?? [])
-            .cast<Map<String, dynamic>>();
+    final instructionUrl =
+        widget.step.config['sound_instruction_url'] as String? ?? '';
+    final options = (widget.step.config['options'] as List<dynamic>? ?? [])
+        .whereType<Map>()
+        .map((item) => item.cast<String, dynamic>())
+        .toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
@@ -88,18 +92,10 @@ class _AssessmentStepState extends State<AssessmentStep> {
               color: AppColors.accentColor,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Row(
-              children: [
-                Icon(Icons.volume_up, color: AppColors.primaryColor),
-                SizedBox(width: 8),
-                Text(
-                  'Click here to listen',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textColor,
-                  ),
-                ),
-              ],
+            child: LessonAudioInlineButton(
+              sourceId: '${widget.step.key}-instruction',
+              url: instructionUrl,
+              label: 'Click here to listen',
             ),
           ),
           const SizedBox(height: 16),
@@ -114,12 +110,13 @@ class _AssessmentStepState extends State<AssessmentStep> {
               childAspectRatio: 0.82,
             ),
             itemBuilder: (context, index) {
-              final label = options.isEmpty
-                  ? 'Item'
-                  : (options[index]['label'] as String? ?? 'Item');
+              final item = options[index];
+              final label = item['label'] as String? ?? 'Item';
+              final imageUrl = item['image_url'] as String? ?? '';
               final isSelected = _selectedIndices.contains(index);
               return _AssessmentOption(
                 label: label,
+                imageUrl: imageUrl,
                 isSelected: isSelected,
                 isChecked: _hasChecked,
                 onTap: () {
@@ -158,12 +155,14 @@ class _AssessmentStepState extends State<AssessmentStep> {
 
 class _AssessmentOption extends StatelessWidget {
   final String label;
+  final String imageUrl;
   final bool isSelected;
   final bool isChecked;
   final VoidCallback onTap;
 
   const _AssessmentOption({
     required this.label,
+    required this.imageUrl,
     required this.isSelected,
     required this.isChecked,
     required this.onTap,
@@ -201,11 +200,21 @@ class _AssessmentOption extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 alignment: Alignment.center,
-                child: const Icon(
-                  Icons.image_outlined,
-                  size: 26,
-                  color: AppColors.textColor,
-                ),
+                child: imageUrl.isEmpty
+                    ? const Icon(
+                        Icons.image_outlined,
+                        size: 26,
+                        color: AppColors.textColor,
+                      )
+                    : ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.network(
+                          imageUrl,
+                          width: double.infinity,
+                          height: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
               ),
             ),
             const SizedBox(height: 6),

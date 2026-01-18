@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../models/lesson_models.dart';
+import '../widgets/lesson_audio_buttons.dart';
 
 class PracticeStep extends StatefulWidget {
   final LessonStepDefinition step;
@@ -28,11 +29,15 @@ class _PracticeStepState extends State<PracticeStep> {
   @override
   Widget build(BuildContext context) {
     final title = widget.step.config['title'] as String? ?? 'Practice';
-    final tip = widget.step.config['tip'] as String? ??
+    final tipMap =
+        (widget.step.config['tip'] as Map?)?.cast<String, dynamic>() ?? {};
+    final tipText = tipMap['text'] as String? ??
         'Tip: Say each word out loud after hearing it.';
-    final examples =
-        (widget.step.config['examples'] as List<dynamic>? ?? [])
-            .cast<Map<String, dynamic>>();
+    final tipAudioUrl = tipMap['sound_url'] as String? ?? '';
+    final items = (widget.step.config['items'] as List<dynamic>? ?? [])
+        .whereType<Map>()
+        .map((item) => item.cast<String, dynamic>())
+        .toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
@@ -47,7 +52,7 @@ class _PracticeStepState extends State<PracticeStep> {
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: examples.isEmpty ? 4 : examples.length,
+            itemCount: items.length,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
               crossAxisSpacing: 12,
@@ -55,10 +60,13 @@ class _PracticeStepState extends State<PracticeStep> {
               childAspectRatio: 0.92,
             ),
             itemBuilder: (context, index) {
-              final word = examples.isEmpty
-                  ? 'Word'
-                  : (examples[index]['word'] as String? ?? 'Word');
-              return _ExampleCard(word: word);
+              final item = items[index];
+              return _ExampleCard(
+                label: item['label'] as String? ?? '',
+                imageUrl: item['image_url'] as String? ?? '',
+                audioUrl: item['sound_url'] as String? ?? '',
+                sourceId: '${widget.step.key}-item-$index',
+              );
             },
           ),
           const SizedBox(height: 14),
@@ -68,28 +76,10 @@ class _PracticeStepState extends State<PracticeStep> {
               color: AppColors.accentColor,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: const BoxDecoration(
-                    color: AppColors.primaryColor,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.volume_up, color: Colors.white),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    tip,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.primaryColor,
-                    ),
-                  ),
-                ),
-              ],
+            child: LessonAudioInlineButton(
+              sourceId: '${widget.step.key}-tip',
+              url: tipAudioUrl,
+              label: tipText,
             ),
           ),
         ],
@@ -99,14 +89,22 @@ class _PracticeStepState extends State<PracticeStep> {
 }
 
 class _ExampleCard extends StatelessWidget {
-  final String word;
+  final String label;
+  final String imageUrl;
+  final String audioUrl;
+  final String sourceId;
 
-  const _ExampleCard({required this.word});
+  const _ExampleCard({
+    required this.label,
+    required this.imageUrl,
+    required this.audioUrl,
+    required this.sourceId,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final firstLetter = word.isNotEmpty ? word[0] : '';
-    final rest = word.length > 1 ? word.substring(1) : '';
+    final firstLetter = label.isNotEmpty ? label[0] : '';
+    final rest = label.length > 1 ? label.substring(1) : '';
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -116,57 +114,63 @@ class _ExampleCard extends StatelessWidget {
         border: Border.all(color: AppColors.borderColor),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Container(
-            height: 88,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: AppColors.accentColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            alignment: Alignment.center,
-            child: const Icon(
-              Icons.image_outlined,
-              size: 32,
-              color: AppColors.textColor,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(
-                  text: firstLetter,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primaryColor,
-                  ),
-                ),
-                TextSpan(
-                  text: rest,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textColor,
-                  ),
-                ),
-              ],
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: AppColors.accentColor,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              alignment: Alignment.center,
+              child: imageUrl.isEmpty
+                  ? const Icon(
+                      Icons.image_outlined,
+                      size: 32,
+                      color: AppColors.textColor,
+                    )
+                  : ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        imageUrl,
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(height: 8),
-          Container(
-            width: 34,
-            height: 34,
-            decoration: const BoxDecoration(
-              color: AppColors.accentColor,
-              shape: BoxShape.circle,
+          Flexible(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: firstLetter,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primaryColor,
+                    ),
+                  ),
+                  TextSpan(
+                    text: rest,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textColor,
+                    ),
+                  ),
+                ],
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
-            child: const Icon(
-              Icons.volume_up,
-              size: 18,
-              color: AppColors.primaryColor,
-            ),
+          ),
+          const SizedBox(height: 6),
+          LessonAudioInlineButton(
+            sourceId: sourceId,
+            url: audioUrl,
           ),
         ],
       ),

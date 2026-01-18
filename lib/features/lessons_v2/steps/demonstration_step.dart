@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../models/lesson_models.dart';
+import '../widgets/tracing_canvas.dart';
 
 class DemonstrationStep extends StatefulWidget {
   final LessonStepDefinition step;
@@ -17,6 +19,10 @@ class DemonstrationStep extends StatefulWidget {
 }
 
 class _DemonstrationStepState extends State<DemonstrationStep> {
+  int _selectedIndex = 0;
+  final TracingCanvasController _tracingController =
+      TracingCanvasController();
+
   @override
   void initState() {
     super.initState();
@@ -32,6 +38,10 @@ class _DemonstrationStepState extends State<DemonstrationStep> {
         widget.step.config['feedbackTitle'] as String? ?? 'Nice work!';
     final feedbackBody = widget.step.config['feedbackBody'] as String? ??
         'You are forming the letter well.';
+    final imageUrls =
+        (widget.step.config['image_urls'] as List<dynamic>? ?? [])
+            .map((url) => url.toString())
+            .toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
@@ -45,15 +55,22 @@ class _DemonstrationStepState extends State<DemonstrationStep> {
           const SizedBox(height: 16),
           Row(
             children: [
-              _LetterTab(
-                label: 'A',
-                isActive: true,
-              ),
-              const SizedBox(width: 10),
-              _LetterTab(
-                label: 'a',
-                isActive: false,
-              ),
+              for (var i = 0; i < imageUrls.length; i++) ...[
+                SizedBox(
+                  width: 140,
+                  child: _SvgTab(
+                    url: imageUrls[i],
+                    isActive: i == _selectedIndex,
+                    onTap: () {
+                      setState(() {
+                        _selectedIndex = i;
+                      });
+                    },
+                  ),
+                ),
+                if (i != imageUrls.length - 1)
+                  const SizedBox(width: 10),
+              ],
             ],
           ),
           const SizedBox(height: 16),
@@ -70,116 +87,122 @@ class _DemonstrationStepState extends State<DemonstrationStep> {
             child: Column(
               children: [
                 Container(
-                  height: 140,
+                  height: 200,
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: AppColors.accentColor,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   alignment: Alignment.center,
-                  child: const Text(
-                    'Tracing Area',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: AppColors.textColor,
-                    ),
-                  ),
+                  child: TracingCanvas(controller: _tracingController),
                 ),
                 const SizedBox(height: 10),
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: const BoxDecoration(
-                    color: AppColors.copBlue,
-                    shape: BoxShape.circle,
+                GestureDetector(
+                  onTap: _tracingController.clear,
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      color: AppColors.copBlue,
+                      shape: BoxShape.circle,
+                    ),
+                    child:
+                        const Icon(Icons.edit, color: Colors.white, size: 20),
                   ),
-                  child: const Icon(Icons.edit, color: Colors.white, size: 20),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.correctAnswerColor.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColors.correctAnswerColor.withOpacity(0.3),
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: const BoxDecoration(
-                    color: AppColors.correctAnswerColor,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.check, color: Colors.white),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        feedbackTitle,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.correctAnswerColor,
-                        ),
-                      ),
-                      Text(
-                        feedbackBody,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.correctAnswerColor.withOpacity(0.9),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // Container(
+          //   padding: const EdgeInsets.all(12),
+          //   decoration: BoxDecoration(
+          //     color: AppColors.correctAnswerColor.withOpacity(0.12),
+          //     borderRadius: BorderRadius.circular(12),
+          //     border: Border.all(
+          //       color: AppColors.correctAnswerColor.withOpacity(0.3),
+          //     ),
+          //   ),
+          //   child: Row(
+          //     children: [
+          //       Container(
+          //         width: 36,
+          //         height: 36,
+          //         decoration: const BoxDecoration(
+          //           color: AppColors.correctAnswerColor,
+          //           shape: BoxShape.circle,
+          //         ),
+          //         child: const Icon(Icons.check, color: Colors.white),
+          //       ),
+          //       const SizedBox(width: 10),
+          //       Expanded(
+          //         child: Column(
+          //           crossAxisAlignment: CrossAxisAlignment.start,
+          //           children: [
+          //             Text(
+          //               feedbackTitle,
+          //               style: const TextStyle(
+          //                 fontSize: 14,
+          //                 fontWeight: FontWeight.w600,
+          //                 color: AppColors.correctAnswerColor,
+          //               ),
+          //             ),
+          //             Text(
+          //               feedbackBody,
+          //               style: TextStyle(
+          //                 fontSize: 12,
+          //                 color: AppColors.correctAnswerColor.withOpacity(0.9),
+          //               ),
+          //             ),
+          //           ],
+          //         ),
+          //       ),
+          //     ],
+          //   ),
+          // ),
         ],
       ),
     );
   }
 }
 
-class _LetterTab extends StatelessWidget {
-  final String label;
+class _SvgTab extends StatelessWidget {
+  final String url;
   final bool isActive;
+  final VoidCallback onTap;
 
-  const _LetterTab({required this.label, required this.isActive});
+  const _SvgTab({
+    required this.url,
+    required this.isActive,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
+    return GestureDetector(
+      onTap: onTap,
       child: Container(
-        height: 56,
+        height: 80,
         decoration: BoxDecoration(
           color: isActive ? AppColors.accentColor : Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isActive
-                ? AppColors.primaryColor
-                : AppColors.borderColor,
+            color: isActive ? AppColors.primaryColor : AppColors.borderColor,
           ),
         ),
         alignment: Alignment.center,
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: isActive ? AppColors.primaryColor : AppColors.textColor,
-          ),
-        ),
+        child: url.isEmpty
+            ? const Icon(Icons.image_not_supported,
+                color: AppColors.textColor)
+            : ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: SvgPicture.network(
+                  url,
+                  width: 56,
+                  height: 80,
+                  fit: BoxFit.cover,
+                ),
+              ),
       ),
     );
   }
