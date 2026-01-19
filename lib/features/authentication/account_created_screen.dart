@@ -86,7 +86,7 @@ class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
     final user = ref.watch(authProvider);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.backgroundColor,
       body: SafeArea(
         child: Column(
           children: [

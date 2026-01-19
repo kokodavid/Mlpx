@@ -198,7 +198,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     final authState = ref.watch(authProvider);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.lightBackground,
       resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: SingleChildScrollView(
