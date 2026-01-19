@@ -102,14 +102,17 @@ class _IntroductionStepState extends State<IntroductionStep> {
                     color: AppColors.accentColor,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  alignment: Alignment.center,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: SvgPicture.network(
-                      howToSvgUrl,
-                      width: double.infinity,
-                      height: double.infinity,
-                      fit: BoxFit.cover,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SvgPicture.network(
+                          howToSvgUrl,
+                          width: constraints.maxWidth,
+                          height: constraints.maxHeight,
+                          fit: BoxFit.cover,
+                        );
+                      },
                     ),
                   ),
                 ),

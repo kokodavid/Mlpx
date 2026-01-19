@@ -21,7 +21,7 @@ class DemonstrationStep extends StatefulWidget {
 class _DemonstrationStepState extends State<DemonstrationStep> {
   int _selectedIndex = 0;
   final TracingCanvasController _tracingController =
-      TracingCanvasController();
+  TracingCanvasController();
 
   @override
   void initState() {
@@ -39,9 +39,9 @@ class _DemonstrationStepState extends State<DemonstrationStep> {
     final feedbackBody = widget.step.config['feedbackBody'] as String? ??
         'You are forming the letter well.';
     final imageUrls =
-        (widget.step.config['image_urls'] as List<dynamic>? ?? [])
-            .map((url) => url.toString())
-            .toList();
+    (widget.step.config['image_urls'] as List<dynamic>? ?? [])
+        .map((url) => url.toString())
+        .toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
@@ -107,7 +107,7 @@ class _DemonstrationStepState extends State<DemonstrationStep> {
                       shape: BoxShape.circle,
                     ),
                     child:
-                        const Icon(Icons.edit, color: Colors.white, size: 20),
+                    const Icon(Icons.edit, color: Colors.white, size: 20),
                   ),
                 ),
               ],
@@ -179,30 +179,40 @@ class _SvgTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const radius = 16.0;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         height: 80,
         decoration: BoxDecoration(
-          color: isActive ? AppColors.accentColor : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isActive ? AppColors.primaryColor : AppColors.borderColor,
+          color: isActive
+              ? AppColors.primaryColor.withOpacity(0.08)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(radius),
+          border: isActive
+              ? Border.all(
+            color: AppColors.primaryColor,
+            width: 2.5,
+          )
+              : null,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(radius), // 👈 SAME radius
+          clipBehavior: Clip.antiAlias,
+          child: SvgPicture.network(
+            url,
+            width: double.infinity,
+            height: double.infinity,
+            fit: BoxFit.cover,
+            colorFilter: isActive
+                ? null
+                : const ColorFilter.mode(
+              Colors.grey,
+              BlendMode.srcIn,
+            ),
           ),
         ),
-        alignment: Alignment.center,
-        child: url.isEmpty
-            ? const Icon(Icons.image_not_supported,
-                color: AppColors.textColor)
-            : ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: SvgPicture.network(
-                  url,
-                  width: 56,
-                  height: 80,
-                  fit: BoxFit.cover,
-                ),
-              ),
       ),
     );
   }
