@@ -146,9 +146,8 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
             return;
           }
           final cached = _cachedOngoingModule;
-          final hasChanged = cached == null ||
-              cached.module.id != module.module.id ||
-              cached.lessons.length != module.lessons.length;
+          final hasChanged =
+              cached == null || cached.module.id != module.module.id;
           if (hasChanged) {
             setState(() {
               _cachedOngoingModule = module;
@@ -195,8 +194,18 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
         body: completeCourseAsync.when(
           data: (completeCourse) {
             final totalModules = completeCourse.modules.length;
-            final totalLessons = completeCourse.modules
-                .fold<int>(0, (sum, m) => sum + m.lessons.length);
+            final moduleLessonsAsyncList = completeCourse.modules
+                .map(
+                  (module) => ref.watch(
+                    lessons_v2.moduleLessonsProvider(module.module.id),
+                  ),
+                )
+                .toList();
+            final totalLessons = moduleLessonsAsyncList.fold<int>(
+              0,
+              (sum, asyncLessons) =>
+                  sum + (asyncLessons.value?.length ?? 0),
+            );
             final allModulesCompleted = completedModulesAsync.maybeWhen(
               data: (completedModules) =>
                   totalModules > 0 &&

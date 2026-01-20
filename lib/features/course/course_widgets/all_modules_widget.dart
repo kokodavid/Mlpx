@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../course_models/complete_course_model.dart';
 import 'package:milpress/utils/app_colors.dart';
-import '../providers/module_provider.dart';
+import 'package:milpress/features/lessons_v2/models/lesson_models.dart';
+import 'package:milpress/features/lessons_v2/providers/lesson_providers.dart'
+    as lessons_v2;
 
 class AllModulesWidget extends ConsumerStatefulWidget {
   final List<ModuleWithLessons> modules;
@@ -60,9 +62,11 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
             final isCompleted = widget.completedModules[module.module.id] ?? false;
             final isOngoing = widget.ongoingModuleId == module.module.id;
             final expanded = _expanded[index];
-            final completedLessonIdsAsync = ref.watch(
-              completedLessonIdsProvider(module.module.id),
+            final moduleLessonsAsync = ref.watch(
+              lessons_v2.moduleLessonsProvider(module.module.id),
             );
+            final moduleLessons =
+                moduleLessonsAsync.value ?? const <LessonDefinition>[];
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6),
               child: GestureDetector(
@@ -95,17 +99,6 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Container(
-                                //   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                //   decoration: BoxDecoration(
-                                //     color: Colors.grey[300],
-                                //     borderRadius: BorderRadius.circular(10),
-                                //   ),
-                                //   child: Text(
-                                //     'Module ${index + 1}',
-                                //     style: const TextStyle(fontSize: 13, color: Colors.black54),
-                                //   ),
-                                // ),
                                 const SizedBox(height: 8),
                                 Text(
                                   module.module.description,
@@ -141,46 +134,34 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              ...List.generate(module.lessons.length, (lessonIdx) {
-                                final lesson = module.lessons[lessonIdx];
-                                final lessonCompleted = completedLessonIdsAsync.maybeWhen(
-                                  data: (ids) => ids.contains(lesson.id),
-                                  orElse: () => false,
-                                );
+                              if (moduleLessonsAsync.isLoading)
+                                const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                ),
+                              if (!moduleLessonsAsync.isLoading &&
+                                  moduleLessons.isEmpty)
+                                const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: Text(
+                                    'No lessons available yet.',
+                                    style: TextStyle(color: AppColors.textColor),
+                                  ),
+                                ),
+                              ...List.generate(moduleLessons.length, (lessonIdx) {
+                                final lesson = moduleLessons[lessonIdx];
                                 
                                 return Column(
                                   children: [
                                     InkWell(
-                                      onTap: lessonCompleted
-                                          ? () {
-                                              final courseId = widget.courseId ?? module.module.courseId;
-                                              if (courseId == null || courseId.isEmpty) {
-                                                return;
-                                              }
-                                              final courseContext = <String, dynamic>{
-                                                'courseId': courseId,
-                                                if (widget.courseTitle != null)
-                                                  'courseTitle': widget.courseTitle,
-                                                'moduleId': module.module.id,
-                                                'moduleTitle': module.module.description,
-                                                if (widget.totalModules != null)
-                                                  'totalModules': widget.totalModules,
-                                                if (widget.totalLessons != null)
-                                                  'totalLessons': widget.totalLessons,
-                                                'currentLessonIndex': lessonIdx,
-                                                'currentModuleIndex': index,
-                                                'moduleLessonsCount': module.lessons.length,
-                                                'isReviewMode': true,
-                                              };
-                                              context.push(
-                                                '/lesson/${lesson.id}',
-                                                extra: {
-                                                  'courseContext': courseContext,
-                                                  'lessonId': lesson.id,
-                                                },
-                                              );
-                                            }
-                                          : null,
+                                      onTap: () {
+                                        context.push(
+                                          '/lesson-attempt',
+                                          extra: {'lessonId': lesson.id},
+                                        );
+                                      },
                                       borderRadius: BorderRadius.circular(12),
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
@@ -190,29 +171,27 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
                                         ),
                                         child: Row(
                                           children: [
-                                            Icon(
-                                              lessonCompleted ? Icons.check_circle : Icons.circle_outlined,
+                                            const Icon(
+                                              Icons.circle_outlined,
                                               size: 20,
-                                              color: lessonCompleted ? Colors.green : AppColors.textColor,
+                                              color: AppColors.textColor,
                                             ),
                                             const SizedBox(width: 10),
                                             Expanded(
                                               child: Text(
                                                 lesson.title,
-                                                style: TextStyle(
+                                                style: const TextStyle(
                                                   fontSize: 15,
                                                   fontWeight: FontWeight.w500,
-                                                  color: lessonCompleted ? Colors.green : AppColors.textColor,
+                                                  color: AppColors.textColor,
                                                 ),
                                               ),
                                             ),
-                                            if (lessonCompleted)
-                                              const Icon(Icons.check, color: Colors.green, size: 16),
                                           ],
                                         ),
                                       ),
                                     ),
-                                    if (lessonIdx < module.lessons.length - 1)
+                                    if (lessonIdx < moduleLessons.length - 1)
                                       Padding(
                                         padding: const EdgeInsets.symmetric(horizontal: 8),
                                         child: Divider(height: 1, color: Colors.grey[300]),
