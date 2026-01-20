@@ -119,7 +119,20 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
       });
       return;
     }
-    widget.onFinish?.call();
+    if (widget.onFinish != null) {
+      widget.onFinish!.call();
+      return;
+    }
+    if (mounted) {
+      context.push(
+        '/lesson-complete-v2',
+        extra: {
+          'lessonId': _lessonDefinition.id,
+          'moduleId': _lessonDefinition.moduleId,
+          'lessonTitle': _lessonDefinition.title,
+        },
+      );
+    }
   }
 
   @override
@@ -198,12 +211,16 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
       );
     }
 
-    final canAdvance = _stepUiState.canAdvance ?? _defaultCanAdvance(_currentStep);
+    final canAdvance =
+        _stepUiState.canAdvance ?? _defaultCanAdvance(_currentStep);
     final isPrimaryEnabled = _stepUiState.isPrimaryEnabled ??
         (_stepUiState.onPrimaryPressed != null || canAdvance);
     final primaryLabel =
         _stepUiState.primaryLabel ?? _defaultPrimaryLabel(_currentStep);
     final showBack = _stepUiState.showBack ?? true;
+    final primaryIcon = _resolvePrimaryIcon(primaryLabel);
+    final primaryColor =
+        primaryLabel == 'Finish' ? AppColors.correctAnswerColor : null;
 
     return Scaffold(
       backgroundColor: AppColors.sandyLight,
@@ -234,6 +251,8 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
         canAdvance: canAdvance,
         isPrimaryEnabled: isPrimaryEnabled,
         primaryLabel: primaryLabel,
+        primaryIcon: primaryIcon,
+        primaryColor: primaryColor,
         showBack: showBack,
       ),
     );
@@ -243,6 +262,8 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
     required bool canAdvance,
     required bool isPrimaryEnabled,
     required String primaryLabel,
+    required IconData? primaryIcon,
+    required Color? primaryColor,
     required bool showBack,
   }) {
     return SafeArea(
@@ -264,6 +285,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
                 key: ValueKey(_currentStep.key),
                 child: LessonStepRenderer(
                   step: _currentStep,
+                  lessonId: _lessonDefinition.id,
                   onStepStateChanged: _onStepStateChanged,
                   isLastStep: _isLastStep,
                 ),
@@ -274,6 +296,8 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
             canGoBack: showBack && _currentStepIndex > 0,
             isPrimaryEnabled: isPrimaryEnabled,
             primaryLabel: primaryLabel,
+            primaryIcon: primaryIcon,
+            primaryColor: primaryColor,
             onPrimaryPressed: () {
               if (_stepUiState.onPrimaryPressed != null) {
                 _stepUiState.onPrimaryPressed!.call();
@@ -288,5 +312,15 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
         ],
       ),
     );
+  }
+
+  IconData? _resolvePrimaryIcon(String label) {
+    if (label == 'Check Answers') {
+      return Icons.check;
+    }
+    if (label == 'Retry') {
+      return Icons.refresh;
+    }
+    return null;
   }
 }

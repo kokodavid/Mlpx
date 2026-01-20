@@ -1,27 +1,45 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../models/lesson_models.dart';
 import '../widgets/lesson_audio_buttons.dart';
 
-class AssessmentStep extends StatefulWidget {
+class AssessmentStep extends ConsumerStatefulWidget {
   final LessonStepDefinition step;
+  final String lessonId;
   final ValueChanged<LessonStepUiState> onStepStateChanged;
   final bool isLastStep;
 
   const AssessmentStep({
     super.key,
     required this.step,
+    required this.lessonId,
     required this.onStepStateChanged,
     required this.isLastStep,
   });
 
   @override
-  State<AssessmentStep> createState() => _AssessmentStepState();
+  ConsumerState<AssessmentStep> createState() => _AssessmentStepState();
 }
 
-class _AssessmentStepState extends State<AssessmentStep> {
-  bool _hasChecked = false;
-  final Set<int> _selectedIndices = {};
+final _assessmentStepControllerProvider = StateNotifierProvider.autoDispose
+    .family<AssessmentStepController, AssessmentStepState, String>(
+  (ref, stepKey) => AssessmentStepController(),
+);
+
+class _AssessmentStepState extends ConsumerState<AssessmentStep> {
+  AssessmentStepController get _controller => ref.read(
+        _assessmentStepControllerProvider(
+          '${widget.lessonId}:${widget.step.key}',
+        ).notifier,
+      );
+
+  AssessmentStepState get _state =>
+      ref.watch(
+        _assessmentStepControllerProvider(
+          '${widget.lessonId}:${widget.step.key}',
+        ),
+      );
 
   @override
   void initState() {
@@ -30,7 +48,7 @@ class _AssessmentStepState extends State<AssessmentStep> {
       widget.onStepStateChanged(
         LessonStepUiState(
           canAdvance: false,
-          isPrimaryEnabled: true,
+          isPrimaryEnabled: false,
           primaryLabel: 'Check Answers',
           onPrimaryPressed: _handleCheck,
         ),
@@ -39,19 +57,42 @@ class _AssessmentStepState extends State<AssessmentStep> {
   }
 
   void _handleCheck() {
-    if (_hasChecked) {
+    if (_state.hasChecked) {
       return;
     }
-    setState(() {
-      _hasChecked = true;
-    });
+    final correctFlags = _buildCorrectFlags();
+    final allCorrect = _controller.checkAnswers(correctFlags);
     widget.onStepStateChanged(
       LessonStepUiState(
-        canAdvance: true,
+        canAdvance: allCorrect,
         isPrimaryEnabled: true,
-        primaryLabel: widget.isLastStep ? 'Finish' : 'Continue',
+        primaryLabel: allCorrect
+            ? (widget.isLastStep ? 'Finish' : 'Continue')
+            : 'Retry',
+        onPrimaryPressed: allCorrect ? null : _handleRetry,
       ),
     );
+  }
+
+  void _handleRetry() {
+    _controller.retry();
+    widget.onStepStateChanged(
+      const LessonStepUiState(
+        canAdvance: false,
+        isPrimaryEnabled: false,
+        primaryLabel: 'Check Answers',
+      ),
+    );
+  }
+
+  List<bool> _buildCorrectFlags() {
+    final options = (widget.step.config['options'] as List<dynamic>? ?? [])
+        .whereType<Map>()
+        .map((item) => item.cast<String, dynamic>())
+        .toList();
+    return options
+        .map((item) => item['is_correct'] as bool? ?? false)
+        .toList();
   }
 
   @override
@@ -113,20 +154,34 @@ class _AssessmentStepState extends State<AssessmentStep> {
               final item = options[index];
               final label = item['label'] as String? ?? 'Item';
               final imageUrl = item['image_url'] as String? ?? '';
-              final isSelected = _selectedIndices.contains(index);
+              final isCorrect = item['is_correct'] as bool? ?? false;
+              final isSelected = _state.selectedIndices.contains(index);
               return _AssessmentOption(
                 label: label,
                 imageUrl: imageUrl,
+                isCorrect: isCorrect,
                 isSelected: isSelected,
-                isChecked: _hasChecked,
+                isChecked: _state.hasChecked,
                 onTap: () {
-                  setState(() {
-                    if (isSelected) {
-                      _selectedIndices.remove(index);
-                    } else {
-                      _selectedIndices.add(index);
-                    }
-                  });
+                  _controller.toggleSelection(index);
+                  if (!_state.hasChecked) {
+                    final hasSelection = ref
+                        .read(
+                          _assessmentStepControllerProvider(
+                            '${widget.lessonId}:${widget.step.key}',
+                          ),
+                        )
+                        .selectedIndices
+                        .isNotEmpty;
+                    widget.onStepStateChanged(
+                      LessonStepUiState(
+                        canAdvance: false,
+                        isPrimaryEnabled: hasSelection,
+                        primaryLabel: 'Check Answers',
+                        onPrimaryPressed: hasSelection ? _handleCheck : null,
+                      ),
+                    );
+                  }
                 },
               );
             },
@@ -156,6 +211,7 @@ class _AssessmentStepState extends State<AssessmentStep> {
 class _AssessmentOption extends StatelessWidget {
   final String label;
   final String imageUrl;
+  final bool isCorrect;
   final bool isSelected;
   final bool isChecked;
   final VoidCallback onTap;
@@ -163,6 +219,7 @@ class _AssessmentOption extends StatelessWidget {
   const _AssessmentOption({
     required this.label,
     required this.imageUrl,
+    required this.isCorrect,
     required this.isSelected,
     required this.isChecked,
     required this.onTap,
@@ -170,9 +227,7 @@ class _AssessmentOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = isSelected
-        ? AppColors.primaryColor
-        : AppColors.borderColor;
+    final borderColor = _resolveBorderColor();
     return GestureDetector(
       onTap: isChecked ? null : onTap,
       child: Container(
@@ -180,7 +235,7 @@ class _AssessmentOption extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: borderColor),
+          border: Border.all(color: borderColor,width: 2),
           boxShadow: [
             if (isSelected)
               BoxShadow(
@@ -231,5 +286,90 @@ class _AssessmentOption extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Color _resolveBorderColor() {
+    if (!isChecked) {
+      return isSelected ? AppColors.primaryColor : AppColors.borderColor;
+    }
+    if (!isSelected) {
+      return AppColors.borderColor;
+    }
+    return isCorrect ? AppColors.correctAnswerColor : AppColors.errorColor;
+  }
+}
+
+class AssessmentStepState {
+  final Set<int> selectedIndices;
+  final bool hasChecked;
+  final bool isCorrect;
+
+  const AssessmentStepState({
+    this.selectedIndices = const {},
+    this.hasChecked = false,
+    this.isCorrect = false,
+  });
+
+  AssessmentStepState copyWith({
+    Set<int>? selectedIndices,
+    bool? hasChecked,
+    bool? isCorrect,
+  }) {
+    return AssessmentStepState(
+      selectedIndices: selectedIndices ?? this.selectedIndices,
+      hasChecked: hasChecked ?? this.hasChecked,
+      isCorrect: isCorrect ?? this.isCorrect,
+    );
+  }
+}
+
+class AssessmentStepController extends StateNotifier<AssessmentStepState> {
+  AssessmentStepController() : super(const AssessmentStepState());
+
+  void toggleSelection(int index) {
+    if (state.hasChecked) {
+      return;
+    }
+    final updated = Set<int>.from(state.selectedIndices);
+    if (updated.contains(index)) {
+      updated.remove(index);
+    } else {
+      updated.add(index);
+    }
+    state = state.copyWith(selectedIndices: updated);
+  }
+
+  bool checkAnswers(List<bool> correctFlags) {
+    if (correctFlags.isEmpty) {
+      state = state.copyWith(hasChecked: true, isCorrect: false);
+      return false;
+    }
+    final selected = state.selectedIndices;
+    if (selected.isEmpty) {
+      state = state.copyWith(hasChecked: true, isCorrect: false);
+      return false;
+    }
+    for (final index in selected) {
+      if (index < 0 || index >= correctFlags.length) {
+        state = state.copyWith(hasChecked: true, isCorrect: false);
+        return false;
+      }
+      if (!correctFlags[index]) {
+        state = state.copyWith(hasChecked: true, isCorrect: false);
+        return false;
+      }
+    }
+    for (var i = 0; i < correctFlags.length; i++) {
+      if (correctFlags[i] && !selected.contains(i)) {
+        state = state.copyWith(hasChecked: true, isCorrect: false);
+        return false;
+      }
+    }
+    state = state.copyWith(hasChecked: true, isCorrect: true);
+    return true;
+  }
+
+  void retry() {
+    state = const AssessmentStepState();
   }
 }

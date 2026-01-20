@@ -179,10 +179,11 @@ class _SvgTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isSvg = url.toLowerCase().contains('.svg');
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 80,
+        height: 100,
         decoration: BoxDecoration(
           color: isActive ? AppColors.accentColor : Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -196,12 +197,19 @@ class _SvgTab extends StatelessWidget {
                 color: AppColors.textColor)
             : ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: SvgPicture.network(
-                  url,
-                  width: 56,
-                  height: 80,
-                  fit: BoxFit.cover,
-                ),
+                child: isSvg
+                    ? SvgPicture.network(
+                        url,
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.fill,
+                      )
+                    : Image.network(
+                        url,
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.fill,
+                      ),
               ),
       ),
     );

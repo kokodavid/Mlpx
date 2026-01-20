@@ -7,12 +7,14 @@ import '../steps/practice_step.dart';
 
 class LessonStepRenderer extends StatelessWidget {
   final LessonStepDefinition step;
+  final String lessonId;
   final ValueChanged<LessonStepUiState> onStepStateChanged;
   final bool isLastStep;
 
   const LessonStepRenderer({
     super.key,
     required this.step,
+    required this.lessonId,
     required this.onStepStateChanged,
     required this.isLastStep,
   });
@@ -38,6 +40,7 @@ class LessonStepRenderer extends StatelessWidget {
       case LessonStepType.assessment:
         return AssessmentStep(
           step: step,
+          lessonId: lessonId,
           onStepStateChanged: onStepStateChanged,
           isLastStep: isLastStep,
         );

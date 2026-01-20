@@ -5,6 +5,8 @@ class LessonBottomActionBar extends StatelessWidget {
   final bool canGoBack;
   final bool isPrimaryEnabled;
   final String primaryLabel;
+  final IconData? primaryIcon;
+  final Color? primaryColor;
   final VoidCallback onPrimaryPressed;
   final VoidCallback? onBackPressed;
 
@@ -13,6 +15,8 @@ class LessonBottomActionBar extends StatelessWidget {
     required this.canGoBack,
     required this.isPrimaryEnabled,
     required this.primaryLabel,
+    this.primaryIcon,
+    this.primaryColor,
     required this.onPrimaryPressed,
     this.onBackPressed,
   });
@@ -32,10 +36,10 @@ class LessonBottomActionBar extends StatelessWidget {
               child: ElevatedButton(
                 onPressed: isPrimaryEnabled ? onPrimaryPressed : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryColor,
+                  backgroundColor: primaryColor ?? AppColors.primaryColor,
                   foregroundColor: Colors.white,
                   disabledBackgroundColor:
-                      AppColors.primaryColor.withOpacity(0.4),
+                      (primaryColor ?? AppColors.primaryColor).withOpacity(0.4),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -43,6 +47,10 @@ class LessonBottomActionBar extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    if (primaryIcon != null) ...[
+                      Icon(primaryIcon),
+                      const SizedBox(width: 8),
+                    ],
                     Text(
                       primaryLabel,
                       style: const TextStyle(
@@ -50,8 +58,10 @@ class LessonBottomActionBar extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.arrow_forward),
+                    if (primaryIcon == null) ...[
+                      const SizedBox(width: 8),
+                      const Icon(Icons.arrow_forward),
+                    ],
                   ],
                 ),
               ),

@@ -14,6 +14,7 @@ import 'package:milpress/features/widgets/custom_bottom_nav.dart';
 import 'package:milpress/features/lesson/lesson_screen.dart';
 import 'package:milpress/features/lessons_v2/screens/lesson_attempt_screen.dart';
 import 'package:milpress/features/lessons_v2/models/lesson_models.dart';
+import 'package:milpress/features/lessons_v2/screens/lesson_complete_v2_screen.dart';
 import 'package:milpress/splash_screen.dart';
 import 'package:milpress/features/authentication/login_screen.dart';
 import 'package:milpress/features/authentication/signup_screen.dart';
@@ -44,6 +45,7 @@ enum AppRoute {
   review,
   lesson,
   lessonAttempt,
+  lessonCompleteV2,
   offlineLesson,
   assessment,
   assessmentResult,
@@ -208,13 +210,21 @@ final routerProvider = Provider<GoRouter>((ref) {
               lessonDefinition: lessonDefinition,
               lessonId: lessonId,
               initialStepIndex: initialStepIndex,
-              onFinish: () {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go('/');
-                }
-              },
+            );
+          },
+        ),
+      ),
+      GoRoute(
+        path: '/lesson-complete-v2',
+        name: AppRoute.lessonCompleteV2.name,
+        builder: AuthGuard.requireAuthenticatedUser(
+          builder: (context, state) {
+            final extra = state.extra as Map<String, dynamic>? ?? {};
+            return LessonCompleteV2Screen(
+              lessonId: extra['lessonId'] as String? ?? '',
+              moduleId: extra['moduleId'] as String? ?? '',
+              lessonTitle: extra['lessonTitle'] as String? ?? 'Lesson',
+              timeRemainingLabel: extra['timeRemainingLabel'] as String?,
             );
           },
         ),
