@@ -350,11 +350,8 @@ class _AssessmentOption extends StatelessWidget {
           children: [
             Expanded(
               child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: AppColors.accentColor,
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                width: 90,
+               
                 alignment: Alignment.center,
                 child: imageUrl.isEmpty
                     ? const Icon(
@@ -366,9 +363,9 @@ class _AssessmentOption extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10),
                         child: Image.network(
                           imageUrl,
-                          width: double.infinity,
-                          height: double.infinity,
-                          fit: BoxFit.fill,
+                          width: 90,
+                          height: 100,
+                          fit: BoxFit.contain,
                         ),
                       ),
               ),

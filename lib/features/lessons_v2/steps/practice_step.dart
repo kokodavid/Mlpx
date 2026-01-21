@@ -110,11 +110,10 @@ class _ExampleCard extends StatelessWidget {
       child: Column(
         children: [
           Expanded(
-            flex: 5,
+            flex: 4,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Container(
-                color: AppColors.accentColor,
                 child: imageUrl.isEmpty
                     ? const Center(
                   child: Icon(
@@ -125,9 +124,9 @@ class _ExampleCard extends StatelessWidget {
                 )
                     : Image.network(
                   imageUrl,
-                  width: double.infinity,
-                  height: double.infinity,
-                  fit: BoxFit.fill,
+                  width: 150,
+                  height: 90,
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
@@ -139,7 +138,7 @@ class _ExampleCard extends StatelessWidget {
                 TextSpan(
                   text: firstLetter,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 19,
                     fontWeight: FontWeight.w600,
                     color: AppColors.primaryColor,
                   ),
@@ -147,7 +146,7 @@ class _ExampleCard extends StatelessWidget {
                 TextSpan(
                   text: rest,
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 17,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textColor,
                   ),
