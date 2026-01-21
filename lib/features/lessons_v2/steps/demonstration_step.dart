@@ -107,7 +107,7 @@ class _DemonstrationStepState extends State<DemonstrationStep> {
                       shape: BoxShape.circle,
                     ),
                     child:
-                        const Icon(Icons.edit, color: Colors.white, size: 20),
+                        const Icon(Icons.backspace, color: Colors.white, size: 20),
                   ),
                 ),
               ],
@@ -179,39 +179,48 @@ class _SvgTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isSvg = url.toLowerCase().contains('.svg');
+    const radius = 16.0;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 100,
+        margin: EdgeInsets.zero,
+        height: 80,
         decoration: BoxDecoration(
-          color: isActive ? AppColors.accentColor : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isActive ? AppColors.primaryColor : AppColors.borderColor,
+          color: isActive
+              ? AppColors.primaryColor.withOpacity(0.08)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(radius),
+          border: isActive
+              ? Border.all(
+            color: AppColors.primaryColor,
+            width: 2.5,
+          )
+              : null,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(radius),
+          clipBehavior: Clip.antiAlias,
+          child: Container(
+            color: isActive
+                ? Colors.transparent
+                : Colors.white, // Force white background for inactive
+            child: Center( // Center the SVG
+              child: SvgPicture.network(
+                url,
+                fit: BoxFit.contain,
+                colorFilter: isActive
+                    ? null
+                    : const ColorFilter.mode(
+                  Colors.grey,
+                  BlendMode.srcIn,
+                ),
+              ),
+            ),
           ),
         ),
-        alignment: Alignment.center,
-        child: url.isEmpty
-            ? const Icon(Icons.image_not_supported,
-                color: AppColors.textColor)
-            : ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: isSvg
-                    ? SvgPicture.network(
-                        url,
-                        width: 80,
-                        height: 80,
-                        fit: BoxFit.fill,
-                      )
-                    : Image.network(
-                        url,
-                        width: 80,
-                        height: 80,
-                        fit: BoxFit.fill,
-                      ),
-              ),
       ),
     );
   }
 }
+

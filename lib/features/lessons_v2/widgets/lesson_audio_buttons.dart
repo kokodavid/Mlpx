@@ -107,8 +107,15 @@ class _LessonAudioCardButtonState
   @override
   void initState() {
     super.initState();
-    final speeds = widget.speedUrls?.keys.toList() ?? const [];
-    _selectedSpeed = speeds.isNotEmpty ? speeds.first : '1x';
+    // Define the desired order of speeds
+    final desiredOrder = ['0.5x', '1x', '1.5x'];
+    final availableSpeeds = widget.speedUrls?.keys.toList() ?? const [];
+
+    // Find the first speed that exists in the desired order
+    _selectedSpeed = desiredOrder.firstWhere(
+          (speed) => availableSpeeds.contains(speed),
+      orElse: () => availableSpeeds.isNotEmpty ? availableSpeeds.first : '1x',
+    );
   }
 
   String get _selectedUrl {
@@ -178,16 +185,20 @@ class _LessonAudioCardButtonState
               Text(
                 widget.label,
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
                   color: AppColors.textColor,
                 ),
               ),
+              // Inside the build method, replace the speed buttons section with:
               if (widget.speedUrls != null &&
                   widget.speedUrls!.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: widget.speedUrls!.keys.map((speed) {
+                  children: ['0.5x', '1x', '1.5x']
+                      .where((speed) => widget.speedUrls!.containsKey(speed))
+                      .map((speed) {
                     final isSelected = speed == _selectedSpeed;
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 10),

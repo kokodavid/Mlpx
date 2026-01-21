@@ -104,8 +104,10 @@ class LessonDefinition {
           config: {
             'title': 'Sound Pronunciation',
             'display_text': 'Aa',
-            'practiceTip':
-                'Practice: Watch your mouth in a mirror while making this sound.',
+            'practice_tip': {
+              'text': 'Practice: Watch your mouth in a mirror while making this sound. Try saying "apple" slowly – notice how your mouth opens wide for the "a" sound.',
+              'audio_url': '',
+            },
           },
         ),
         LessonStepDefinition(

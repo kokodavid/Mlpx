@@ -24,15 +24,15 @@ class AssessmentStep extends ConsumerStatefulWidget {
 
 final _assessmentStepControllerProvider = StateNotifierProvider.autoDispose
     .family<AssessmentStepController, AssessmentStepState, String>(
-  (ref, stepKey) => AssessmentStepController(),
+      (ref, stepKey) => AssessmentStepController(),
 );
 
 class _AssessmentStepState extends ConsumerState<AssessmentStep> {
   AssessmentStepController get _controller => ref.read(
-        _assessmentStepControllerProvider(
-          '${widget.lessonId}:${widget.step.key}',
-        ).notifier,
-      );
+    _assessmentStepControllerProvider(
+      '${widget.lessonId}:${widget.step.key}',
+    ).notifier,
+  );
 
   AssessmentStepState get _state =>
       ref.watch(
@@ -140,6 +140,7 @@ class _AssessmentStepState extends ConsumerState<AssessmentStep> {
             ),
           ),
           const SizedBox(height: 16),
+
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -167,10 +168,10 @@ class _AssessmentStepState extends ConsumerState<AssessmentStep> {
                   if (!_state.hasChecked) {
                     final hasSelection = ref
                         .read(
-                          _assessmentStepControllerProvider(
-                            '${widget.lessonId}:${widget.step.key}',
-                          ),
-                        )
+                      _assessmentStepControllerProvider(
+                        '${widget.lessonId}:${widget.step.key}',
+                      ),
+                    )
                         .selectedIndices
                         .isNotEmpty;
                     widget.onStepStateChanged(
@@ -200,6 +201,141 @@ class _AssessmentStepState extends ConsumerState<AssessmentStep> {
                 fontSize: 13,
                 color: AppColors.textColor,
               ),
+            ),
+          ),
+
+          // Feedback Section
+          if (_state.hasChecked)
+            Padding(
+              padding: const EdgeInsets.only(top: 14),
+              child: _state.isCorrect
+                  ? _SuccessFeedback()
+                  : _ErrorFeedback(),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SuccessFeedback extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: const BoxDecoration(
+        color: AppColors.backgroundColor,
+        border: Border(
+          top: BorderSide(
+            color: AppColors.successColor,
+            width: 1,
+          ),
+          bottom: BorderSide(
+            color: AppColors.successColor,
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: const BoxDecoration(
+              color: Color(0xFF66BB6A),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.check,
+              color: Colors.white,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 16),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Excellent work!',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2E7D32),
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'You identified the sounds correctly!',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF2E7D32),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorFeedback extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: const BoxDecoration(
+        color: AppColors.accentColor,
+        border: Border(
+          top: BorderSide(
+            color: AppColors.errorColor,
+            width: 1,
+          ),
+          bottom: BorderSide(
+            color: AppColors.errorColor,
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: const BoxDecoration(
+              color: AppColors.errorColor,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.face,
+              color: Colors.white,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 16),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Keep going!',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.errorColor,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Review the correct answers above and try to \nhear the difference.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFFC62828),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -235,7 +371,7 @@ class _AssessmentOption extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: borderColor,width: 2),
+          border: Border.all(color: borderColor, width: 2),
           boxShadow: [
             if (isSelected)
               BoxShadow(
@@ -257,19 +393,19 @@ class _AssessmentOption extends StatelessWidget {
                 alignment: Alignment.center,
                 child: imageUrl.isEmpty
                     ? const Icon(
-                        Icons.image_outlined,
-                        size: 26,
-                        color: AppColors.textColor,
-                      )
+                  Icons.image_outlined,
+                  size: 26,
+                  color: AppColors.textColor,
+                )
                     : ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.network(
-                          imageUrl,
-                          width: double.infinity,
-                          height: double.infinity,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.network(
+                    imageUrl,
+                    width: double.infinity,
+                    height: double.infinity,
+                    fit: BoxFit.fill,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 6),

@@ -88,7 +88,7 @@ class _IntroductionStepState extends State<IntroductionStep> {
               border: Border.all(color: AppColors.borderColor),
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const Text(
                   'How to make this sound',
@@ -102,26 +102,43 @@ class _IntroductionStepState extends State<IntroductionStep> {
                     color: AppColors.accentColor,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  alignment: Alignment.center,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: SvgPicture.network(
-                      howToSvgUrl,
-                      width: double.infinity,
-                      height: double.infinity,
-                      fit: BoxFit.cover,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
+                      child: SvgPicture.network(
+                        howToSvgUrl,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                 ),
+
               ],
             ),
           ),
           const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.all(12),
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 12,
+            ),
             decoration: BoxDecoration(
               color: AppColors.accentColor,
-              borderRadius: BorderRadius.circular(12),
+              border: Border(
+                top: BorderSide(
+                  color: AppColors.accentColor.withOpacity(0.6),
+                  width: 1,
+                ),
+                bottom: BorderSide(
+                  color: AppColors.accentColor.withOpacity(0.6),
+                  width: 1,
+                ),
+              ),
             ),
             child: LessonAudioInlineButton(
               sourceId: '${widget.step.key}-tip',
@@ -129,6 +146,7 @@ class _IntroductionStepState extends State<IntroductionStep> {
               label: practiceTipText,
             ),
           ),
+
         ],
       ),
     );
