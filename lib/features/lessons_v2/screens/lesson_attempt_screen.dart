@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:milpress/features/lessons_v2/services/lesson_audio_controller.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../models/lesson_models.dart';
 import '../models/lesson_attempt_request.dart';
@@ -43,6 +44,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
   LessonStepUiState _stepUiState = const LessonStepUiState();
   LessonDefinition? _loadedLesson;
   ProviderSubscription<AsyncValue<LessonDefinition?>>? _lessonSubscription;
+  late final LessonAudioController _audioController;
 
   LessonDefinition get _lessonDefinition =>
       _loadedLesson ?? widget.lessonDefinition!;
@@ -53,6 +55,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
   @override
   void initState() {
     super.initState();
+    _audioController = ref.read(lessonAudioControllerProvider);
     if (widget.lessonDefinition != null) {
       _loadedLesson = widget.lessonDefinition;
       _currentStepIndex = widget.initialStepIndex.clamp(
@@ -126,7 +129,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
   }
 
   void _goBack() {
-    ref.read(lessonAudioControllerProvider).stop();
+    _audioController.stop();
     if (_currentStepIndex <= 0) {
       return;
     }
@@ -137,7 +140,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
   }
 
   Future<void> _goForward() async {
-    ref.read(lessonAudioControllerProvider).stop();
+    _audioController.stop();
     if (!_isLastStep) {
       setState(() {
         _currentStepIndex += 1;
@@ -197,7 +200,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
   @override
   void dispose() {
     _lessonSubscription?.close();
-    ref.read(lessonAudioControllerProvider).stop();
+    _audioController.stop();
     super.dispose();
   }
 
