@@ -32,7 +32,7 @@ class _PracticeStepState extends State<PracticeStep> {
     final tipMap =
         (widget.step.config['tip'] as Map?)?.cast<String, dynamic>() ?? {};
     final tipText = tipMap['text'] as String? ??
-        'Tip: Say each word out loud after hearing it.';
+        'Tip: Say each word out loud after hearing it.\nFocus on the highlighted letter sound.';
     final tipAudioUrl = tipMap['sound_url'] as String? ?? '';
     final items = (widget.step.config['items'] as List<dynamic>? ?? [])
         .whereType<Map>()
@@ -48,7 +48,7 @@ class _PracticeStepState extends State<PracticeStep> {
             title,
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -57,7 +57,7 @@ class _PracticeStepState extends State<PracticeStep> {
               crossAxisCount: 2,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
-              childAspectRatio: 0.92,
+              childAspectRatio: 0.79,
             ),
             itemBuilder: (context, index) {
               final item = items[index];
@@ -69,7 +69,7 @@ class _PracticeStepState extends State<PracticeStep> {
               );
             },
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -107,70 +107,69 @@ class _ExampleCard extends StatelessWidget {
     final rest = label.length > 1 ? label.substring(1) : '';
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.borderColor),
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
+            flex: 5,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
                 color: AppColors.accentColor,
-                borderRadius: BorderRadius.circular(12),
+                child: imageUrl.isEmpty
+                    ? const Center(
+                  child: Icon(
+                    Icons.image_outlined,
+                    size: 32,
+                    color: AppColors.textColor,
+                  ),
+                )
+                    : Image.network(
+                  imageUrl,
+                  width: double.infinity,
+                  height: double.infinity,
+                  fit: BoxFit.fill,
+                ),
               ),
-              alignment: Alignment.center,
-              child: imageUrl.isEmpty
-                  ? const Icon(
-                      Icons.image_outlined,
-                      size: 32,
-                      color: AppColors.textColor,
-                    )
-                  : ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        imageUrl,
-                        width: double.infinity,
-                        height: double.infinity,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
             ),
           ),
           const SizedBox(height: 8),
-          Flexible(
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: firstLetter,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primaryColor,
-                    ),
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: firstLetter,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primaryColor,
                   ),
-                  TextSpan(
-                    text: rest,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textColor,
-                    ),
+                ),
+                TextSpan(
+                  text: rest,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textColor,
                   ),
-                ],
-              ),
-              overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 6),
-          LessonAudioInlineButton(
-            sourceId: sourceId,
-            url: audioUrl,
+          const SizedBox(height: 2),
+          SizedBox(
+            height: 30,
+            child: LessonAudioInlineButton(
+              sourceId: sourceId,
+              url: audioUrl,
+            ),
           ),
         ],
       ),

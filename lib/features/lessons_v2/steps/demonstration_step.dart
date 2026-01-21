@@ -224,3 +224,4 @@ class _SvgTab extends StatelessWidget {
     );
   }
 }
+

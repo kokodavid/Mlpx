@@ -8,12 +8,14 @@ class LessonAudioInlineButton extends ConsumerWidget {
   final String sourceId;
   final String url;
   final String? label;
+  final Color? backgroundColor;  // New parameter for custom background color
 
   const LessonAudioInlineButton({
     super.key,
     required this.sourceId,
     required this.url,
     this.label,
+    this.backgroundColor,  // Optional custom color
   });
 
   @override
@@ -31,35 +33,40 @@ class LessonAudioInlineButton extends ConsumerWidget {
         return GestureDetector(
           onTap: url.isEmpty
               ? () {
-                  debugPrint(
-                      'LessonAudioInlineButton: empty url for $sourceId');
-                }
+            debugPrint(
+                'LessonAudioInlineButton: empty url for $sourceId');
+          }
               : () => controller.playUrl(url, sourceId: sourceId),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 40,
+                width: 50,
                 height: 40,
-                decoration: const BoxDecoration(
-                  color: AppColors.primaryColor,
-                  shape: BoxShape.circle,
+                decoration: BoxDecoration(
+                  color: isPlaying
+                      ? AppColors.primaryColor
+                      : (backgroundColor ?? Colors.grey[200]),  // Use custom color or default grey
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: isLoading
-                    ? const Padding(
-                        padding: EdgeInsets.all(10),
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
-                    : Icon(
-                        isPlaying ? Icons.pause : Icons.volume_up,
-                        color: Colors.white,
-                        size: 20,
+                child: Center(
+                  child: isLoading
+                      ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        isPlaying ? Colors.white : AppColors.primaryColor,
                       ),
+                    ),
+                  )
+                      : Icon(
+                    isPlaying ? Icons.pause : Icons.volume_up,
+                    color: isPlaying ? Colors.white : AppColors.primaryColor,
+                    size: 24,
+                  ),
+                ),
               ),
               if (label != null) ...[
                 const SizedBox(width: 10),
@@ -107,8 +114,15 @@ class _LessonAudioCardButtonState
   @override
   void initState() {
     super.initState();
-    final speeds = widget.speedUrls?.keys.toList() ?? const [];
-    _selectedSpeed = speeds.isNotEmpty ? speeds.first : '1x';
+    // Define the desired order of speeds
+    final desiredOrder = ['0.5x', '1x', '1.5x'];
+    final availableSpeeds = widget.speedUrls?.keys.toList() ?? const [];
+
+    // Find the first speed that exists in the desired order
+    _selectedSpeed = desiredOrder.firstWhere(
+          (speed) => availableSpeeds.contains(speed),
+      orElse: () => availableSpeeds.isNotEmpty ? availableSpeeds.first : '1x',
+    );
   }
 
   String get _selectedUrl {
@@ -143,13 +157,13 @@ class _LessonAudioCardButtonState
               GestureDetector(
                 onTap: _selectedUrl.isEmpty
                     ? () {
-                        debugPrint(
-                            'LessonAudioCardButton: empty url for ${widget.sourceId}');
-                      }
+                  debugPrint(
+                      'LessonAudioCardButton: empty url for ${widget.sourceId}');
+                }
                     : () => controller.playUrl(
-                          _selectedUrl,
-                          sourceId: widget.sourceId,
-                        ),
+                  _selectedUrl,
+                  sourceId: widget.sourceId,
+                ),
                 child: Container(
                   width: 56,
                   height: 56,
@@ -159,35 +173,39 @@ class _LessonAudioCardButtonState
                   ),
                   child: isLoading
                       ? const Padding(
-                          padding: EdgeInsets.all(14),
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                          ),
-                        )
+                    padding: EdgeInsets.all(14),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Colors.white,
+                      ),
+                    ),
+                  )
                       : Icon(
-                          isPlaying ? Icons.pause : Icons.play_arrow,
-                          color: Colors.white,
-                          size: 26,
-                        ),
+                    isPlaying ? Icons.pause : Icons.play_arrow,
+                    color: Colors.white,
+                    size: 26,
+                  ),
                 ),
               ),
               const SizedBox(height: 10),
               Text(
                 widget.label,
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
                   color: AppColors.textColor,
                 ),
               ),
+              // Inside the build method, replace the speed buttons section with:
               if (widget.speedUrls != null &&
                   widget.speedUrls!.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: widget.speedUrls!.keys.map((speed) {
+                  children: ['0.5x', '1x', '1.5x']
+                      .where((speed) => widget.speedUrls!.containsKey(speed))
+                      .map((speed) {
                     final isSelected = speed == _selectedSpeed;
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 10),
