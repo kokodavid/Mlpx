@@ -24,18 +24,17 @@ class AssessmentStep extends ConsumerStatefulWidget {
 
 final _assessmentStepControllerProvider = StateNotifierProvider.autoDispose
     .family<AssessmentStepController, AssessmentStepState, String>(
-      (ref, stepKey) => AssessmentStepController(),
+  (ref, stepKey) => AssessmentStepController(),
 );
 
 class _AssessmentStepState extends ConsumerState<AssessmentStep> {
   AssessmentStepController get _controller => ref.read(
-    _assessmentStepControllerProvider(
-      '${widget.lessonId}:${widget.step.key}',
-    ).notifier,
-  );
+        _assessmentStepControllerProvider(
+          '${widget.lessonId}:${widget.step.key}',
+        ).notifier,
+      );
 
-  AssessmentStepState get _state =>
-      ref.watch(
+  AssessmentStepState get _state => ref.watch(
         _assessmentStepControllerProvider(
           '${widget.lessonId}:${widget.step.key}',
         ),
@@ -44,8 +43,8 @@ class _AssessmentStepState extends ConsumerState<AssessmentStep> {
   @override
   void initState() {
     super.initState();
-    _controller.retry();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _controller.retry();
       widget.onStepStateChanged(
         LessonStepUiState(
           canAdvance: false,
@@ -67,9 +66,8 @@ class _AssessmentStepState extends ConsumerState<AssessmentStep> {
       LessonStepUiState(
         canAdvance: allCorrect,
         isPrimaryEnabled: true,
-        primaryLabel: allCorrect
-            ? (widget.isLastStep ? 'Finish' : 'Continue')
-            : 'Retry',
+        primaryLabel:
+            allCorrect ? (widget.isLastStep ? 'Finish' : 'Continue') : 'Retry',
         onPrimaryPressed: allCorrect ? null : _handleRetry,
       ),
     );
@@ -91,9 +89,7 @@ class _AssessmentStepState extends ConsumerState<AssessmentStep> {
         .whereType<Map>()
         .map((item) => item.cast<String, dynamic>())
         .toList();
-    return options
-        .map((item) => item['is_correct'] as bool? ?? false)
-        .toList();
+    return options.map((item) => item['is_correct'] as bool? ?? false).toList();
   }
 
   @override
@@ -101,8 +97,6 @@ class _AssessmentStepState extends ConsumerState<AssessmentStep> {
     final title = widget.step.config['title'] as String? ?? 'Assessment';
     final prompt =
         widget.step.config['prompt'] as String? ?? 'Choose the correct answers';
-    final hint = widget.step.config['hint'] as String? ??
-        'Select all correct answers, then tap "Check \nAnswers".';
     final instructionUrl =
         widget.step.config['sound_instruction_url'] as String? ?? '';
     final options = (widget.step.config['options'] as List<dynamic>? ?? [])
@@ -120,25 +114,12 @@ class _AssessmentStepState extends ConsumerState<AssessmentStep> {
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
-          Text(
-            prompt,
-            style: const TextStyle(
-              fontSize: 15,
-              color: AppColors.textColor,
-            ),
-          ),
-          const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-            ),
             child: LessonAudioInlineButton(
               sourceId: '${widget.step.key}-instruction',
               url: instructionUrl,
-              label: 'Click here to listen',
-              backgroundColor: Colors.pink[100], // Add pink background here
+              label: prompt,
             ),
           ),
           const SizedBox(height: 16),
@@ -170,10 +151,10 @@ class _AssessmentStepState extends ConsumerState<AssessmentStep> {
                   if (!_state.hasChecked) {
                     final hasSelection = ref
                         .read(
-                      _assessmentStepControllerProvider(
-                        '${widget.lessonId}:${widget.step.key}',
-                      ),
-                    )
+                          _assessmentStepControllerProvider(
+                            '${widget.lessonId}:${widget.step.key}',
+                          ),
+                        )
                         .selectedIndices
                         .isNotEmpty;
                     widget.onStepStateChanged(
@@ -190,29 +171,11 @@ class _AssessmentStepState extends ConsumerState<AssessmentStep> {
             },
           ),
           const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.borderColor),
-            ),
-            child: Text(
-              hint,
-              style: const TextStyle(
-                fontSize: 13,
-                color: AppColors.textColor,
-              ),
-            ),
-          ),
-
           // Feedback Section
           if (_state.hasChecked)
             Padding(
               padding: const EdgeInsets.only(top: 14),
-              child: _state.isCorrect
-                  ? _SuccessFeedback()
-                  : _ErrorFeedback(),
+              child: _state.isCorrect ? _SuccessFeedback() : _ErrorFeedback(),
             ),
         ],
       ),
@@ -395,19 +358,19 @@ class _AssessmentOption extends StatelessWidget {
                 alignment: Alignment.center,
                 child: imageUrl.isEmpty
                     ? const Icon(
-                  Icons.image_outlined,
-                  size: 26,
-                  color: AppColors.textColor,
-                )
+                        Icons.image_outlined,
+                        size: 26,
+                        color: AppColors.textColor,
+                      )
                     : ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.network(
-                    imageUrl,
-                    width: double.infinity,
-                    height: double.infinity,
-                    fit: BoxFit.fill,
-                  ),
-                ),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.network(
+                          imageUrl,
+                          width: double.infinity,
+                          height: double.infinity,
+                          fit: BoxFit.fill,
+                        ),
+                      ),
               ),
             ),
             const SizedBox(height: 6),

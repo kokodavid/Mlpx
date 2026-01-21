@@ -40,10 +40,8 @@ class LessonCompleteV2Screen extends ConsumerWidget {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => context.pop(),
-        ),
+        automaticallyImplyLeading: false,
+        
         actions: [
           IconButton(
             icon: const Icon(Icons.help_outline, color: Colors.black),

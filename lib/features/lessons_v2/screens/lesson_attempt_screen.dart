@@ -45,6 +45,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
   LessonDefinition? _loadedLesson;
   ProviderSubscription<AsyncValue<LessonDefinition?>>? _lessonSubscription;
   late final LessonAudioController _audioController;
+  bool _isFinishing = false;
 
   LessonDefinition get _lessonDefinition =>
       _loadedLesson ?? widget.lessonDefinition!;
@@ -148,9 +149,23 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
       });
       return;
     }
+    if (_isFinishing) {
+      return;
+    }
+    setState(() {
+      _isFinishing = true;
+    });
     await _recordLessonCompletionAttempt();
+    if (!mounted) {
+      return;
+    }
     if (widget.onFinish != null) {
       widget.onFinish!.call();
+      if (mounted) {
+        setState(() {
+          _isFinishing = false;
+        });
+      }
       return;
     }
     if (widget.isReattempt) {
@@ -168,6 +183,11 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
           'lessonTitle': _lessonDefinition.title,
         },
       );
+    }
+    if (mounted) {
+      setState(() {
+        _isFinishing = false;
+      });
     }
   }
 
@@ -266,8 +286,10 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
 
     final canAdvance =
         _stepUiState.canAdvance ?? _defaultCanAdvance(_currentStep);
-    final isPrimaryEnabled = _stepUiState.isPrimaryEnabled ??
-        (_stepUiState.onPrimaryPressed != null || canAdvance);
+    final isPrimaryEnabled = _isFinishing
+        ? false
+        : (_stepUiState.isPrimaryEnabled ??
+            (_stepUiState.onPrimaryPressed != null || canAdvance));
     final primaryLabel =
         _stepUiState.primaryLabel ?? _defaultPrimaryLabel(_currentStep);
     final showBack = _stepUiState.showBack ?? true;

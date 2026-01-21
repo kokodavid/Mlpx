@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:milpress/features/lessons_v2/widgets/lesson_audio_buttons.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../models/lesson_models.dart';
-import '../widgets/lesson_audio_buttons.dart';
+import '../widgets/lesson_audio_tip_banner.dart';
 
 class PracticeStep extends StatefulWidget {
   final LessonStepDefinition step;
@@ -69,18 +70,11 @@ class _PracticeStepState extends State<PracticeStep> {
               );
             },
           ),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.accentColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: LessonAudioInlineButton(
-              sourceId: '${widget.step.key}-tip',
-              url: tipAudioUrl,
-              label: tipText,
-            ),
+          const SizedBox(height: 15),
+          LessonAudioTipBanner(
+            sourceId: '${widget.step.key}-tip',
+            url: tipAudioUrl,
+            label: tipText,
           ),
         ],
       ),
