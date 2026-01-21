@@ -46,17 +46,6 @@ class CourseDetailHeader extends StatelessWidget {
               fontWeight: FontWeight.bold,
               color: Color(0xFF232B3A)),
         ),
-        const SizedBox(height: 18),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CourseInfoPill(
-                icon: Icons.menu_book, label: '$totalModules Modules'),
-            const SizedBox(width: 16),
-            CourseInfoPill(
-                icon: Icons.menu, label: '$totalLessons Lessons'),
-          ],
-        ),
       ],
     );
   }

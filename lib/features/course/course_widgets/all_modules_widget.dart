@@ -3,11 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../course_models/complete_course_model.dart';
 import 'package:milpress/utils/app_colors.dart';
-import '../providers/module_provider.dart';
+import 'package:milpress/features/lessons_v2/models/lesson_models.dart';
+import 'package:milpress/features/lessons_v2/providers/lesson_providers.dart'
+    as lessons_v2;
 
 class AllModulesWidget extends ConsumerStatefulWidget {
   final List<ModuleWithLessons> modules;
-  final Map<String, bool> completedModules; // moduleId -> completed
   final String? ongoingModuleId;
   final String? courseId;
   final String? courseTitle;
@@ -17,7 +18,6 @@ class AllModulesWidget extends ConsumerStatefulWidget {
   const AllModulesWidget({
     Key? key,
     required this.modules,
-    required this.completedModules,
     this.ongoingModuleId,
     this.courseId,
     this.courseTitle,
@@ -57,12 +57,23 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
           itemCount: modules.length,
           itemBuilder: (context, index) {
             final module = modules[index];
-            final isCompleted = widget.completedModules[module.module.id] ?? false;
-            final isOngoing = widget.ongoingModuleId == module.module.id;
             final expanded = _expanded[index];
-            final completedLessonIdsAsync = ref.watch(
-              completedLessonIdsProvider(module.module.id),
+            final moduleLessonsAsync = ref.watch(
+              lessons_v2.moduleLessonsProvider(module.module.id),
             );
+            final moduleLessons =
+                moduleLessonsAsync.value ?? const <LessonDefinition>[];
+            final completedLessonIdsAsync = ref.watch(
+              lessons_v2.completedLessonIdsV2Provider(module.module.id),
+            );
+            final completedLessonIds =
+                completedLessonIdsAsync.value ?? const <String>{};
+            final completedLessonCount = completedLessonIds.length;
+            final totalLessonCount = moduleLessons.length;
+            final isCompleted = totalLessonCount > 0 &&
+                completedLessonCount >= totalLessonCount;
+            final isOngoing = !isCompleted &&
+                (widget.ongoingModuleId == module.module.id);
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6),
               child: GestureDetector(
@@ -95,17 +106,6 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Container(
-                                //   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                //   decoration: BoxDecoration(
-                                //     color: Colors.grey[300],
-                                //     borderRadius: BorderRadius.circular(10),
-                                //   ),
-                                //   child: Text(
-                                //     'Module ${index + 1}',
-                                //     style: const TextStyle(fontSize: 13, color: Colors.black54),
-                                //   ),
-                                // ),
                                 const SizedBox(height: 8),
                                 Text(
                                   module.module.description,
@@ -115,10 +115,34 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
                                     color: Color(0xFF232B3A),
                                   ),
                                 ),
-                                if (isCompleted)
-                                  const Text('Lesson completed', style: TextStyle(color: Colors.green, fontSize: 15))
-                                else if (isOngoing)
-                                  const Text('Lessons ongoing', style: TextStyle(color: Colors.orange, fontSize: 15)),
+                                if (moduleLessonsAsync.isLoading)
+                                  const Text(
+                                    'Loading lessons...',
+                                    style: TextStyle(
+                                      color: Colors.grey,
+                                      fontSize: 14,
+                                    ),
+                                  )
+                                else if (totalLessonCount == 0)
+                                  const Text(
+                                    'No lessons available',
+                                    style: TextStyle(
+                                      color: Colors.grey,
+                                      fontSize: 14,
+                                    ),
+                                  )
+                                else
+                                  Text(
+                                    '$completedLessonCount of $totalLessonCount lessons completed',
+                                    style: TextStyle(
+                                      color: isCompleted
+                                          ? Colors.green
+                                          : (isOngoing
+                                              ? Colors.orange
+                                              : Colors.grey),
+                                      fontSize: 14,
+                                    ),
+                                  ),
                               ],
                             ),
                             const Spacer(),
@@ -141,46 +165,48 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              ...List.generate(module.lessons.length, (lessonIdx) {
-                                final lesson = module.lessons[lessonIdx];
-                                final lessonCompleted = completedLessonIdsAsync.maybeWhen(
-                                  data: (ids) => ids.contains(lesson.id),
-                                  orElse: () => false,
-                                );
+                              if (moduleLessonsAsync.isLoading)
+                                const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                ),
+                              if (!moduleLessonsAsync.isLoading &&
+                                  moduleLessons.isEmpty)
+                                const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: Text(
+                                    'No lessons available yet.',
+                                    style: TextStyle(color: AppColors.textColor),
+                                  ),
+                                ),
+                              ...List.generate(moduleLessons.length, (lessonIdx) {
+                                final lesson = moduleLessons[lessonIdx];
                                 
                                 return Column(
                                   children: [
                                     InkWell(
-                                      onTap: lessonCompleted
-                                          ? () {
-                                              final courseId = widget.courseId ?? module.module.courseId;
-                                              if (courseId == null || courseId.isEmpty) {
-                                                return;
-                                              }
-                                              final courseContext = <String, dynamic>{
-                                                'courseId': courseId,
-                                                if (widget.courseTitle != null)
-                                                  'courseTitle': widget.courseTitle,
-                                                'moduleId': module.module.id,
-                                                'moduleTitle': module.module.description,
-                                                if (widget.totalModules != null)
-                                                  'totalModules': widget.totalModules,
-                                                if (widget.totalLessons != null)
-                                                  'totalLessons': widget.totalLessons,
-                                                'currentLessonIndex': lessonIdx,
-                                                'currentModuleIndex': index,
-                                                'moduleLessonsCount': module.lessons.length,
-                                                'isReviewMode': true,
-                                              };
-                                              context.push(
-                                                '/lesson/${lesson.id}',
-                                                extra: {
-                                                  'courseContext': courseContext,
-                                                  'lessonId': lesson.id,
-                                                },
-                                              );
-                                            }
-                                          : null,
+                                      onTap: () {
+                                        if (!completedLessonIds
+                                            .contains(lesson.id)) {
+                                          // ScaffoldMessenger.of(context)
+                                          //     .showSnackBar(
+                                          //   const SnackBar(
+                                          //     content: Text(
+                                          //         'Complete lesson for review to be available.'),
+                                          //   ),
+                                          // );
+                                          return;
+                                        }
+                                        context.push(
+                                          '/lesson-attempt',
+                                          extra: {
+                                            'lessonId': lesson.id,
+                                            'isReattempt': true,
+                                          },
+                                        );
+                                      },
                                       borderRadius: BorderRadius.circular(12),
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
@@ -191,28 +217,30 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
                                         child: Row(
                                           children: [
                                             Icon(
-                                              lessonCompleted ? Icons.check_circle : Icons.circle_outlined,
+                                              completedLessonIds.contains(lesson.id)
+                                                  ? Icons.check_circle
+                                                  : Icons.circle_outlined,
                                               size: 20,
-                                              color: lessonCompleted ? Colors.green : AppColors.textColor,
+                                              color: completedLessonIds.contains(lesson.id)
+                                                  ? AppColors.correctAnswerColor
+                                                  : AppColors.textColor,
                                             ),
                                             const SizedBox(width: 10),
                                             Expanded(
                                               child: Text(
                                                 lesson.title,
-                                                style: TextStyle(
+                                                style: const TextStyle(
                                                   fontSize: 15,
                                                   fontWeight: FontWeight.w500,
-                                                  color: lessonCompleted ? Colors.green : AppColors.textColor,
+                                                  color: AppColors.textColor,
                                                 ),
                                               ),
                                             ),
-                                            if (lessonCompleted)
-                                              const Icon(Icons.check, color: Colors.green, size: 16),
                                           ],
                                         ),
                                       ),
                                     ),
-                                    if (lessonIdx < module.lessons.length - 1)
+                                    if (lessonIdx < moduleLessons.length - 1)
                                       Padding(
                                         padding: const EdgeInsets.symmetric(horizontal: 8),
                                         child: Divider(height: 1, color: Colors.grey[300]),

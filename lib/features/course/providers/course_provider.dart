@@ -8,11 +8,36 @@ import 'package:milpress/features/user_progress/providers/course_progress_provid
 import 'package:milpress/utils/supabase_config.dart';
 import 'package:milpress/features/user_progress/models/course_progress_model.dart';
 import 'package:milpress/features/user_progress/providers/user_progress_providers.dart';
+import 'package:milpress/features/lessons_v2/models/lesson_models.dart';
+import 'package:milpress/features/lessons_v2/providers/lesson_providers.dart'
+    as lessons_v2;
 
 final courseServiceProvider = Provider<CourseService>((ref) {
   final supabase = Supabase.instance.client;
   return CourseService(supabase);
 });
+
+Future<int> _fetchTotalLessonsV2(
+  Ref ref,
+  List<ModuleWithLessons> modules,
+) async {
+  if (modules.isEmpty) {
+    return 0;
+  }
+
+  final lessonCounts = await Future.wait(modules.map((module) async {
+    final moduleId = module.module.id;
+    if (moduleId.isEmpty) {
+      return 0;
+    }
+    final lessons = await ref.watch(
+      lessons_v2.moduleLessonsProvider(moduleId).future,
+    );
+    return lessons.length;
+  }));
+
+  return lessonCounts.fold<int>(0, (sum, count) => sum + count);
+}
 
 // Provider for courses with their module and lesson counts
 final coursesWithDetailsProvider = FutureProvider<List<CourseWithDetails>>((ref) async {
@@ -29,7 +54,7 @@ final coursesWithDetailsProvider = FutureProvider<List<CourseWithDetails>>((ref)
     try {
       final completeCourse = await courseService.getCompleteCourse(course.id);
       final totalModules = completeCourse.modules.length;
-      final totalLessons = completeCourse.modules.fold(0, (sum, module) => sum + module.lessons.length);
+      final totalLessons = await _fetchTotalLessonsV2(ref, completeCourse.modules);
       print('  -> ${course.title}: $totalModules modules, $totalLessons lessons');
       coursesWithDetails.add(CourseWithDetails(
         course: course,
@@ -167,127 +192,196 @@ final firstModuleProvider = FutureProvider.family<ModuleWithLessons?, String>((r
   return null;
 });
 
-Future<Set<String>> _fetchCompletedModuleIds(String courseProgressId) async {
-  try {
-    final response = await Supabase.instance.client
-        .from('module_progress')
-        .select('module_id')
-        .eq('course_progress_id', courseProgressId)
-        .eq('status', 'completed');
-
-    if (response is! List) {
-      return <String>{};
-    }
-
-    return response
-        .map((row) => row['module_id'] as String?)
-        .whereType<String>()
-        .toSet();
-  } catch (e) {
-    debugPrint('Error fetching completed modules: $e');
-    return <String>{};
-  }
-}
-
 // Provider to get completed modules for a course
 final completedModulesProvider = FutureProvider.family<Map<String, bool>, String>((ref, courseId) async {
   final completeCourse = await ref.watch(completeCourseProvider(courseId).future);
-  final completedModules = <String, bool>{};
-  
-  // Get courseProgressId for this course
-  final courseProgressId = await ref.watch(getOrCreateCourseProgressProvider(courseId).future);
-  
-  // Check module progress records in Supabase
-  final moduleProgressRecords = await _fetchCompletedModuleIds(courseProgressId);
-  
-  print('\n=== Completed Modules Provider Debug ===');
-  print('Course ID: $courseId');
-  print('Course Progress ID: $courseProgressId');
-  print('Completed modules from progress records: ${moduleProgressRecords.toList()}');
-  
-  for (final module in completeCourse.modules) {
-    final isCompletedFromRecord = moduleProgressRecords.contains(module.module.id);
+  final moduleCompletion = await Future.wait(
+    completeCourse.modules.map((module) async {
+      final moduleId = module.module.id;
+      if (moduleId.isEmpty) {
+        return MapEntry(moduleId, false);
+      }
+      final lessons = await ref.watch(
+        lessons_v2.moduleLessonsProvider(moduleId).future,
+      );
+      if (lessons.isEmpty) {
+        return MapEntry(moduleId, false);
+      }
+      final completedLessonIds = await ref.watch(
+        lessons_v2.completedLessonIdsV2Provider(moduleId).future,
+      );
+      final isCompleted = completedLessonIds.length >= lessons.length;
+      return MapEntry(moduleId, isCompleted);
+    }),
+  );
 
-    completedModules[module.module.id] = isCompletedFromRecord;
-
-    print('Module: ${module.module.description} (${module.module.id})');
-    print('  Completed from record: $isCompletedFromRecord');
-  }
-  
-  print('Final completed modules: ${completedModules.entries.where((e) => e.value).map((e) => e.key).toList()}');
-  print('=====================================\n');
-  
-  return completedModules;
+  return Map<String, bool>.fromEntries(moduleCompletion);
 });
 
 // Provider to get the ongoing module (first incomplete module)
 final ongoingModuleProvider = FutureProvider.family<ModuleWithLessons?, String>((ref, courseId) async {
   final completeCourse = await ref.watch(completeCourseProvider(courseId).future);
-  final completedModules = await ref.watch(completedModulesProvider(courseId).future);
-  
-  // Get courseProgressId for this course
-  final courseProgressId = await ref.watch(getOrCreateCourseProgressProvider(courseId).future);
-  
-  // Check module progress records in Supabase
-  final moduleProgressRecords = await _fetchCompletedModuleIds(courseProgressId);
-  
-  print('\n=== Ongoing Module Provider Debug ===');
-  print('Course ID: $courseId');
-  print('Course Progress ID: $courseProgressId');
-  print('Completed modules from progress records: ${moduleProgressRecords.toList()}');
-  print('Completed modules from progress records: ${moduleProgressRecords.toList()}');
-  
-  // Find the first incomplete module
+  final completedModules =
+      await ref.watch(completedModulesProvider(courseId).future);
+
   for (final module in completeCourse.modules) {
-    final isCompletedFromRecord = moduleProgressRecords.contains(module.module.id);
-
-    print('Module: ${module.module.description} (${module.module.id})');
-    print('  Completed from record: $isCompletedFromRecord');
-
-    if (!isCompletedFromRecord) {
-      print('  -> Returning as ongoing module');
-      print('=====================================\n');
+    final isCompleted = completedModules[module.module.id] ?? false;
+    if (!isCompleted) {
       return module;
     }
   }
-  
-  // If all modules are completed, return null (no ongoing module)
-  print('All modules are completed, returning null');
-  print('=====================================\n');
+
   return null;
 });
 
-// Provider to get course progress statistics
-final courseProgressProvider = FutureProvider.family<CourseProgressStats, String>((ref, courseId) async {
+class _ModuleLessonInfo {
+  final String moduleId;
+  final List<String> lessonIds;
+
+  const _ModuleLessonInfo({
+    required this.moduleId,
+    required this.lessonIds,
+  });
+}
+
+// Course progress stats based on lessons_v2 and lesson_completion.
+final courseProgressV2Provider =
+    FutureProvider.family<CourseProgressStats, String>((ref, courseId) async {
   final completeCourse = await ref.watch(completeCourseProvider(courseId).future);
-  final completedModules = await ref.watch(completedModulesProvider(courseId).future);
-  
-  int totalModules = completeCourse.modules.length;
-  int completedModulesCount = completedModules.values.where((completed) => completed).length;
-  int totalLessons = completeCourse.modules.fold<int>(0, (sum, module) => sum + module.lessons.length);
-  int completedLessons = 0;
-  int totalQuizzes = 0;
-  int completedQuizzes = 0;
-  
-  // Calculate lesson and quiz progress
-  // for (final module in completeCourse.modules) {
-  //   final moduleProgress = ref.watch(moduleQuizProgressProvider(module.module.id));
-  //   if (moduleProgress != null) {
-  //     completedLessons += moduleProgress.lessonScores.length;
-  //     totalQuizzes += moduleProgress.totalQuizzes;
-  //     completedQuizzes += moduleProgress.completedQuizzes;
-  //   }
-  // }
-  
+  final modules = completeCourse.modules;
+  final totalModules = modules.length;
+
+  final moduleLessons = await Future.wait(modules.map((module) async {
+    final lessons = await ref.watch(
+      lessons_v2.moduleLessonsProvider(module.module.id).future,
+    );
+    final lessonIds = lessons
+        .map((lesson) => lesson.id)
+        .where((id) => id.isNotEmpty)
+        .toList(growable: false);
+    return _ModuleLessonInfo(
+      moduleId: module.module.id,
+      lessonIds: lessonIds,
+    );
+  }));
+
+  final totalLessons = moduleLessons.fold<int>(
+    0,
+    (sum, module) => sum + module.lessonIds.length,
+  );
+
+  final userId = SupabaseConfig.currentUser?.id;
+  if (userId == null || totalLessons == 0) {
+    return CourseProgressStats(
+      totalModules: totalModules,
+      completedModules: 0,
+      totalLessons: totalLessons,
+      completedLessons: 0,
+      totalQuizzes: 0,
+      completedQuizzes: 0,
+      courseCompletionPercentage: 0,
+    );
+  }
+
+  final allLessonIds = moduleLessons
+      .expand((module) => module.lessonIds)
+      .toList(growable: false);
+  if (allLessonIds.isEmpty) {
+    return CourseProgressStats(
+      totalModules: totalModules,
+      completedModules: 0,
+      totalLessons: totalLessons,
+      completedLessons: 0,
+      totalQuizzes: 0,
+      completedQuizzes: 0,
+      courseCompletionPercentage: 0,
+    );
+  }
+
+  Set<String> completedLessonIds = {};
+  try {
+    final response = await SupabaseConfig.client
+        .from('lesson_completion')
+        .select('lesson_id')
+        .eq('user_id', userId)
+        .inFilter('lesson_id', allLessonIds);
+    if (response is List) {
+      completedLessonIds = response
+          .map((row) => row['lesson_id'] as String?)
+          .whereType<String>()
+          .toSet();
+    }
+  } catch (e) {
+    debugPrint('courseProgressV2Provider: failed to load completion: $e');
+  }
+
+  final completedLessons = completedLessonIds.length;
+  int completedModules = 0;
+  for (final module in moduleLessons) {
+    if (module.lessonIds.isEmpty) {
+      continue;
+    }
+    final isCompleted = module.lessonIds
+        .every((lessonId) => completedLessonIds.contains(lessonId));
+    if (isCompleted) {
+      completedModules += 1;
+    }
+  }
+
+  final completionPercentage =
+      totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0.0;
+
   return CourseProgressStats(
     totalModules: totalModules,
-    completedModules: completedModulesCount,
+    completedModules: completedModules,
     totalLessons: totalLessons,
     completedLessons: completedLessons,
-    totalQuizzes: totalQuizzes,
-    completedQuizzes: completedQuizzes,
-    courseCompletionPercentage: totalModules > 0 ? (completedModulesCount / totalModules) * 100 : 0,
+    totalQuizzes: 0,
+    completedQuizzes: 0,
+    courseCompletionPercentage: completionPercentage,
   );
+});
+
+class OngoingLessonInfo {
+  final ModuleWithLessons module;
+  final LessonDefinition? nextLesson;
+
+  const OngoingLessonInfo({
+    required this.module,
+    required this.nextLesson,
+  });
+}
+
+final ongoingLessonInfoV2Provider =
+    FutureProvider.family<OngoingLessonInfo?, String>((ref, courseId) async {
+  final completeCourse = await ref.watch(completeCourseProvider(courseId).future);
+
+  for (final module in completeCourse.modules) {
+    final lessons = await ref.watch(
+      lessons_v2.moduleLessonsProvider(module.module.id).future,
+    );
+    if (lessons.isEmpty) {
+      continue;
+    }
+
+    final completedLessonIds = await ref.watch(
+      lessons_v2.completedLessonIdsV2Provider(module.module.id).future,
+    );
+
+    LessonDefinition? nextLesson;
+    for (final lesson in lessons) {
+      if (!completedLessonIds.contains(lesson.id)) {
+        nextLesson = lesson;
+        break;
+      }
+    }
+
+    if (nextLesson != null) {
+      return OngoingLessonInfo(module: module, nextLesson: nextLesson);
+    }
+  }
+
+  return null;
 });
 
 // Helper class to combine course with its module and lesson counts
@@ -343,9 +437,8 @@ final courseProgressRefreshStreamProvider = StreamProvider.family<void, String>(
   // Invalidate all related providers
   ref.invalidate(completedModulesProvider(courseId));
   ref.invalidate(ongoingModuleProvider(courseId));
-  ref.invalidate(courseCompletedLessonsProvider(courseId));
-  ref.invalidate(courseCompletedModulesProvider(courseId));
-  ref.invalidate(courseProgressProvider(courseId));
+  ref.invalidate(courseProgressV2Provider(courseId));
+  ref.invalidate(ongoingLessonInfoV2Provider(courseId));
   
   debugPrint('CourseProgressRefreshStream: Refreshed data for course $courseId');
 });
@@ -385,70 +478,19 @@ final checkAndUpdateCourseCompletionProvider = FutureProvider.family<void, Strin
   }
 });
 
-// Provider that combines course progress data and refreshes when needed
-final courseProgressWithRefreshProvider = FutureProvider.family<CourseProgressStats, String>((ref, courseId) async {
-  // Watch the refresh provider to trigger updates
-  ref.watch(courseProgressRefreshProvider);
-  
-  final completeCourse = await ref.watch(completeCourseProvider(courseId).future);
-  final completedModules = await ref.watch(completedModulesProvider(courseId).future);
-  
-  int totalModules = completeCourse.modules.length;
-  int completedModulesCount = completedModules.values.where((completed) => completed).length;
-  int totalLessons = completeCourse.modules.fold<int>(0, (sum, module) => sum + module.lessons.length);
-  int completedLessons = 0;
-  int totalQuizzes = 0;
-  int completedQuizzes = 0;
-  
-  // Calculate lesson and quiz progress
-  // for (final module in completeCourse.modules) {
-  //   final moduleProgress = ref.watch(moduleQuizProgressProvider(module.module.id));
-  //   if (moduleProgress != null) {
-  //     completedLessons += moduleProgress.lessonScores.length;
-  //     totalQuizzes += moduleProgress.totalQuizzes;
-  //     completedQuizzes += moduleProgress.completedQuizzes;
-  //   }
-  // }
-  
-  return CourseProgressStats(
-    totalModules: totalModules,
-    completedModules: completedModulesCount,
-    totalLessons: totalLessons,
-    completedLessons: completedLessons,
-    totalQuizzes: totalQuizzes,
-    completedQuizzes: completedQuizzes,
-    courseCompletionPercentage: totalModules > 0 ? (completedModulesCount / totalModules) * 100 : 0,
-  );
-});
-
 // Enhanced provider that automatically refreshes all course-related data
-final autoRefreshCourseDataProvider = FutureProvider.family<void, String>((ref, courseId) async {
+final autoRefreshCourseDataProvider =
+    FutureProvider.family<void, String>((ref, courseId) async {
   // Watch the refresh provider to trigger updates
   ref.watch(courseProgressRefreshProvider);
-  
+
   // Invalidate all related providers to ensure fresh data
   ref.invalidate(completedModulesProvider(courseId));
   ref.invalidate(ongoingModuleProvider(courseId));
-  ref.invalidate(courseCompletedLessonsProvider(courseId));
-  ref.invalidate(courseCompletedModulesProvider(courseId));
-  ref.invalidate(courseProgressProvider(courseId));
-  
-  // Force refresh of all module progress
-  final completeCourse = await ref.watch(completeCourseProvider(courseId).future);
-  // for (final module in completeCourse.modules) {
-  //   ref.read(moduleQuizProgressProvider(module.module.id).notifier).loadModuleProgress(module.module.id);
-  // }
-  
-  debugPrint('AutoRefreshCourseDataProvider: Refreshed all data for course $courseId');
-});
+  ref.invalidate(courseProgressV2Provider(courseId));
+  ref.invalidate(ongoingLessonInfoV2Provider(courseId));
 
-// Provider to get course progress with automatic refresh
-final courseProgressWithAutoRefreshProvider = FutureProvider.family<CourseProgressStats, String>((ref, courseId) async {
-  // Trigger auto refresh
-  await ref.watch(autoRefreshCourseDataProvider(courseId).future);
-  
-  // Get the refreshed data
-  return ref.watch(courseProgressWithRefreshProvider(courseId).future);
+  debugPrint('AutoRefreshCourseDataProvider: Refreshed all data for course $courseId');
 });
 
 // Assessment Course Suggestions Provider
