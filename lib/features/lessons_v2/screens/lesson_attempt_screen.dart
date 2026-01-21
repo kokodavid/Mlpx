@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:milpress/features/lessons_v2/services/lesson_audio_controller.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../models/lesson_models.dart';
+import '../models/lesson_attempt_request.dart';
 import '../providers/lesson_audio_providers.dart';
 import '../providers/lesson_providers.dart';
 import '../widgets/bottom_action_bar.dart';
@@ -14,6 +16,7 @@ class LessonAttemptScreen extends ConsumerStatefulWidget {
   final String? lessonId;
   final int initialStepIndex;
   final VoidCallback? onFinish;
+  final bool isReattempt;
 
   LessonAttemptScreen({
     super.key,
@@ -21,6 +24,7 @@ class LessonAttemptScreen extends ConsumerStatefulWidget {
     this.lessonId,
     this.initialStepIndex = 0,
     this.onFinish,
+    this.isReattempt = false,
   }) : assert(
           lessonDefinition != null || lessonId != null,
           'Provide either lessonDefinition or lessonId.',
@@ -39,6 +43,8 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
   late int _currentStepIndex;
   LessonStepUiState _stepUiState = const LessonStepUiState();
   LessonDefinition? _loadedLesson;
+  ProviderSubscription<AsyncValue<LessonDefinition?>>? _lessonSubscription;
+  late final LessonAudioController _audioController;
 
   LessonDefinition get _lessonDefinition =>
       _loadedLesson ?? widget.lessonDefinition!;
@@ -49,11 +55,34 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
   @override
   void initState() {
     super.initState();
+    _audioController = ref.read(lessonAudioControllerProvider);
     if (widget.lessonDefinition != null) {
       _loadedLesson = widget.lessonDefinition;
       _currentStepIndex = widget.initialStepIndex.clamp(
         0,
         widget.lessonDefinition!.steps.length - 1,
+      );
+    }
+    if (widget.lessonId != null) {
+      _lessonSubscription = ref.listenManual<AsyncValue<LessonDefinition?>>(
+        lessonDefinitionProvider(widget.lessonId!),
+        (previous, next) {
+          next.whenData((lesson) {
+            if (!mounted || lesson == null) {
+              return;
+            }
+            if (_loadedLesson?.id == lesson.id) {
+              return;
+            }
+            setState(() {
+              _loadedLesson = lesson;
+              _currentStepIndex = widget.initialStepIndex.clamp(
+                0,
+                lesson.steps.length - 1,
+              );
+            });
+          });
+        },
       );
     }
   }
@@ -100,7 +129,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
   }
 
   void _goBack() {
-    ref.read(lessonAudioControllerProvider).stop();
+    _audioController.stop();
     if (_currentStepIndex <= 0) {
       return;
     }
@@ -110,8 +139,8 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
     });
   }
 
-  void _goForward() {
-    ref.read(lessonAudioControllerProvider).stop();
+  Future<void> _goForward() async {
+    _audioController.stop();
     if (!_isLastStep) {
       setState(() {
         _currentStepIndex += 1;
@@ -119,8 +148,15 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
       });
       return;
     }
+    await _recordLessonCompletionAttempt();
     if (widget.onFinish != null) {
       widget.onFinish!.call();
+      return;
+    }
+    if (widget.isReattempt) {
+      if (mounted) {
+        context.pop();
+      }
       return;
     }
     if (mounted) {
@@ -135,36 +171,41 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
     }
   }
 
+  Future<void> _recordLessonCompletionAttempt() async {
+    final lessonId = _lessonDefinition.id;
+    if (lessonId.isEmpty) {
+      return;
+    }
+    try {
+      await ref.read(
+        recordLessonAttemptProvider(
+          LessonAttemptRequest(
+            lessonId: lessonId,
+            markCompleted: true,
+          ),
+        ).future,
+      );
+      if (!mounted) {
+        return;
+      }
+      final moduleId = _lessonDefinition.moduleId;
+      if (moduleId.isNotEmpty) {
+        ref.invalidate(completedLessonIdsV2Provider(moduleId));
+      }
+    } catch (e) {
+      debugPrint('LessonAttemptScreen: failed to record attempt: $e');
+    }
+  }
+
   @override
   void dispose() {
-    ref.read(lessonAudioControllerProvider).stop();
+    _lessonSubscription?.close();
+    _audioController.stop();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.lessonId != null) {
-      ref.listen<AsyncValue<LessonDefinition?>>(
-        lessonDefinitionProvider(widget.lessonId!),
-        (previous, next) {
-          next.whenData((lesson) {
-            if (!mounted || lesson == null) {
-              return;
-            }
-            if (_loadedLesson?.id == lesson.id) {
-              return;
-            }
-            setState(() {
-              _loadedLesson = lesson;
-              _currentStepIndex = widget.initialStepIndex.clamp(
-                0,
-                lesson.steps.length - 1,
-              );
-            });
-          });
-        },
-      );
-    }
     if (widget.lessonDefinition == null && _loadedLesson == null) {
       final lessonId = widget.lessonId ?? '';
       if (lessonId.isEmpty) {
@@ -203,6 +244,18 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
             if (lesson == null) {
               return const Center(child: Text('Lesson not found'));
             }
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted || _loadedLesson?.id == lesson.id) {
+                return;
+              }
+              setState(() {
+                _loadedLesson = lesson;
+                _currentStepIndex = widget.initialStepIndex.clamp(
+                  0,
+                  lesson.steps.length - 1,
+                );
+              });
+            });
             return const Center(child: CircularProgressIndicator());
           },
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -298,13 +351,13 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
             primaryLabel: primaryLabel,
             primaryIcon: primaryIcon,
             primaryColor: primaryColor,
-            onPrimaryPressed: () {
+            onPrimaryPressed: () async {
               if (_stepUiState.onPrimaryPressed != null) {
                 _stepUiState.onPrimaryPressed!.call();
                 return;
               }
               if (canAdvance) {
-                _goForward();
+                await _goForward();
               }
             },
             onBackPressed: _goBack,

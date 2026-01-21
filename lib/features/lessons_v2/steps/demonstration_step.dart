@@ -54,22 +54,17 @@ class _DemonstrationStepState extends State<DemonstrationStep> {
           ),
           const SizedBox(height: 16),
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               for (var i = 0; i < imageUrls.length; i++) ...[
                 SizedBox(
                   width: 140,
                   child: _SvgTab(
                     url: imageUrls[i],
-                    isActive: i == _selectedIndex,
-                    onTap: () {
-                      setState(() {
-                        _selectedIndex = i;
-                      });
-                    },
                   ),
                 ),
                 if (i != imageUrls.length - 1)
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 15),
               ],
             ],
           ),
@@ -87,7 +82,7 @@ class _DemonstrationStepState extends State<DemonstrationStep> {
             child: Column(
               children: [
                 Container(
-                  height: 200,
+                  height: 250,
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: AppColors.accentColor,
@@ -100,14 +95,20 @@ class _DemonstrationStepState extends State<DemonstrationStep> {
                 GestureDetector(
                   onTap: _tracingController.clear,
                   child: Container(
-                    width: 40,
+                    width: 60,
                     height: 40,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       color: AppColors.copBlue,
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child:
-                        const Icon(Icons.backspace, color: Colors.white, size: 20),
+                    alignment: Alignment.center,
+                    child: SvgPicture.asset(
+                      'assets/eraser.svg',
+                      width: 20,
+                      height: 20,
+                      colorFilter:
+                          const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                    ),
                   ),
                 ),
               ],
@@ -168,58 +169,58 @@ class _DemonstrationStepState extends State<DemonstrationStep> {
 
 class _SvgTab extends StatelessWidget {
   final String url;
-  final bool isActive;
-  final VoidCallback onTap;
 
   const _SvgTab({
     required this.url,
-    required this.isActive,
-    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    const radius = 16.0;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: EdgeInsets.zero,
-        height: 80,
-        decoration: BoxDecoration(
-          color: isActive
-              ? AppColors.primaryColor.withOpacity(0.08)
-              : Colors.white,
-          borderRadius: BorderRadius.circular(radius),
-          border: isActive
-              ? Border.all(
-            color: AppColors.primaryColor,
-            width: 2.5,
-          )
-              : null,
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(radius),
-          clipBehavior: Clip.antiAlias,
-          child: Container(
-            color: isActive
-                ? Colors.transparent
-                : Colors.white, // Force white background for inactive
-            child: Center( // Center the SVG
-              child: SvgPicture.network(
-                url,
-                fit: BoxFit.contain,
-                colorFilter: isActive
-                    ? null
-                    : const ColorFilter.mode(
-                  Colors.grey,
-                  BlendMode.srcIn,
-                ),
-              ),
-            ),
-          ),
+    final isSvg = url.toLowerCase().contains('.svg');
+    return Container(
+      height: 100,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppColors.borderColor,
         ),
       ),
+      alignment: Alignment.center,
+      child: url.isEmpty
+          ? const Icon(Icons.image_not_supported,
+              color: AppColors.textColor)
+          : ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: isSvg
+                  ? SvgPicture.network(
+                      url,
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                      placeholderBuilder: (context) => const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : Image.network(
+                      url,
+                      width: 110,
+                      height: 110,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) {
+                          return child;
+                        }
+                        return const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2,color: AppColors.copBlue,),
+                        );
+                      },
+                    ),
+            ),
     );
   }
 }

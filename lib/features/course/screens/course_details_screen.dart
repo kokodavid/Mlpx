@@ -14,8 +14,6 @@ import 'package:go_router/go_router.dart';
 import 'package:milpress/features/lessons_v2/models/lesson_models.dart';
 import 'package:milpress/features/lessons_v2/providers/lesson_providers.dart'
     as lessons_v2;
-import 'package:milpress/features/user_progress/providers/user_progress_providers.dart';
-import 'package:milpress/features/user_progress/providers/course_progress_providers.dart';
 
 class CourseDetailsScreen extends ConsumerStatefulWidget {
   final String courseId;
@@ -34,7 +32,7 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
     with WidgetsBindingObserver {
   late FocusNode _focusNode;
   bool _isOngoingModuleLoading = false;
-  ModuleWithLessons? _cachedOngoingModule;
+  OngoingLessonInfo? _cachedOngoingLessonInfo;
 
   @override
   void initState() {
@@ -86,11 +84,9 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
     }
 
     // Invalidate all relevant providers
-    ref.invalidate(courseCompletedLessonsProvider(widget.courseId));
-    ref.invalidate(courseCompletedModulesProvider(widget.courseId));
     ref.invalidate(completedModulesProvider(widget.courseId));
-    ref.invalidate(ongoingModuleProvider(widget.courseId));
-    ref.invalidate(courseProgressProvider(widget.courseId));
+    ref.invalidate(courseProgressV2Provider(widget.courseId));
+    ref.invalidate(ongoingLessonInfoV2Provider(widget.courseId));
 
     // Trigger the refresh provider to update all progress data
     ref.read(courseProgressRefreshProvider.notifier).state++;
@@ -122,35 +118,32 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
 
     final completeCourseAsync =
         ref.watch(completeCourseProvider(widget.courseId));
-    final ongoingModuleAsync =
-        ref.watch(ongoingModuleProvider(widget.courseId));
+    final ongoingLessonInfoAsync =
+        ref.watch(ongoingLessonInfoV2Provider(widget.courseId));
     final courseProgressAsync =
-        ref.watch(courseProgressProvider(widget.courseId));
+        ref.watch(courseProgressV2Provider(widget.courseId));
     final completedModulesAsync =
         ref.watch(completedModulesProvider(widget.courseId));
-    final courseCompletedLessonsAsync =
-        ref.watch(courseCompletedLessonsProvider(widget.courseId));
-    final courseCompletedModulesAsync =
-        ref.watch(courseCompletedModulesProvider(widget.courseId));
 
     // Watch the auto-refresh provider to ensure data is always fresh
     ref.watch(autoRefreshCourseDataProvider(widget.courseId));
 
     // Watch the stream-based refresh for immediate updates
     ref.watch(courseProgressRefreshStreamProvider(widget.courseId));
-    ref.listen<AsyncValue<ModuleWithLessons?>>(
-      ongoingModuleProvider(widget.courseId),
+    ref.listen<AsyncValue<OngoingLessonInfo?>>(
+      ongoingLessonInfoV2Provider(widget.courseId),
       (previous, next) {
-        next.whenData((module) {
-          if (!mounted || module == null) {
+        next.whenData((info) {
+          if (!mounted || info == null) {
             return;
           }
-          final cached = _cachedOngoingModule;
-          final hasChanged =
-              cached == null || cached.module.id != module.module.id;
+          final cached = _cachedOngoingLessonInfo;
+          final hasChanged = cached == null ||
+              cached.module.module.id != info.module.module.id ||
+              cached.nextLesson?.id != info.nextLesson?.id;
           if (hasChanged) {
             setState(() {
-              _cachedOngoingModule = module;
+              _cachedOngoingLessonInfo = info;
             });
           }
         });
@@ -206,13 +199,10 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
               (sum, asyncLessons) =>
                   sum + (asyncLessons.value?.length ?? 0),
             );
-            final allModulesCompleted = completedModulesAsync.maybeWhen(
-              data: (completedModules) =>
-                  totalModules > 0 &&
-                  completedModules.values
-                          .where((completed) => completed)
-                          .length >=
-                      totalModules,
+            final allModulesCompleted = courseProgressAsync.maybeWhen(
+              data: (progress) =>
+                  progress.totalModules > 0 &&
+                  progress.completedModules >= progress.totalModules,
               orElse: () => false,
             );
             return RefreshIndicator(
@@ -220,10 +210,9 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
                 // Force refresh the course data
                 ref.invalidate(completeCourseProvider(widget.courseId));
                 // Force refresh all progress providers
-                ref.invalidate(courseCompletedLessonsProvider(widget.courseId));
-                ref.invalidate(courseCompletedModulesProvider(widget.courseId));
                 ref.invalidate(completedModulesProvider(widget.courseId));
-                ref.invalidate(ongoingModuleProvider(widget.courseId));
+                ref.invalidate(courseProgressV2Provider(widget.courseId));
+                ref.invalidate(ongoingLessonInfoV2Provider(widget.courseId));
                 // Trigger the refresh provider to update all progress data
                 ref.read(courseProgressRefreshProvider.notifier).state++;
               },
@@ -303,67 +292,24 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
                           ),
                         ),
 
-                      courseCompletedLessonsAsync.when(
-                        data: (completedLessons) =>
-                            courseCompletedModulesAsync.when(
-                          data: (completedModules) => CourseProgressCard(
-                            totalModules: completeCourse.modules.length,
-                            totalLessons: totalLessons,
-                            completedLessons: completedLessons,
-                            completedModules: completedModules,
-                          ),
-                          loading: () => CourseProgressCard(
-                            totalModules: completeCourse.modules.length,
-                            totalLessons: totalLessons,
-                            completedLessons: completedLessons,
-                            completedModules: 0,
-                          ),
-                          error: (_, __) => CourseProgressCard(
-                            totalModules: completeCourse.modules.length,
-                            totalLessons: totalLessons,
-                            completedLessons: completedLessons,
-                            completedModules: 0,
-                          ),
+                      courseProgressAsync.when(
+                        data: (progress) => CourseProgressCard(
+                          totalModules: progress.totalModules,
+                          totalLessons: progress.totalLessons,
+                          completedLessons: progress.completedLessons,
+                          completedModules: progress.completedModules,
                         ),
-                        loading: () => courseCompletedModulesAsync.when(
-                          data: (completedModules) => CourseProgressCard(
-                            totalModules: completeCourse.modules.length,
-                            totalLessons: totalLessons,
-                            completedLessons: 0,
-                            completedModules: completedModules,
-                          ),
-                          loading: () => CourseProgressCard(
-                            totalModules: completeCourse.modules.length,
-                            totalLessons: totalLessons,
-                            completedLessons: 0,
-                            completedModules: 0,
-                          ),
-                          error: (_, __) => CourseProgressCard(
-                            totalModules: completeCourse.modules.length,
-                            totalLessons: totalLessons,
-                            completedLessons: 0,
-                            completedModules: 0,
-                          ),
+                        loading: () => CourseProgressCard(
+                          totalModules: completeCourse.modules.length,
+                          totalLessons: totalLessons,
+                          completedLessons: 0,
+                          completedModules: 0,
                         ),
-                        error: (_, __) => courseCompletedModulesAsync.when(
-                          data: (completedModules) => CourseProgressCard(
-                            totalModules: completeCourse.modules.length,
-                            totalLessons: totalLessons,
-                            completedLessons: 0,
-                            completedModules: completedModules,
-                          ),
-                          loading: () => CourseProgressCard(
-                            totalModules: completeCourse.modules.length,
-                            totalLessons: totalLessons,
-                            completedLessons: 0,
-                            completedModules: 0,
-                          ),
-                          error: (_, __) => CourseProgressCard(
-                            totalModules: completeCourse.modules.length,
-                            totalLessons: totalLessons,
-                            completedLessons: 0,
-                            completedModules: 0,
-                          ),
+                        error: (_, __) => CourseProgressCard(
+                          totalModules: completeCourse.modules.length,
+                          totalLessons: totalLessons,
+                          completedLessons: 0,
+                          completedModules: 0,
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -415,11 +361,13 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
                               ],
                             );
                           }
-                          final ongoingModule =
-                              ongoingModuleAsync.value ?? _cachedOngoingModule;
-                          if (ongoingModule == null) {
+                          final ongoingLessonInfo =
+                              ongoingLessonInfoAsync.value ??
+                                  _cachedOngoingLessonInfo;
+                          if (ongoingLessonInfo == null) {
                             return const SizedBox.shrink();
                           }
+                          final ongoingModule = ongoingLessonInfo.module;
                           final moduleLessonsAsync = ref.watch(
                             lessons_v2.moduleLessonsProvider(
                               ongoingModule.module.id,
@@ -428,9 +376,8 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
                           final moduleLessons =
                               moduleLessonsAsync.value ??
                                   const <LessonDefinition>[];
-                          final nextLessonForCard = moduleLessons.isNotEmpty
-                              ? moduleLessons.first
-                              : null;
+                          final nextLessonForCard =
+                              ongoingLessonInfo.nextLesson;
                           final isLessonsLoading =
                               moduleLessonsAsync.isLoading &&
                                   moduleLessons.isEmpty;
@@ -459,14 +406,12 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
                                   try {
                                     var nextLesson = nextLessonForCard;
                                     if (nextLesson == null) {
-                                      final fetchedLessons = await ref.read(
-                                        lessons_v2.moduleLessonsProvider(
-                                          ongoingModule.module.id,
+                                      final refreshedInfo = await ref.read(
+                                        ongoingLessonInfoV2Provider(
+                                          widget.courseId,
                                         ).future,
                                       );
-                                      if (fetchedLessons.isNotEmpty) {
-                                        nextLesson = fetchedLessons.first;
-                                      }
+                                      nextLesson = refreshedInfo?.nextLesson;
                                     }
                                     if (nextLesson == null) {
                                       if (context.mounted) {
@@ -504,12 +449,11 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
 
                       const SizedBox(height: 24),
                       completedModulesAsync.when(
-                        data: (completedModules) => AllModulesWidget(
+                        data: (_) => AllModulesWidget(
                           modules: completeCourse.modules,
-                          completedModules: completedModules,
                           ongoingModuleId: allModulesCompleted
                               ? null
-                              : ongoingModuleAsync.value?.module.id,
+                              : ongoingLessonInfoAsync.value?.module.module.id,
                           courseId: completeCourse.course.id,
                           courseTitle: completeCourse.course.title,
                           totalModules: totalModules,
@@ -517,7 +461,6 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
                         ),
                         loading: () => AllModulesWidget(
                           modules: completeCourse.modules,
-                          completedModules: {},
                           ongoingModuleId: null,
                           courseId: completeCourse.course.id,
                           courseTitle: completeCourse.course.title,
@@ -526,7 +469,6 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
                         ),
                         error: (_, __) => AllModulesWidget(
                           modules: completeCourse.modules,
-                          completedModules: {},
                           ongoingModuleId: null,
                           courseId: completeCourse.course.id,
                           courseTitle: completeCourse.course.title,

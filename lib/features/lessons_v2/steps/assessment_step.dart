@@ -44,6 +44,7 @@ class _AssessmentStepState extends ConsumerState<AssessmentStep> {
   @override
   void initState() {
     super.initState();
+    _controller.retry();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       widget.onStepStateChanged(
         LessonStepUiState(
