@@ -1,9 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milpress/features/course/providers/course_provider.dart';
-import 'package:milpress/features/user_progress/providers/course_progress_providers.dart';
-import 'package:milpress/features/user_progress/providers/user_progress_providers.dart';
-import 'package:milpress/features/course/providers/module_provider.dart';
-import 'package:milpress/utils/supabase_config.dart';
 
 class OngoingLessonData {
   final String title;
@@ -34,55 +30,19 @@ final ongoingLessonProvider = FutureProvider<OngoingLessonData?>((ref) async {
 
     final courseId = activeCourse.course.id;
 
-    final ongoingModule =
-        await ref.watch(ongoingModuleProvider(courseId).future);
-    if (ongoingModule == null) return null;
-
-    final sortedLessons = List.of(ongoingModule.lessons)
-      ..sort((a, b) {
-        final positionCompare = a.position.compareTo(b.position);
-        if (positionCompare != 0) {
-          return positionCompare;
-        }
-        return a.id.compareTo(b.id);
-      });
-    if (sortedLessons.isEmpty) return null;
-
-    // Get course progress to calculate overall progress
-    final completedLessons =
-        await ref.watch(courseCompletedLessonsProvider(courseId).future);
-    final totalLessons = activeCourse.totalLessons;
-    final progressPercentage = totalLessons > 0
-        ? ((completedLessons / totalLessons) * 100).round()
-        : 0;
-
-    // Find the next lesson based on Supabase progress for this module
-    Set<String> completedLessonIds = {};
-    final userId = SupabaseConfig.currentUser?.id;
-    if (userId != null) {
-      try {
-        final response = await SupabaseConfig.client
-            .from('lesson_progress')
-            .select('lesson_id')
-            .eq('user_id', userId)
-            .eq('module_id', ongoingModule.module.id)
-            .eq('status', 'completed');
-
-        if (response is List) {
-          completedLessonIds = response
-              .map((row) => row['lesson_id'] as String?)
-              .whereType<String>()
-              .toSet();
-        }
-      } catch (e) {
-        print('Error fetching lesson progress for ongoing lesson: $e');
-      }
+    final ongoingLessonInfo =
+        await ref.watch(ongoingLessonInfoV2Provider(courseId).future);
+    if (ongoingLessonInfo == null || ongoingLessonInfo.nextLesson == null) {
+      return null;
     }
 
-    final nextLesson = sortedLessons.firstWhere(
-      (lesson) => !completedLessonIds.contains(lesson.id),
-      orElse: () => sortedLessons.first,
-    );
+    final progress =
+        await ref.watch(courseProgressV2Provider(courseId).future);
+    final progressPercentage = progress.totalLessons > 0
+        ? ((progress.completedLessons / progress.totalLessons) * 100).round()
+        : 0;
+
+    final nextLesson = ongoingLessonInfo.nextLesson!;
 
     // Display total course duration
     final courseDurationMinutes = activeCourse.course.durationInMinutes;
@@ -103,7 +63,7 @@ final ongoingLessonProvider = FutureProvider<OngoingLessonData?>((ref) async {
       timeLeft: timeLeft,
       courseId: courseId,
       lessonId: nextLesson.id,
-      moduleId: ongoingModule.module.id,
+      moduleId: ongoingLessonInfo.module.module.id,
     );
   } catch (e) {
     print('Error getting ongoing lesson data: $e');

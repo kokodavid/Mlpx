@@ -6,8 +6,6 @@ import '../course_widgets/tab_button.dart';
 import '../course_widgets/completed_course_card.dart';
 import '../course_widgets/offline_courses_message.dart';
 import '../providers/course_provider.dart';
-import 'package:milpress/utils/supabase_config.dart';
-import 'package:milpress/features/user_progress/providers/user_progress_providers.dart';
 import 'package:milpress/features/user_progress/providers/course_progress_providers.dart';
 import 'package:milpress/providers/auth_provider.dart';
 import 'package:milpress/providers/audio_service_provider.dart';
@@ -52,9 +50,9 @@ class _CourseScreenState extends ConsumerState<CourseScreen>
       return;
     }
     final courseId = activeCourse.course.id;
-    ref.invalidate(courseCompletedLessonsProvider(courseId));
-    ref.invalidate(courseLessonProgressValueProvider(courseId));
-    ref.invalidate(courseCompletedModulesProvider(courseId));
+    ref.invalidate(courseProgressV2Provider(courseId));
+    ref.invalidate(completedModulesProvider(courseId));
+    ref.invalidate(ongoingLessonInfoV2Provider(courseId));
   }
 
   @override
@@ -81,7 +79,6 @@ class _CourseScreenState extends ConsumerState<CourseScreen>
       );
     }
 
-    // Supabase is source of truth; no cache priming needed here.
 
     // Build tab content
     Widget tabContent;
@@ -94,57 +91,42 @@ class _CourseScreenState extends ConsumerState<CourseScreen>
             return const Center(child: Text('No active course available'));
           }
           final course = courseWithDetails.course;
-          final completedLessonsAsync = ref.watch(courseCompletedLessonsProvider(course.id));
-          final lessonProgressValueAsync = ref.watch(courseLessonProgressValueProvider(course.id));
-          final completedModulesAsync = ref.watch(courseCompletedModulesProvider(course.id));
-          return completedLessonsAsync.when(
-            data: (completedLessons) => lessonProgressValueAsync.when(
-              data: (progressValue) => completedModulesAsync.when(
-                data: (completedModules) => CourseCard(
-                  title: course.title,
-                  level: course.level,
-                  durationMinutes: course.durationInMinutes,
-                  totalModules: courseWithDetails.totalModules,
-                  totalLessons: courseWithDetails.totalLessons,
-                  eligible: true,
-                  locked: course.locked,
-                  isCompleted: completedLessons == courseWithDetails.totalLessons,
-                  completedLessons: completedLessons,
-                  lessonProgressValue: progressValue,
-                  onStart: () async {
-                    try {
-                      final courseProgressId = await ref.read(
-                          getOrCreateCourseProgressProvider(course.id).future);
-                      context.push('/course/${course.id}', extra: {
-                        'courseProgressId': courseProgressId,
-                      });
-                    } catch (e) {
-                      context.push('/course/${course.id}');
-                    }
-                  },
-                ),
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (_, __) => OfflineCoursesMessage(
-                  onRetry: () {
-                    ref.invalidate(courseCompletedModulesProvider(course.id));
-                  },
-                ),
-                skipLoadingOnReload: true,
-                skipLoadingOnRefresh: true,
-              ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, __) => OfflineCoursesMessage(
-                onRetry: () {
-                  ref.invalidate(courseLessonProgressValueProvider(course.id));
+          final courseProgressAsync =
+              ref.watch(courseProgressV2Provider(course.id));
+          return courseProgressAsync.when(
+            data: (progress) {
+              final progressValue = progress.totalLessons > 0
+                  ? progress.completedLessons / progress.totalLessons
+                  : 0.0;
+              return CourseCard(
+                title: course.title,
+                level: course.level,
+                durationMinutes: course.durationInMinutes,
+                totalModules: progress.totalModules,
+                totalLessons: progress.totalLessons,
+                eligible: true,
+                locked: course.locked,
+                isCompleted: progress.totalLessons > 0 &&
+                    progress.completedLessons >= progress.totalLessons,
+                completedLessons: progress.completedLessons,
+                lessonProgressValue: progressValue,
+                onStart: () async {
+                  try {
+                    final courseProgressId = await ref.read(
+                        getOrCreateCourseProgressProvider(course.id).future);
+                    context.push('/course/${course.id}', extra: {
+                      'courseProgressId': courseProgressId,
+                    });
+                  } catch (e) {
+                    context.push('/course/${course.id}');
+                  }
                 },
-              ),
-              skipLoadingOnReload: true,
-              skipLoadingOnRefresh: true,
-            ),
+              );
+            },
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (_, __) => OfflineCoursesMessage(
               onRetry: () {
-                ref.invalidate(courseCompletedLessonsProvider(course.id));
+                ref.invalidate(courseProgressV2Provider(course.id));
               },
             ),
             skipLoadingOnReload: true,

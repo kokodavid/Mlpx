@@ -206,10 +206,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             final lessonId = extra?['lessonId'] as String?;
             final initialStepIndex =
                 extra?['initialStepIndex'] as int? ?? 0;
+            final isReattempt = extra?['isReattempt'] as bool? ?? false;
             return LessonAttemptScreen(
               lessonDefinition: lessonDefinition,
               lessonId: lessonId,
               initialStepIndex: initialStepIndex,
+              isReattempt: isReattempt,
             );
           },
         ),

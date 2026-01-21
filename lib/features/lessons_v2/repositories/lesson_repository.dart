@@ -56,4 +56,56 @@ class LessonRepository {
       return [];
     }
   }
+
+  Future<int> recordLessonAttempt({
+    required String lessonId,
+    String? userId,
+    bool markCompleted = false,
+  }) async {
+    try {
+      final resolvedUserId = userId ?? SupabaseConfig.currentUser?.id;
+      if (resolvedUserId == null || resolvedUserId.isEmpty) {
+        throw Exception('User not authenticated');
+      }
+
+      final now = DateTime.now().toIso8601String();
+      final existing = await SupabaseConfig.client
+          .from('lesson_completion')
+          .select('attempt_count, completed_at')
+          .eq('user_id', resolvedUserId)
+          .eq('lesson_id', lessonId)
+          .maybeSingle();
+
+      if (existing == null) {
+        await SupabaseConfig.client.from('lesson_completion').insert({
+          'user_id': resolvedUserId,
+          'lesson_id': lessonId,
+          'attempt_count': 1,
+          'last_attempt_at': now,
+          if (markCompleted) 'completed_at': now,
+        });
+        return 1;
+      }
+
+      final currentAttempts = (existing['attempt_count'] as int?) ?? 0;
+      final updates = <String, dynamic>{
+        'attempt_count': currentAttempts + 1,
+        'last_attempt_at': now,
+      };
+      if (markCompleted && existing['completed_at'] == null) {
+        updates['completed_at'] = now;
+      }
+
+      await SupabaseConfig.client
+          .from('lesson_completion')
+          .update(updates)
+          .eq('user_id', resolvedUserId)
+          .eq('lesson_id', lessonId);
+
+      return currentAttempts + 1;
+    } catch (e) {
+      debugPrint('LessonRepository: failed to record attempt for $lessonId: $e');
+      rethrow;
+    }
+  }
 }
