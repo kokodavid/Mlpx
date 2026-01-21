@@ -101,7 +101,7 @@ class _AssessmentStepState extends ConsumerState<AssessmentStep> {
     final prompt =
         widget.step.config['prompt'] as String? ?? 'Choose the correct answers';
     final hint = widget.step.config['hint'] as String? ??
-        'Select all correct answers, then tap "Check Answers".';
+        'Select all correct answers, then tap "Check \nAnswers".';
     final instructionUrl =
         widget.step.config['sound_instruction_url'] as String? ?? '';
     final options = (widget.step.config['options'] as List<dynamic>? ?? [])
@@ -130,13 +130,14 @@ class _AssessmentStepState extends ConsumerState<AssessmentStep> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.accentColor,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(12),
             ),
             child: LessonAudioInlineButton(
               sourceId: '${widget.step.key}-instruction',
               url: instructionUrl,
               label: 'Click here to listen',
+              backgroundColor: Colors.pink[100], // Add pink background here
             ),
           ),
           const SizedBox(height: 16),

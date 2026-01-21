@@ -32,7 +32,7 @@ class _PracticeStepState extends State<PracticeStep> {
     final tipMap =
         (widget.step.config['tip'] as Map?)?.cast<String, dynamic>() ?? {};
     final tipText = tipMap['text'] as String? ??
-        'Tip: Say each word out loud after hearing it.';
+        'Tip: Say each word out loud after hearing it.\nFocus on the highlighted letter sound.';
     final tipAudioUrl = tipMap['sound_url'] as String? ?? '';
     final items = (widget.step.config['items'] as List<dynamic>? ?? [])
         .whereType<Map>()
@@ -107,16 +107,16 @@ class _ExampleCard extends StatelessWidget {
     final rest = label.length > 1 ? label.substring(1) : '';
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.borderColor),
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center ,
         children: [
           Expanded(
+            flex: 5,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Container(
@@ -138,13 +138,14 @@ class _ExampleCard extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: 8),
           Text.rich(
             TextSpan(
               children: [
                 TextSpan(
                   text: firstLetter,
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 18,
                     fontWeight: FontWeight.w600,
                     color: AppColors.primaryColor,
                   ),
@@ -152,7 +153,7 @@ class _ExampleCard extends StatelessWidget {
                 TextSpan(
                   text: rest,
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textColor,
                   ),
@@ -162,9 +163,9 @@ class _ExampleCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 2),
           SizedBox(
-            height: 20,
+            height: 30,
             child: LessonAudioInlineButton(
               sourceId: sourceId,
               url: audioUrl,
