@@ -24,10 +24,11 @@ class LoginScreenState {
     String? error,
     bool? isEmailValid,
     bool? isPasswordValid,
+    bool clearError = false,
   }) {
     return LoginScreenState(
       isLoading: isLoading ?? this.isLoading,
-      error: error,
+      error: clearError ? null : (error ?? this.error),
       isEmailValid: isEmailValid ?? this.isEmailValid,
       isPasswordValid: isPasswordValid ?? this.isPasswordValid,
     );
@@ -43,7 +44,11 @@ class LoginScreenNotifier extends StateNotifier<LoginScreenState> {
   }
 
   void setError(String? error) {
-    state = state.copyWith(error: error);
+    if (error == null) {
+      state = state.copyWith(clearError: true);
+    } else {
+      state = state.copyWith(error: error);
+    }
   }
 
   void validateEmail(String email) {
@@ -66,9 +71,9 @@ class LoginScreenNotifier extends StateNotifier<LoginScreenState> {
 
   bool _isNetworkError(String error) {
     return error.toLowerCase().contains('network') ||
-           error.toLowerCase().contains('connection') ||
-           error.toLowerCase().contains('timeout') ||
-           error.toLowerCase().contains('unreachable');
+        error.toLowerCase().contains('connection') ||
+        error.toLowerCase().contains('timeout') ||
+        error.toLowerCase().contains('unreachable');
   }
 
   // Email/Password authentication
@@ -105,7 +110,11 @@ class LoginScreenNotifier extends StateNotifier<LoginScreenState> {
         return null;
       }
     } on AuthException catch (e) {
-      setError(e.message);
+      if (e.message.toLowerCase().contains('invalid login credentials')) {
+        setError('Authentication failed. Please check your credentials.');
+      } else {
+        setError('An unexpected error occurred');
+      }
       return null;
     } catch (e) {
       setError('An unexpected error occurred');
@@ -122,10 +131,10 @@ class LoginScreenNotifier extends StateNotifier<LoginScreenState> {
 
     try {
       await ref.read(authProvider.notifier).signInWithGoogle();
-      
+
       // Check if authentication was successful
       final user = ref.read(authProvider).value;
-      
+
       if (user != null) {
         return true;
       } else {
@@ -166,4 +175,4 @@ class LoginScreenNotifier extends StateNotifier<LoginScreenState> {
 // Provider for login screen state
 final loginScreenProvider = StateNotifierProvider<LoginScreenNotifier, LoginScreenState>((ref) {
   return LoginScreenNotifier();
-}); 
+});
