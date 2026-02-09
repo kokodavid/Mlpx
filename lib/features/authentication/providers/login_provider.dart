@@ -24,10 +24,11 @@ class LoginScreenState {
     String? error,
     bool? isEmailValid,
     bool? isPasswordValid,
+    bool clearError = false,
   }) {
     return LoginScreenState(
       isLoading: isLoading ?? this.isLoading,
-      error: error,
+      error: clearError ? null : (error ?? this.error),
       isEmailValid: isEmailValid ?? this.isEmailValid,
       isPasswordValid: isPasswordValid ?? this.isPasswordValid,
     );
@@ -43,7 +44,11 @@ class LoginScreenNotifier extends StateNotifier<LoginScreenState> {
   }
 
   void setError(String? error) {
-    state = state.copyWith(error: error);
+    if (error == null) {
+      state = state.copyWith(clearError: true);
+    } else {
+      state = state.copyWith(error: error);
+    }
   }
 
   void validateEmail(String email) {
@@ -66,9 +71,25 @@ class LoginScreenNotifier extends StateNotifier<LoginScreenState> {
 
   bool _isNetworkError(String error) {
     return error.toLowerCase().contains('network') ||
-           error.toLowerCase().contains('connection') ||
-           error.toLowerCase().contains('timeout') ||
-           error.toLowerCase().contains('unreachable');
+        error.toLowerCase().contains('connection') ||
+        error.toLowerCase().contains('timeout') ||
+        error.toLowerCase().contains('unreachable');
+  }
+
+  String _getNetworkErrorMessage(String error) {
+    final lowerError = error.toLowerCase();
+
+    if (lowerError.contains('no internet') || lowerError.contains('no connection')) {
+      return 'No internet connection. Please check your network settings and try again.';
+    } else if (lowerError.contains('timeout') || lowerError.contains('timed out')) {
+      return 'Connection timed out. Please check your network and try again.';
+    } else if (lowerError.contains('unreachable') || lowerError.contains('host')) {
+      return 'The server is unreachable. Please try again later.';
+    } else if (lowerError.contains('ssl') || lowerError.contains('certificate') || lowerError.contains('secure')) {
+      return 'Secure connection failed. Please check your network or contact support.';
+    } else {
+      return 'Unable to connect to the server. Please check your network and try again.';
+    }
   }
 
   // Email/Password authentication
@@ -105,10 +126,20 @@ class LoginScreenNotifier extends StateNotifier<LoginScreenState> {
         return null;
       }
     } on AuthException catch (e) {
-      setError(e.message);
+      if (e.message.toLowerCase().contains('invalid login credentials')) {
+        setError('Authentication failed. Please check your credentials.');
+      } else if (_isNetworkError(e.message)) {
+        setError(_getNetworkErrorMessage(e.message));
+      } else {
+        setError('An unexpected error occurred');
+      }
       return null;
     } catch (e) {
-      setError('An unexpected error occurred');
+      if (_isNetworkError(e.toString())) {
+        setError(_getNetworkErrorMessage(e.toString()));
+      } else {
+        setError('An unexpected error occurred');
+      }
       return null;
     } finally {
       setLoading(false);
@@ -122,10 +153,10 @@ class LoginScreenNotifier extends StateNotifier<LoginScreenState> {
 
     try {
       await ref.read(authProvider.notifier).signInWithGoogle();
-      
+
       // Check if authentication was successful
       final user = ref.read(authProvider).value;
-      
+
       if (user != null) {
         return true;
       } else {
@@ -136,14 +167,14 @@ class LoginScreenNotifier extends StateNotifier<LoginScreenState> {
       if (e.message.contains('OAuth')) {
         setError('Google Sign-In is not configured properly. Please contact support.');
       } else if (_isNetworkError(e.message)) {
-        setError('Network error. Please check your internet connection.');
+        setError(_getNetworkErrorMessage(e.message));
       } else {
         setError('Google Sign-In failed: ${e.message}');
       }
       return false;
     } catch (e) {
       if (_isNetworkError(e.toString())) {
-        setError('Network error. Please check your internet connection.');
+        setError(_getNetworkErrorMessage(e.toString()));
       } else if (e.toString().contains('cancelled')) {
         setError(null); // User cancelled, don't show error
       } else {
@@ -166,4 +197,4 @@ class LoginScreenNotifier extends StateNotifier<LoginScreenState> {
 // Provider for login screen state
 final loginScreenProvider = StateNotifierProvider<LoginScreenNotifier, LoginScreenState>((ref) {
   return LoginScreenNotifier();
-}); 
+});
