@@ -36,7 +36,7 @@ class LessonCompleteV2Screen extends ConsumerWidget {
     final courseId = moduleAsync.value?.module.courseId;
 
     return Scaffold(
-      backgroundColor: AppColors.sandyLight,
+      backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
