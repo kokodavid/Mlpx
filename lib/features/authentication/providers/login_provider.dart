@@ -76,6 +76,22 @@ class LoginScreenNotifier extends StateNotifier<LoginScreenState> {
         error.toLowerCase().contains('unreachable');
   }
 
+  String _getNetworkErrorMessage(String error) {
+    final lowerError = error.toLowerCase();
+
+    if (lowerError.contains('no internet') || lowerError.contains('no connection')) {
+      return 'No internet connection. Please check your network settings and try again.';
+    } else if (lowerError.contains('timeout') || lowerError.contains('timed out')) {
+      return 'Connection timed out. Please check your network and try again.';
+    } else if (lowerError.contains('unreachable') || lowerError.contains('host')) {
+      return 'The server is unreachable. Please try again later.';
+    } else if (lowerError.contains('ssl') || lowerError.contains('certificate') || lowerError.contains('secure')) {
+      return 'Secure connection failed. Please check your network or contact support.';
+    } else {
+      return 'Unable to connect to the server. Please check your network and try again.';
+    }
+  }
+
   // Email/Password authentication
   Future<AuthResponse?> signInWithEmailAndPassword(
       String email,
@@ -112,12 +128,18 @@ class LoginScreenNotifier extends StateNotifier<LoginScreenState> {
     } on AuthException catch (e) {
       if (e.message.toLowerCase().contains('invalid login credentials')) {
         setError('Authentication failed. Please check your credentials.');
+      } else if (_isNetworkError(e.message)) {
+        setError(_getNetworkErrorMessage(e.message));
       } else {
         setError('An unexpected error occurred');
       }
       return null;
     } catch (e) {
-      setError('An unexpected error occurred');
+      if (_isNetworkError(e.toString())) {
+        setError(_getNetworkErrorMessage(e.toString()));
+      } else {
+        setError('An unexpected error occurred');
+      }
       return null;
     } finally {
       setLoading(false);
@@ -145,14 +167,14 @@ class LoginScreenNotifier extends StateNotifier<LoginScreenState> {
       if (e.message.contains('OAuth')) {
         setError('Google Sign-In is not configured properly. Please contact support.');
       } else if (_isNetworkError(e.message)) {
-        setError('Network error. Please check your internet connection.');
+        setError(_getNetworkErrorMessage(e.message));
       } else {
         setError('Google Sign-In failed: ${e.message}');
       }
       return false;
     } catch (e) {
       if (_isNetworkError(e.toString())) {
-        setError('Network error. Please check your internet connection.');
+        setError(_getNetworkErrorMessage(e.toString()));
       } else if (e.toString().contains('cancelled')) {
         setError(null); // User cancelled, don't show error
       } else {

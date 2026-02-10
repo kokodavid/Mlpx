@@ -45,6 +45,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
   LessonDefinition? _loadedLesson;
   ProviderSubscription<AsyncValue<LessonDefinition?>>? _lessonSubscription;
   late final LessonAudioController _audioController;
+  bool _isFinishing = false;
 
   LessonDefinition get _lessonDefinition =>
       _loadedLesson ?? widget.lessonDefinition!;
@@ -148,9 +149,23 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
       });
       return;
     }
+    if (_isFinishing) {
+      return;
+    }
+    setState(() {
+      _isFinishing = true;
+    });
     await _recordLessonCompletionAttempt();
+    if (!mounted) {
+      return;
+    }
     if (widget.onFinish != null) {
       widget.onFinish!.call();
+      if (mounted) {
+        setState(() {
+          _isFinishing = false;
+        });
+      }
       return;
     }
     if (widget.isReattempt) {
@@ -168,6 +183,11 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
           'lessonTitle': _lessonDefinition.title,
         },
       );
+    }
+    if (mounted) {
+      setState(() {
+        _isFinishing = false;
+      });
     }
   }
 
@@ -215,7 +235,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
       }
       final lessonAsync = ref.watch(lessonDefinitionProvider(lessonId));
       return Scaffold(
-        backgroundColor: AppColors.sandyLight,
+        backgroundColor: AppColors.backgroundColor,
         appBar: AppBar(
           elevation: 0,
           backgroundColor: Colors.white,
@@ -266,8 +286,10 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
 
     final canAdvance =
         _stepUiState.canAdvance ?? _defaultCanAdvance(_currentStep);
-    final isPrimaryEnabled = _stepUiState.isPrimaryEnabled ??
-        (_stepUiState.onPrimaryPressed != null || canAdvance);
+    final isPrimaryEnabled = _isFinishing
+        ? false
+        : (_stepUiState.isPrimaryEnabled ??
+            (_stepUiState.onPrimaryPressed != null || canAdvance));
     final primaryLabel =
         _stepUiState.primaryLabel ?? _defaultPrimaryLabel(_currentStep);
     final showBack = _stepUiState.showBack ?? true;
@@ -279,7 +301,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
       backgroundColor: AppColors.sandyLight,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.sandyLight,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => context.pop(),
@@ -329,6 +351,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
               percent: _progressPercent,
             ),
           ),
+
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 250),

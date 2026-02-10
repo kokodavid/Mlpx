@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:milpress/features/lessons_v2/widgets/lesson_audio_buttons.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../models/lesson_models.dart';
-import '../widgets/lesson_audio_buttons.dart';
+import '../widgets/lesson_audio_tip_banner.dart';
 
 class PracticeStep extends StatefulWidget {
   final LessonStepDefinition step;
@@ -69,18 +70,11 @@ class _PracticeStepState extends State<PracticeStep> {
               );
             },
           ),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.accentColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: LessonAudioInlineButton(
-              sourceId: '${widget.step.key}-tip',
-              url: tipAudioUrl,
-              label: tipText,
-            ),
+          const SizedBox(height: 15),
+          LessonAudioTipBanner(
+            sourceId: '${widget.step.key}-tip',
+            url: tipAudioUrl,
+            label: tipText,
           ),
         ],
       ),
@@ -116,11 +110,10 @@ class _ExampleCard extends StatelessWidget {
       child: Column(
         children: [
           Expanded(
-            flex: 5,
+            flex: 4,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Container(
-                color: AppColors.accentColor,
                 child: imageUrl.isEmpty
                     ? const Center(
                   child: Icon(
@@ -131,9 +124,9 @@ class _ExampleCard extends StatelessWidget {
                 )
                     : Image.network(
                   imageUrl,
-                  width: double.infinity,
-                  height: double.infinity,
-                  fit: BoxFit.fill,
+                  width: 130,
+                  height: 90,
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
@@ -145,7 +138,7 @@ class _ExampleCard extends StatelessWidget {
                 TextSpan(
                   text: firstLetter,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 19,
                     fontWeight: FontWeight.w600,
                     color: AppColors.primaryColor,
                   ),
@@ -153,7 +146,7 @@ class _ExampleCard extends StatelessWidget {
                 TextSpan(
                   text: rest,
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 17,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textColor,
                   ),

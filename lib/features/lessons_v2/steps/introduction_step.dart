@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:milpress/features/lessons_v2/widgets/lesson_audio_buttons.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../models/lesson_models.dart';
-import '../widgets/lesson_audio_buttons.dart';
+import '../widgets/lesson_audio_tip_banner.dart';
 
 class IntroductionStep extends StatefulWidget {
   final LessonStepDefinition step;
@@ -121,30 +122,10 @@ class _IntroductionStepState extends State<IntroductionStep> {
             ),
           ),
           const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 12,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.accentColor,
-              border: Border(
-                top: BorderSide(
-                  color: AppColors.accentColor.withOpacity(0.6),
-                  width: 1,
-                ),
-                bottom: BorderSide(
-                  color: AppColors.accentColor.withOpacity(0.6),
-                  width: 1,
-                ),
-              ),
-            ),
-            child: LessonAudioInlineButton(
-              sourceId: '${widget.step.key}-tip',
-              url: practiceTipAudioUrl,
-              label: practiceTipText,
-            ),
+          LessonAudioTipBanner(
+            sourceId: '${widget.step.key}-tip',
+            url: practiceTipAudioUrl,
+            label: practiceTipText,
           ),
 
         ],

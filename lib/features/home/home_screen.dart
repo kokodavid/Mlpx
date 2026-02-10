@@ -69,7 +69,7 @@ class HomeScreen extends ConsumerWidget {
     // Show loading while auth state is being determined
     if (authAsync.isLoading) {
       return const Scaffold(
-        backgroundColor: AppColors.lightBackground,
+        backgroundColor: AppColors.backgroundColor,
         body: Center(
           child: CircularProgressIndicator(),
         ),
