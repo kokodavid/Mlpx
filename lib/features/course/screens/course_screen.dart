@@ -3,12 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../course_widgets/course_card.dart';
 import '../course_widgets/tab_button.dart';
-import '../course_widgets/completed_course_card.dart';
 import '../course_widgets/offline_courses_message.dart';
 import '../providers/course_provider.dart';
 import 'package:milpress/features/user_progress/providers/course_progress_providers.dart';
 import 'package:milpress/providers/auth_provider.dart';
-import 'package:milpress/providers/audio_service_provider.dart';
 
 class CourseScreen extends ConsumerStatefulWidget {
   const CourseScreen({super.key});
@@ -60,7 +58,8 @@ class _CourseScreenState extends ConsumerState<CourseScreen>
     // Watch auth state for reactivity
     final authState = ref.watch(authStateProvider);
     final user = authState.user;
-    print("CourseScreen build - user: ${user?.id}, isGuest: ${authState.isGuestUser}");
+    print(
+        "CourseScreen build - user: ${user?.id}, isGuest: ${authState.isGuestUser}");
 
     final activeCourseAsync = ref.watch(activeCourseWithDetailsProvider);
     print("activeCourseAsync: $activeCourseAsync");
@@ -68,9 +67,9 @@ class _CourseScreenState extends ConsumerState<CourseScreen>
     final upcomingCoursesAsync = ref.watch(upcomingCoursesWithDetailsProvider);
     print("upcomingCoursesAsync: $upcomingCoursesAsync");
 
-    final completedCoursesAsync = ref.watch(completedCoursesWithDetailsProvider);
+    final completedCoursesAsync =
+        ref.watch(completedCoursesWithDetailsProvider);
     print("completedCoursesAsync: $completedCoursesAsync");
-    final userId = user?.id ?? 'guest_${authState.isGuestUser ? 'default' : 'unknown'}';
 
     // Show loading or error if not authenticated and not guest
     if (user == null && !authState.isGuestUser) {
@@ -78,7 +77,6 @@ class _CourseScreenState extends ConsumerState<CourseScreen>
         body: Center(child: Text('User not logged in')),
       );
     }
-
 
     // Build tab content
     Widget tabContent;
@@ -95,9 +93,9 @@ class _CourseScreenState extends ConsumerState<CourseScreen>
               ref.watch(courseProgressV2Provider(course.id));
           return courseProgressAsync.when(
             data: (progress) {
-              final progressValue = progress.totalLessons > 0
-                  ? progress.completedLessons / progress.totalLessons
-                  : 0.0;
+              final progressValue = (progress.courseCompletionPercentage / 100)
+                  .clamp(0.0, 1.0)
+                  .toDouble();
               return CourseCard(
                 title: course.title,
                 level: course.level,
@@ -106,8 +104,8 @@ class _CourseScreenState extends ConsumerState<CourseScreen>
                 totalLessons: progress.totalLessons,
                 eligible: true,
                 locked: course.locked,
-                isCompleted: progress.totalLessons > 0 &&
-                    progress.completedLessons >= progress.totalLessons,
+                isCompleted: progress.totalModules > 0 &&
+                    progress.completedModules >= progress.totalModules,
                 completedLessons: progress.completedLessons,
                 lessonProgressValue: progressValue,
                 onStart: () async {
@@ -144,7 +142,8 @@ class _CourseScreenState extends ConsumerState<CourseScreen>
       );
     } else if (selectedTab == 1) {
       // Upcoming Tab
-      final upcomingCoursesAsync = ref.watch(upcomingCoursesWithDetailsProvider);
+      final upcomingCoursesAsync =
+          ref.watch(upcomingCoursesWithDetailsProvider);
       tabContent = upcomingCoursesAsync.when(
         data: (coursesWithDetails) {
           if (coursesWithDetails.isEmpty) {
@@ -177,7 +176,8 @@ class _CourseScreenState extends ConsumerState<CourseScreen>
                               isCompleted: false,
                               completedLessons: 0,
                               lessonProgressValue: 0.0,
-                              lockMessage: 'Complete Level ${course.level - 1} to unlock',
+                              lockMessage:
+                                  'Complete Level ${course.level - 1} to unlock',
                               onStart: null,
                             ),
                           ),
@@ -216,7 +216,8 @@ class _CourseScreenState extends ConsumerState<CourseScreen>
       );
     } else {
       // Completed Tab
-      final completedCoursesAsync = ref.watch(completedCoursesWithDetailsProvider);
+      final completedCoursesAsync =
+          ref.watch(completedCoursesWithDetailsProvider);
       tabContent = completedCoursesAsync.when(
         data: (coursesWithDetails) {
           if (coursesWithDetails.isEmpty) {
@@ -226,9 +227,11 @@ class _CourseScreenState extends ConsumerState<CourseScreen>
                 children: [
                   Icon(Icons.school_outlined, size: 64, color: Colors.grey),
                   SizedBox(height: 16),
-                  Text('No completed courses yet', style: TextStyle(fontSize: 18, color: Colors.grey)),
+                  Text('No completed courses yet',
+                      style: TextStyle(fontSize: 18, color: Colors.grey)),
                   SizedBox(height: 8),
-                  Text('Complete your first course to see it here', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                  Text('Complete your first course to see it here',
+                      style: TextStyle(fontSize: 14, color: Colors.grey)),
                 ],
               ),
             );
@@ -241,7 +244,8 @@ class _CourseScreenState extends ConsumerState<CourseScreen>
               final course = courseWithDetails.course;
               return Card(
                 margin: const EdgeInsets.only(bottom: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18)),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(18),
                   onTap: () async {
@@ -271,30 +275,46 @@ class _CourseScreenState extends ConsumerState<CourseScreen>
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
                                 color: Colors.grey[200],
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Text('LEVEL ${course.level}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey)),
+                              child: Text('LEVEL ${course.level}',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: Colors.grey)),
                             ),
-                            const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 16),
+                            const Icon(Icons.arrow_forward_ios,
+                                color: Colors.grey, size: 16),
                           ],
                         ),
                         const SizedBox(height: 10),
-                        Text(course.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF232B3A))),
+                        Text(course.title,
+                            style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF232B3A))),
                         const SizedBox(height: 10),
                         const Row(
                           children: [
-                            Icon(Icons.check_circle, color: Colors.green, size: 18),
+                            Icon(Icons.check_circle,
+                                color: Colors.green, size: 18),
                             SizedBox(width: 6),
-                            Text('You have successfully completed this level', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                            Text('You have successfully completed this level',
+                                style: TextStyle(
+                                    color: Colors.grey, fontSize: 13)),
                           ],
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'Tap to view your progress and achievements',
-                          style: TextStyle(color: Colors.grey[600], fontSize: 12, fontStyle: FontStyle.italic),
+                          style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic),
                         ),
                       ],
                     ),
@@ -338,7 +358,8 @@ class _CourseScreenState extends ConsumerState<CourseScreen>
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
                   children: [
                     TabButton(

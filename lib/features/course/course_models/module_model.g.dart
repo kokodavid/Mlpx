@@ -26,13 +26,15 @@ class ModuleModelAdapter extends TypeAdapter<ModuleModel> {
       locked: fields[6] as bool,
       lockMessage: fields[7] as String,
       description: fields[8] as String,
+      moduleType: fields[9] as String,
+      assessmentId: fields[10] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, ModuleModel obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -50,7 +52,11 @@ class ModuleModelAdapter extends TypeAdapter<ModuleModel> {
       ..writeByte(7)
       ..write(obj.lockMessage)
       ..writeByte(8)
-      ..write(obj.description);
+      ..write(obj.description)
+      ..writeByte(9)
+      ..write(obj.moduleType)
+      ..writeByte(10)
+      ..write(obj.assessmentId);
   }
 
   @override
