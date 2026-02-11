@@ -100,20 +100,20 @@ class HomeScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   HomeHeader(
-                    userName: authState.isGuestUser 
+                    userName: authState.isGuestUser
                         ? "Guest"
                         : profileAsync.when(
-                            data: (profile) => profile?.firstName ?? "",
-                            loading: () => "User",
-                            error: (_, __) => "User",
-                          ),
+                      data: (profile) => profile?.firstName ?? "",
+                      loading: () => "User",
+                      error: (_, __) => "User",
+                    ),
                     profileImageUrl: authState.isGuestUser
-                        ? 'https://i.pravatar.cc/150?img=3'
+                        ? null
                         : profileAsync.when(
-                            data: (profile) => profile?.avatarUrl ?? 'https://i.pravatar.cc/150?img=3',
-                            loading: () => 'https://i.pravatar.cc/150?img=3',
-                            error: (_, __) => 'https://i.pravatar.cc/150?img=3',
-                          ),
+                      data: (profile) => profile?.avatarUrl,
+                      loading: () => null,
+                      error: (_, __) => null,
+                    ),
                   ),
                   const EmailVerificationBanner(),
                   ProgressGoalSection(
@@ -148,7 +148,7 @@ class HomeScreen extends ConsumerWidget {
                     data: (ongoingLesson) {
                       if (ongoingLesson == null) {
                         return const SizedBox
-                            .shrink(); 
+                            .shrink();
                       }
                       return OngoingLessonCard(
                         title: ongoingLesson.title,
@@ -194,7 +194,7 @@ class HomeScreen extends ConsumerWidget {
                       onTap: () {},
                     ),
                     error: (_, __) =>
-                        const SizedBox.shrink(), // Hide card on error
+                    const SizedBox.shrink(), // Hide card on error
                   ),
                   const SizedBox(height: 16),
                   const PromotionCard(),

@@ -32,14 +32,26 @@ class ProfileHeaderWidget extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const CircleAvatar(
+          CircleAvatar(
             radius: 50,
-            backgroundImage: AssetImage('assets/turtle.png'),
+            backgroundImage: profile?.avatarUrl != null
+                ? NetworkImage(profile!.avatarUrl!)
+                : (profile == null ? const AssetImage('assets/turtle.png') as ImageProvider : null),
+            child: profile != null && profile?.avatarUrl == null
+                ? Text(
+              (profile?.fullName.isNotEmpty == true
+                  ? profile!.fullName
+                  : profile?.email ?? '')
+                  .substring(0, 1)
+                  .toUpperCase(),
+              style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
+            )
+                : null,
           ),
           const SizedBox(height: 16),
           Text(
-            profile?.fullName.isNotEmpty == true 
-                ? profile!.fullName 
+            profile?.fullName.isNotEmpty == true
+                ? profile!.fullName
                 : profile?.email ?? 'User',
             style: const TextStyle(
               fontSize: 24,
@@ -80,4 +92,4 @@ class ProfileHeaderWidget extends ConsumerWidget {
       ),
     );
   }
-} 
+}
