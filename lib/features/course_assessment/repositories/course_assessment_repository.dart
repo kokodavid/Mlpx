@@ -182,7 +182,6 @@ class CourseAssessmentRepository {
       AssessmentV2Progress progress) async {
     try {
       final data = progress.toJson();
-      // Remove fields that are auto-managed by the DB
       data.remove('created_at');
       data.remove('updated_at');
 

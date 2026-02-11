@@ -389,18 +389,14 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
                                     });
                                     try {
                                       if (context.mounted) {
-                                        // TODO: navigate to assessment screen
-                                        // await context.push('/assessment', extra: {
-                                        //   'assessmentId': currentModule.module.assessmentId,
-                                        //   'moduleId': currentModule.module.id,
-                                        // });
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                                'Assessment coming soon.'),
-                                          ),
-                                        );
+                                        final assessmentId =
+                                            currentModule.module.assessmentId;
+                                        if (assessmentId != null &&
+                                            assessmentId.trim().isNotEmpty) {
+                                          await context.push(
+                                            '/course-assessment/$assessmentId',
+                                          );
+                                        }
                                       }
                                     } finally {
                                       if (mounted) {

@@ -28,6 +28,7 @@ import 'package:milpress/features/on_boarding/profile_checker.dart';
 import 'package:milpress/features/profile/profile_page.dart';
 import 'package:milpress/features/profile/screens/about_screen.dart';
 import 'package:milpress/features/weekly_goal/screens/weekly_goal_screen.dart';
+import 'package:milpress/features/course_assessment/screens/assessment_play_screen.dart';
 import '../features/authentication/email_verification_screen.dart';
 import 'auth_guard.dart';
 
@@ -54,6 +55,7 @@ enum AppRoute {
   about,
   lessonHistory,
   weeklyGoal,
+  courseAssessment,
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -359,6 +361,17 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: AppRoute.weeklyGoal.name,
         builder: AuthGuard.requireAuthenticatedUser(
           builder: (context, state) => const WeeklyGoalScreen(),
+        ),
+      ),
+      // Course assessment route - requires authenticated user
+      GoRoute(
+        path: '/course-assessment/:assessmentId',
+        name: AppRoute.courseAssessment.name,
+        builder: AuthGuard.requireAuthenticatedUser(
+          builder: (context, state) {
+            final assessmentId = state.pathParameters['assessmentId']!;
+            return AssessmentPlayScreen(assessmentId: assessmentId);
+          },
         ),
       ),
       // Profile checker - PUBLIC (no auth required for onboarding)
