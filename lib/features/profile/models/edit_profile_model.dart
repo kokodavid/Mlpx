@@ -1,4 +1,4 @@
-import '../models/profile_model.dart';
+/*import '../models/profile_model.dart';
 
 class EditProfileModel {
   final String firstName;
@@ -53,4 +53,4 @@ class EditProfileModel {
       isSuccess: isSuccess ?? this.isSuccess,
     );
   }
-}
+}*/

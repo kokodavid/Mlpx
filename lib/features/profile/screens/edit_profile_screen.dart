@@ -18,6 +18,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late TextEditingController _firstNameController;
   late TextEditingController _lastNameController;
   bool _controllersInitialised = false;
+  bool _hasEdited = false;
+  String _originalFirstName = '';
+  String _originalLastName = '';
 
   @override
   void dispose() {
@@ -31,7 +34,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     if (_controllersInitialised) return;
     _firstNameController = TextEditingController(text: firstName);
     _lastNameController = TextEditingController(text: lastName);
+    _originalFirstName = firstName;
+    _originalLastName = lastName;
     _controllersInitialised = true;
+  }
+
+  void _checkIfEdited() {
+    final currentFirstName = _firstNameController.text.trim();
+    final currentLastName = _lastNameController.text.trim();
+    setState(() {
+      _hasEdited = currentFirstName != _originalFirstName ||
+          currentLastName != _originalLastName;
+    });
   }
 
   Future<void> _pickImage() async {
@@ -54,9 +68,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final editState = ref.watch(editProfileProvider);
+    final profile = editState.profile;
 
     // Initialise controllers as soon as we have data
-    _initControllers(editState.firstName, editState.lastName);
+    if (profile != null) {
+      _initControllers(profile.firstName, profile.lastName);
+    }
 
     // Listen for success to pop back
     ref.listen(editProfileProvider, (previous, next) {
@@ -74,7 +91,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.backgroundColor,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
@@ -98,17 +115,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             const SizedBox(height: 24),
 
             // Avatar picker
-            Center(
-              child: ProfileAvatarPicker(
-                avatarUrl: editState.avatarUrl,
-                initials: _buildInitials(
-                  editState.firstName,
-                  editState.lastName,
+            if (profile != null)
+              Center(
+                child: ProfileAvatarPicker(
+                  avatarUrl: profile.avatarUrl,
+                  initials: _buildInitials(
+                    profile.firstName,
+                    profile.lastName,
+                  ),
+                  isLoading: editState.isLoading,
+                  onTap: _pickImage,
                 ),
-                isLoading: editState.isLoading,
-                onTap: _pickImage,
               ),
-            ),
             const SizedBox(height: 32),
 
             // First Name
@@ -117,8 +135,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             _buildTextField(
               controller: _firstNameController,
               hint: 'Enter first name',
-              onChanged: (v) =>
-                  ref.read(editProfileProvider.notifier).setFirstName(v),
+              onChanged: (v) {
+                ref.read(editProfileProvider.notifier).setFirstName(v);
+                _checkIfEdited();
+              },
             ),
             const SizedBox(height: 20),
 
@@ -128,8 +148,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             _buildTextField(
               controller: _lastNameController,
               hint: 'Enter last name',
-              onChanged: (v) =>
-                  ref.read(editProfileProvider.notifier).setLastName(v),
+              onChanged: (v) {
+                ref.read(editProfileProvider.notifier).setLastName(v);
+                _checkIfEdited();
+              },
             ),
             const SizedBox(height: 20),
 
@@ -137,7 +159,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             _buildLabel('Email Address'),
             const SizedBox(height: 8),
             _buildTextField(
-              controller: TextEditingController(text: editState.email),
+              controller: TextEditingController(text: profile?.email ?? ''),
               hint: 'example@abc.xyz',
               readOnly: true,
             ),
@@ -160,7 +182,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               readOnly: true,
               obscureText: true,
               suffixIcon: const Icon(
-                Icons.visibility_off_outlined,
+                Icons.visibility_outlined,
                 color: Colors.grey,
                 size: 20,
               ),
@@ -174,7 +196,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 'Change Password?',
                 style: TextStyle(
                   fontSize: 16,
-                  color: Color(0xFFFF6B6B),
+                  color: AppColors.errorShadowColor,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -194,7 +216,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 child: Text(
                   editState.errorMessage!,
                   style: TextStyle(
-                    color: Colors.red.shade700,
+                    color: AppColors.errorColor,
                     fontSize: 13,
                   ),
                 ),
@@ -202,13 +224,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               const SizedBox(height: 16),
             ],
 
-            // Update Profile button
+            // Update Profile button - FIXED COLOR
             CustomButton(
-              text: editState.isLoading ? 'Updating...' : 'Update Profile',
-              onPressed: editState.isLoading ? null : () =>
+              text: 'Update Profile',
+              onPressed: (editState.isLoading || !_hasEdited) ? null : () =>
                   ref.read(editProfileProvider.notifier).submitProfile(),
               isFilled: true,
-              fillColor: editState.isLoading ? AppColors.textColor : AppColors.seaGreenColor,
+              fillColor: !_hasEdited ? AppColors.textColor : AppColors.primaryColor,
+              isLoading: editState.isLoading,
             ),
             const SizedBox(height: 32),
           ],

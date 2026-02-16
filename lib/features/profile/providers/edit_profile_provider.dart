@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/edit_profile_model.dart';
 import '../models/profile_model.dart';
 import '../services/edit_profile_service.dart';
 import 'profile_provider.dart';
@@ -9,31 +8,68 @@ final editProfileServiceProvider = Provider<EditProfileService>((ref) {
   return EditProfileService();
 });
 
+// Edit profile state class
+class EditProfileState {
+  final ProfileModel? profile;
+  final bool isLoading;
+  final String? errorMessage;
+  final bool isSuccess;
+
+  const EditProfileState({
+    this.profile,
+    this.isLoading = false,
+    this.errorMessage,
+    this.isSuccess = false,
+  });
+
+  bool get isValid =>
+      profile != null &&
+          profile!.firstName.trim().isNotEmpty &&
+          profile!.lastName.trim().isNotEmpty;
+
+  EditProfileState copyWith({
+    ProfileModel? profile,
+    bool? isLoading,
+    String? errorMessage,
+    bool clearError = false,
+    bool? isSuccess,
+  }) {
+    return EditProfileState(
+      profile: profile ?? this.profile,
+      isLoading: isLoading ?? this.isLoading,
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      isSuccess: isSuccess ?? this.isSuccess,
+    );
+  }
+}
+
 // Edit profile state provider
 final editProfileProvider =
-StateNotifierProvider<EditProfileNotifier, EditProfileModel>((ref) {
+StateNotifierProvider<EditProfileNotifier, EditProfileState>((ref) {
   final service = ref.watch(editProfileServiceProvider);
   final profileAsync = ref.watch(profileProvider);
 
   // Pre-fill from the existing loaded profile
   final initialState = profileAsync.value != null
-      ? EditProfileModel.fromProfile(profileAsync.value!)
-      : const EditProfileModel();
+      ? EditProfileState(profile: profileAsync.value)
+      : const EditProfileState();
 
   return EditProfileNotifier(service, ref, initialState);
 });
 
-class EditProfileNotifier extends StateNotifier<EditProfileModel> {
+class EditProfileNotifier extends StateNotifier<EditProfileState> {
   final EditProfileService _service;
   final Ref _ref;
 
-  EditProfileNotifier(this._service, this._ref, EditProfileModel initialState)
+  EditProfileNotifier(this._service, this._ref, EditProfileState initialState)
       : super(initialState);
 
   /// Update the first name field in state
   void setFirstName(String value) {
+    if (state.profile == null) return;
+
     state = state.copyWith(
-      firstName: value,
+      profile: state.profile!.copyWith(firstName: value),
       clearError: true,
       isSuccess: false,
     );
@@ -41,8 +77,10 @@ class EditProfileNotifier extends StateNotifier<EditProfileModel> {
 
   /// Update the last name field in state
   void setLastName(String value) {
+    if (state.profile == null) return;
+
     state = state.copyWith(
-      lastName: value,
+      profile: state.profile!.copyWith(lastName: value),
       clearError: true,
       isSuccess: false,
     );
@@ -50,7 +88,12 @@ class EditProfileNotifier extends StateNotifier<EditProfileModel> {
 
   /// Set a new local avatar path (before upload)
   void setAvatarUrl(String? url) {
-    state = state.copyWith(avatarUrl: url, clearError: true);
+    if (state.profile == null) return;
+
+    state = state.copyWith(
+      profile: state.profile!.copyWith(avatarUrl: url),
+      clearError: true,
+    );
   }
 
   /// Submit the updated profile to Supabase and refresh the profile provider
@@ -66,8 +109,8 @@ class EditProfileNotifier extends StateNotifier<EditProfileModel> {
 
     try {
       final success = await _service.updateProfileDetails(
-        firstName: state.firstName,
-        lastName: state.lastName,
+        firstName: state.profile!.firstName,
+        lastName: state.profile!.lastName,
       );
 
       if (!success) {
@@ -106,7 +149,12 @@ class EditProfileNotifier extends StateNotifier<EditProfileModel> {
       }
 
       // Update local state with new URL
-      state = state.copyWith(isLoading: false, avatarUrl: imageUrl);
+      if (state.profile != null) {
+        state = state.copyWith(
+          isLoading: false,
+          profile: state.profile!.copyWith(avatarUrl: imageUrl),
+        );
+      }
 
       // Also sync avatar into profileProvider so the profile page updates
       _ref.read(profileProvider.notifier).updateAvatar(imagePath);
@@ -122,7 +170,7 @@ class EditProfileNotifier extends StateNotifier<EditProfileModel> {
   void resetToCurrentProfile() {
     final profile = _ref.read(profileProvider).value;
     if (profile != null) {
-      state = EditProfileModel.fromProfile(profile);
+      state = EditProfileState(profile: profile);
     }
   }
 

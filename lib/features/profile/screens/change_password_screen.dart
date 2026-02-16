@@ -16,6 +16,7 @@ class ChangePasswordScreen extends ConsumerStatefulWidget {
 
 class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
   late TextEditingController _emailController;
+  bool _isEmailValid = false;
 
   @override
   void initState() {
@@ -29,6 +30,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
       if (email.isNotEmpty) {
         ref.read(changePasswordProvider.notifier).prefillEmail(email);
         _emailController.text = email;
+        _checkEmailValid();
       }
     });
   }
@@ -37,6 +39,12 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
   void dispose() {
     _emailController.dispose();
     super.dispose();
+  }
+
+  void _checkEmailValid() {
+    setState(() {
+      _isEmailValid = _emailController.text.trim().isNotEmpty;
+    });
   }
 
   @override
@@ -81,8 +89,10 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
             TextField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
-              onChanged: (v) =>
-                  ref.read(changePasswordProvider.notifier).setEmail(v),
+              onChanged: (v) {
+                ref.read(changePasswordProvider.notifier).setEmail(v);
+                _checkEmailValid();
+              },
               decoration: InputDecoration(
                 hintText: 'abc@example.xyz',
                 filled: true,
@@ -118,7 +128,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                 child: Text(
                   pwState.errorMessage!,
                   style: TextStyle(
-                    color: Colors.red.shade700,
+                    color: AppColors.errorColor,
                     fontSize: 13,
                   ),
                 ),
@@ -129,14 +139,15 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
 
             // Continue button
             CustomButton(
-              text: pwState.isLoading ? 'Sending...' : 'Continue',
-              onPressed: !pwState.isLoading
+              text: 'Continue',
+              onPressed: (!pwState.isLoading && _isEmailValid)
                   ? () => ref
                   .read(changePasswordProvider.notifier)
                   .sendResetEmail()
                   : null,
               isFilled: true,
-              fillColor: !pwState.isLoading ? AppColors.primaryColor : AppColors.textColor,
+              fillColor: !_isEmailValid ? AppColors.textColor : AppColors.primaryColor,
+              isLoading: pwState.isLoading,
             ),
             const SizedBox(height: 32),
           ],
