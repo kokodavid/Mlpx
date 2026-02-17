@@ -235,7 +235,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
       }
       final lessonAsync = ref.watch(lessonDefinitionProvider(lessonId));
       return Scaffold(
-        backgroundColor: AppColors.sandyLight,
+        backgroundColor: AppColors.backgroundColor,
         appBar: AppBar(
           elevation: 0,
           backgroundColor: Colors.white,
@@ -301,7 +301,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
       backgroundColor: AppColors.sandyLight,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.sandyLight,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => context.pop(),
@@ -351,6 +351,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
               percent: _progressPercent,
             ),
           ),
+
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 250),
