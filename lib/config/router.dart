@@ -27,6 +27,8 @@ import 'package:milpress/features/lesson/offline_lesson_screen.dart';
 import 'package:milpress/features/on_boarding/profile_checker.dart';
 import 'package:milpress/features/profile/profile_page.dart';
 import 'package:milpress/features/profile/screens/about_screen.dart';
+import 'package:milpress/features/profile/screens/edit_profile_screen.dart';
+import 'package:milpress/features/profile/screens/change_password_screen.dart';
 import 'package:milpress/features/weekly_goal/screens/weekly_goal_screen.dart';
 import 'package:milpress/features/course_assessment/screens/assessment_play_screen.dart';
 import '../features/authentication/email_verification_screen.dart';
@@ -56,6 +58,8 @@ enum AppRoute {
   lessonHistory,
   weeklyGoal,
   courseAssessment,
+  editProfile,
+  changePassword,
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -128,7 +132,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state, child) {
           final uri = state.uri;
           int selectedIndex = 0;
-          
+
           if (uri.path.startsWith('/course')) {
             selectedIndex = 1;
           } else if (uri.path.startsWith('/review')) {
@@ -204,7 +208,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           builder: (context, state) {
             final extra = state.extra as Map<String, dynamic>?;
             final lessonDefinition =
-                extra?['lessonDefinition'] as LessonDefinition?;
+            extra?['lessonDefinition'] as LessonDefinition?;
             final lessonId = extra?['lessonId'] as String?;
             final initialStepIndex =
                 extra?['initialStepIndex'] as int? ?? 0;
@@ -286,7 +290,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           final questions = extra['questions'] as List<Map<String, dynamic>>? ?? [];
           final config = extra['config'] as AssessmentConfig?;
           final allQuestions = extra['allQuestions'] as List<Map<String, dynamic>>?;
-          
+
           if (config == null) {
             // If no config provided, show error
             return const Scaffold(
@@ -295,7 +299,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             );
           }
-          
+
           return AssessmentScreen(questions: questions, config: config, allQuestions: allQuestions);
         },
       ),
@@ -384,6 +388,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: AppRoute.about.name,
         builder: (context, state) => const AboutScreen(),
       ),
+      // Edit Profile route - requires authenticated user (not guest)
+      GoRoute(
+        path: '/edit-profile',
+        name: AppRoute.editProfile.name,
+        builder: AuthGuard.requireAuthenticatedUser(
+          builder: (context, state) => const EditProfileScreen(),
+        ),
+      ),
+      // Change Password route - requires authenticated user (not guest)
+      GoRoute(
+        path: '/change-password',
+        name: AppRoute.changePassword.name,
+        builder: AuthGuard.requireAuthenticatedUser(
+          builder: (context, state) => const ChangePasswordScreen(),
+        ),
+      ),
     ],
     // Optional: Add error handling
     errorBuilder: (context, state) => Scaffold(
@@ -392,4 +412,4 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ),
   );
-}); 
+});

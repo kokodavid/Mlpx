@@ -3,13 +3,13 @@ import 'package:go_router/go_router.dart';
 
 class HomeHeader extends StatelessWidget {
   final String userName;
-  final String profileImageUrl;
+  final String? profileImageUrl;
   final int points;
 
   const HomeHeader({
     Key? key,
     required this.userName,
-    required this.profileImageUrl,
+    this.profileImageUrl,
     this.points = 32, // Example value
   }) : super(key: key);
 
@@ -35,14 +35,22 @@ class HomeHeader extends StatelessWidget {
               ],
             ),
           ),
-       
+
           GestureDetector(
             onTap: () {
               context.push('/profile');
             },
-            child: const CircleAvatar(
+            child: CircleAvatar(
               radius: 19,
-              backgroundImage: AssetImage('assets/turtle.png'),
+              backgroundImage: profileImageUrl != null
+                  ? NetworkImage(profileImageUrl!)
+                  : (userName == 'Guest' ? const AssetImage('assets/turtle.png') as ImageProvider : null),
+              child: profileImageUrl == null && userName != 'Guest'
+                  ? Text(
+                userName.isNotEmpty ? userName.substring(0, 1).toUpperCase() : '?',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              )
+                  : null,
             ),
           ),
         ],

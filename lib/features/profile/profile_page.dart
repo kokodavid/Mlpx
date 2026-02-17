@@ -36,6 +36,19 @@ class ProfilePage extends ConsumerWidget {
           ),
         ),
         centerTitle: true,
+        actions: [
+          TextButton(
+            onPressed: () => context.push('/edit-profile'),
+            child: const Text(
+              'Edit',
+              style: TextStyle(
+                color: AppColors.primaryColor,
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+              ),
+            ),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -57,7 +70,7 @@ class ProfilePage extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 32),
-              
+
               // Stats Section
               statsAsync.when(
                 data: (stats) => StatsSectionWidget(stats: stats),
@@ -68,11 +81,11 @@ class ProfilePage extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 32),
-              
+
               // Menu Items
               const MenuItemsWidget(),
               const SizedBox(height: 32),
-              
+
               // Logout Button
               LogoutButtonWidget(
                 onLogout: () => _handleLogout(ref),

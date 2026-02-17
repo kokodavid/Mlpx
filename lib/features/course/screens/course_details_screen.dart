@@ -162,7 +162,7 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.sandyLight,
+        backgroundColor: AppColors.backgroundColor,
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
