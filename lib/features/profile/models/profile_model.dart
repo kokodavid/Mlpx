@@ -12,6 +12,10 @@ class ProfileModel {
 
   String get fullName => '$firstName $lastName'.trim();
 
+  /// Returns true if all required fields are valid for submission
+  bool get isValid =>
+      firstName.trim().isNotEmpty && lastName.trim().isNotEmpty;
+
   ProfileModel({
     required this.id,
     required this.firstName,
@@ -32,11 +36,11 @@ class ProfileModel {
       lastName: json['last_name'] ?? '',
       email: json['email'] ?? '',
       avatarUrl: json['avatar_url'],
-      createdAt: json['created_at'] != null 
-          ? DateTime.parse(json['created_at']) 
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
           : DateTime.now(),
-      updatedAt: json['updated_at'] != null 
-          ? DateTime.parse(json['updated_at']) 
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
           : DateTime.now(),
       coursesCompleted: json['courses_completed'] ?? 0,
       lessonsCompleted: json['lessons_completed'] ?? 0,
@@ -84,4 +88,4 @@ class ProfileModel {
       totalPoints: totalPoints ?? this.totalPoints,
     );
   }
-} 
+}
