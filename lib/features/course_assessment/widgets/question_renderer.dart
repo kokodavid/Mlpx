@@ -6,6 +6,11 @@ import 'word_matching_question.dart';
 import 'fill_in_blank_question.dart';
 import 'true_false_question.dart';
 import 'matching_options.dart';
+import 'select_matching_sound_question.dart';
+import 'initial_sound_matching_question.dart';
+import 'alphabet_sequence_question.dart';
+import 'missing_items_question.dart';
+import 'item_ordering_question.dart';
 
 class QuestionRenderer extends StatelessWidget {
   final AssessmentQuestion question;
@@ -48,6 +53,31 @@ class QuestionRenderer extends StatelessWidget {
           onAnswerChecked: onAnswerChecked,
         ),
       'matching_options' => MatchingOptions(
+          question: question,
+          questionKey: questionKey,
+          onAnswerChecked: onAnswerChecked,
+        ),
+      'select_matching_sound' => SelectMatchingSoundQuestion(
+          question: question,
+          questionKey: questionKey,
+          onAnswerChecked: onAnswerChecked,
+        ),
+      'initial_sound_matching' => InitialSoundMatchingQuestion(
+          question: question,
+          questionKey: questionKey,
+          onAnswerChecked: onAnswerChecked,
+        ),
+      'sequence_matching' => AlphabetSequenceQuestion(
+          question: question,
+          questionKey: questionKey,
+          onAnswerChecked: onAnswerChecked,
+        ),
+      'missing_items' => MissingItemsQuestion(
+          question: question,
+          questionKey: questionKey,
+          onAnswerChecked: onAnswerChecked,
+        ),
+      'item_ordering' => ItemOrderingQuestion(
           question: question,
           questionKey: questionKey,
           onAnswerChecked: onAnswerChecked,

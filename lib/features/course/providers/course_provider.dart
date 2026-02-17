@@ -9,6 +9,7 @@ import 'package:milpress/utils/supabase_config.dart';
 import 'package:milpress/features/user_progress/models/course_progress_model.dart';
 import 'package:milpress/features/user_progress/providers/user_progress_providers.dart';
 import 'package:milpress/features/assessment/providers/assessment_result_provider.dart';
+import 'package:milpress/features/course_assessment/providers/course_assessment_providers.dart';
 import 'package:milpress/features/lessons_v2/models/lesson_models.dart';
 import 'package:milpress/features/lessons_v2/providers/lesson_providers.dart'
     as lessons_v2;
@@ -342,10 +343,6 @@ final courseProgressV2Provider =
   final completedLessonModules = lessonModules
       .where((module) => completedModuleMap[module.module.id] == true)
       .length;
-  final completedAssessmentModules = assessmentModules
-      .where((module) => completedModuleMap[module.module.id] == true)
-      .length;
-  final completedModules = completedLessonModules + completedAssessmentModules;
 
   final allLessonIds = moduleLessons
       .expand((module) => module.lessonIds)
@@ -370,17 +367,86 @@ final courseProgressV2Provider =
   }
 
   final completedLessons = completedLessonIds.length;
+
+  // Assessment progress: use sublevel-based completion from
+  // course_assessment_progress table (same logic as courseDetailsProgressProvider).
+  var assessmentUnitsTotal = 0;
+  var assessmentUnitsCompleted = 0;
+  var completedAssessmentModules = 0;
+
+  for (final module in assessmentModules) {
+    final assessmentId = module.module.assessmentId?.trim();
+    final fallbackCompleted = completedModuleMap[module.module.id] == true;
+
+    if (assessmentId == null || assessmentId.isEmpty) {
+      assessmentUnitsTotal += 1;
+      if (fallbackCompleted) {
+        assessmentUnitsCompleted += 1;
+        completedAssessmentModules += 1;
+      }
+      continue;
+    }
+
+    try {
+      final assessment =
+          await ref.watch(assessmentByIdProvider(assessmentId).future);
+      final assessmentProgress =
+          await ref.watch(assessmentProgressProvider(assessmentId).future);
+      final orderedSublevels = [
+        for (final level in (assessment?.levels ?? const []))
+          ...level.sublevels,
+      ];
+
+      if (orderedSublevels.isEmpty) {
+        assessmentUnitsTotal += 1;
+        if (fallbackCompleted) {
+          assessmentUnitsCompleted += 1;
+          completedAssessmentModules += 1;
+        }
+        continue;
+      }
+
+      final completedSublevelIds = assessmentProgress
+          .where((progress) => progress.completedAt != null)
+          .map((progress) => progress.sublevelId)
+          .toSet();
+      final totalSublevels = orderedSublevels.length;
+      final completedSublevels = orderedSublevels
+          .where((sublevel) => completedSublevelIds.contains(sublevel.id))
+          .length;
+
+      assessmentUnitsTotal += totalSublevels;
+      assessmentUnitsCompleted += completedSublevels;
+
+      if (completedSublevels >= totalSublevels) {
+        completedAssessmentModules += 1;
+      }
+    } catch (e) {
+      debugPrint(
+          'courseProgressV2Provider: failed to load assessment progress: $e');
+      assessmentUnitsTotal += 1;
+      if (fallbackCompleted) {
+        assessmentUnitsCompleted += 1;
+        completedAssessmentModules += 1;
+      }
+    }
+  }
+
+  final completedModules = completedLessonModules + completedAssessmentModules;
+
+  final lessonModuleProgress = lessonModules.isNotEmpty
+      ? completedLessonModules / lessonModules.length
+      : 0.0;
+  final assessmentProgressRatio = assessmentUnitsTotal > 0
+      ? assessmentUnitsCompleted / assessmentUnitsTotal
+      : 0.0;
+
   double completionPercentage;
   if (assessmentModules.isNotEmpty && lessonModules.isNotEmpty) {
-    // Weight lesson-module completion to 80% and assessment-module completion to 20%.
-    final lessonModuleProgress = completedLessonModules / lessonModules.length;
-    final assessmentModuleProgress =
-        completedAssessmentModules / assessmentModules.length;
     completionPercentage =
-        ((lessonModuleProgress * 0.8) + (assessmentModuleProgress * 0.2)) * 100;
+        ((lessonModuleProgress * 0.8) + (assessmentProgressRatio * 0.2)) * 100;
   } else if (assessmentModules.isNotEmpty) {
-    completionPercentage =
-        (completedAssessmentModules / assessmentModules.length) * 100;
+    completionPercentage = assessmentProgressRatio * 100;
   } else {
     completionPercentage =
         totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0.0;
@@ -399,6 +465,190 @@ final courseProgressV2Provider =
     completedLessonModules: completedLessonModules,
     totalAssessmentModules: assessmentModules.length,
     completedAssessmentModules: completedAssessmentModules,
+  );
+});
+
+class CourseDetailsProgressData {
+  final CourseProgressStats stats;
+  final Map<String, bool> completedModules;
+
+  const CourseDetailsProgressData({
+    required this.stats,
+    required this.completedModules,
+  });
+}
+
+final courseDetailsProgressProvider =
+    FutureProvider.family<CourseDetailsProgressData, String>(
+        (ref, courseId) async {
+  final completeCourse =
+      await ref.watch(completeCourseProvider(courseId).future);
+  final modules = completeCourse.modules;
+  final totalModules = modules.length;
+  final lessonModules = modules
+      .where((module) => !_isAssessmentModule(module))
+      .toList(growable: false);
+  final assessmentModules =
+      modules.where(_isAssessmentModule).toList(growable: false);
+
+  final baselineCompletedModules =
+      await ref.watch(completedModulesProvider(courseId).future);
+  final completedModulesOverride =
+      Map<String, bool>.from(baselineCompletedModules);
+
+  final moduleLessons = await Future.wait(lessonModules.map((module) async {
+    final lessons = await ref.watch(
+      lessons_v2.moduleLessonsProvider(module.module.id).future,
+    );
+    final lessonIds = lessons
+        .map((lesson) => lesson.id)
+        .where((id) => id.isNotEmpty)
+        .toList(growable: false);
+    return _ModuleLessonInfo(
+      moduleId: module.module.id,
+      lessonIds: lessonIds,
+    );
+  }));
+
+  final totalLessons = moduleLessons.fold<int>(
+    0,
+    (sum, module) => sum + module.lessonIds.length,
+  );
+
+  final completedLessonModules = lessonModules
+      .where((module) => baselineCompletedModules[module.module.id] == true)
+      .length;
+
+  final allLessonIds = moduleLessons
+      .expand((module) => module.lessonIds)
+      .toList(growable: false);
+
+  Set<String> completedLessonIds = {};
+  final userId = SupabaseConfig.currentUser?.id;
+  if (userId != null && allLessonIds.isNotEmpty) {
+    try {
+      final response = await SupabaseConfig.client
+          .from('lesson_completion')
+          .select('lesson_id')
+          .eq('user_id', userId)
+          .inFilter('lesson_id', allLessonIds);
+      completedLessonIds = (response as List)
+          .map((row) => row['lesson_id'] as String?)
+          .whereType<String>()
+          .toSet();
+    } catch (e) {
+      debugPrint(
+          'courseDetailsProgressProvider: failed to load lesson completion: $e');
+    }
+  }
+  final completedLessons = completedLessonIds.length;
+
+  var assessmentUnitsTotal = 0;
+  var assessmentUnitsCompleted = 0;
+  var completedAssessmentModules = 0;
+
+  for (final module in assessmentModules) {
+    final moduleId = module.module.id;
+    final fallbackCompleted = baselineCompletedModules[moduleId] == true;
+    final assessmentId = module.module.assessmentId?.trim();
+
+    if (assessmentId == null || assessmentId.isEmpty) {
+      assessmentUnitsTotal += 1;
+      if (fallbackCompleted) {
+        assessmentUnitsCompleted += 1;
+        completedAssessmentModules += 1;
+      }
+      completedModulesOverride[moduleId] = fallbackCompleted;
+      continue;
+    }
+
+    try {
+      final assessment =
+          await ref.watch(assessmentByIdProvider(assessmentId).future);
+      final assessmentProgress =
+          await ref.watch(assessmentProgressProvider(assessmentId).future);
+      final orderedSublevels = [
+        for (final level in (assessment?.levels ?? const []))
+          ...level.sublevels,
+      ];
+
+      if (orderedSublevels.isEmpty) {
+        assessmentUnitsTotal += 1;
+        if (fallbackCompleted) {
+          assessmentUnitsCompleted += 1;
+          completedAssessmentModules += 1;
+        }
+        completedModulesOverride[moduleId] = fallbackCompleted;
+        continue;
+      }
+
+      final completedSublevelIds = assessmentProgress
+          .where((progress) => progress.completedAt != null)
+          .map((progress) => progress.sublevelId)
+          .toSet();
+      final totalSublevels = orderedSublevels.length;
+      final completedSublevels = orderedSublevels
+          .where((sublevel) => completedSublevelIds.contains(sublevel.id))
+          .length;
+
+      assessmentUnitsTotal += totalSublevels;
+      assessmentUnitsCompleted += completedSublevels;
+
+      final isCompleted = completedSublevels >= totalSublevels;
+      completedModulesOverride[moduleId] = isCompleted;
+      if (isCompleted) {
+        completedAssessmentModules += 1;
+      }
+    } catch (e) {
+      debugPrint(
+          'courseDetailsProgressProvider: failed to load assessment progress for module $moduleId: $e');
+      assessmentUnitsTotal += 1;
+      if (fallbackCompleted) {
+        assessmentUnitsCompleted += 1;
+        completedAssessmentModules += 1;
+      }
+      completedModulesOverride[moduleId] = fallbackCompleted;
+    }
+  }
+
+  final completedModules = completedLessonModules + completedAssessmentModules;
+  final lessonModuleProgress = lessonModules.isNotEmpty
+      ? completedLessonModules / lessonModules.length
+      : 0.0;
+  final assessmentProgressRatio = assessmentUnitsTotal > 0
+      ? assessmentUnitsCompleted / assessmentUnitsTotal
+      : 0.0;
+
+  double completionPercentage;
+  if (assessmentModules.isNotEmpty && lessonModules.isNotEmpty) {
+    completionPercentage =
+        ((lessonModuleProgress * 0.8) + (assessmentProgressRatio * 0.2)) * 100;
+  } else if (assessmentModules.isNotEmpty) {
+    completionPercentage = assessmentProgressRatio * 100;
+  } else {
+    completionPercentage =
+        totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0.0;
+  }
+
+  completionPercentage = completionPercentage.clamp(0.0, 100.0).toDouble();
+
+  final stats = CourseProgressStats(
+    totalModules: totalModules,
+    completedModules: completedModules,
+    totalLessons: totalLessons,
+    completedLessons: completedLessons,
+    totalQuizzes: 0,
+    completedQuizzes: 0,
+    courseCompletionPercentage: completionPercentage,
+    totalLessonModules: lessonModules.length,
+    completedLessonModules: completedLessonModules,
+    totalAssessmentModules: assessmentModules.length,
+    completedAssessmentModules: completedAssessmentModules,
+  );
+
+  return CourseDetailsProgressData(
+    stats: stats,
+    completedModules: completedModulesOverride,
   );
 });
 
@@ -514,6 +764,7 @@ final courseProgressRefreshStreamProvider =
   ref.invalidate(completedModulesProvider(courseId));
   ref.invalidate(ongoingModuleProvider(courseId));
   ref.invalidate(courseProgressV2Provider(courseId));
+  ref.invalidate(courseDetailsProgressProvider(courseId));
   ref.invalidate(ongoingLessonInfoV2Provider(courseId));
 
   debugPrint(
@@ -571,6 +822,7 @@ final autoRefreshCourseDataProvider =
   ref.invalidate(completedModulesProvider(courseId));
   ref.invalidate(ongoingModuleProvider(courseId));
   ref.invalidate(courseProgressV2Provider(courseId));
+  ref.invalidate(courseDetailsProgressProvider(courseId));
   ref.invalidate(ongoingLessonInfoV2Provider(courseId));
 
   debugPrint(

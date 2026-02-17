@@ -2,9 +2,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milpress/utils/app_colors.dart';
-import 'package:milpress/features/lessons_v2/widgets/lesson_audio_buttons.dart';
 import '../models/question_model.dart';
 import '../providers/question_state_provider.dart';
+import 'question_instruction_header.dart';
 
 class WordMatchingQuestion extends ConsumerWidget {
   final AssessmentQuestion question;
@@ -28,13 +28,6 @@ class WordMatchingQuestion extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title
-          Text(
-            question.title,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 12),
-
           // Word prompt — shown prominently
           if (question.correctAnswer is String) ...[
             Center(
@@ -59,27 +52,10 @@ class WordMatchingQuestion extends ConsumerWidget {
             const SizedBox(height: 16),
           ],
 
-          // Audio prompt or text prompt
-          if (question.audioUrl.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.all(12),
-              child: LessonAudioInlineButton(
-                sourceId: '$questionKey-instruction',
-                url: question.audioUrl,
-                label: question.prompt,
-              ),
-            )
-          else
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text(
-                question.prompt,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: AppColors.primaryColor,
-                ),
-              ),
-            ),
+          QuestionInstructionHeader(
+            question: question,
+            sourceId: '$questionKey-instruction',
+          ),
 
           const SizedBox(height: 16),
 

@@ -17,7 +17,7 @@ import 'package:milpress/features/assessment/models/assessment_result_model.dart
 import 'package:milpress/features/course_assessment/models/course_assessment_model.dart';
 import 'package:milpress/features/course_assessment/models/assessment_level_model.dart';
 import 'package:milpress/features/course_assessment/models/assessment_sublevel_model.dart';
-import 'package:milpress/features/course_assessment/models/assessment_v2_progress_model.dart';
+import 'package:milpress/features/course_assessment/models/course_assessment_progress_model.dart';
 import 'package:milpress/features/widgets/connectivity_sheet_listener.dart';
 import 'package:milpress/providers/auth_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -45,7 +45,7 @@ void main() async {
   Hive.registerAdapter(CourseAssessmentAdapter());
   Hive.registerAdapter(AssessmentLevelAdapter());
   Hive.registerAdapter(AssessmentSublevelAdapter());
-  Hive.registerAdapter(AssessmentV2ProgressAdapter());
+  Hive.registerAdapter(CourseAssessmentProgressAdapter());
   
   await Supabase.initialize(
     url: SupabaseConfig.supabaseUrl,

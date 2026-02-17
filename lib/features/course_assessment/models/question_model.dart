@@ -65,6 +65,13 @@ class AssessmentQuestion {
   /// Optional helper for new V2 payloads.
   String? get hintText => _asNullableString(extraFields['hint_text']);
 
+  /// Display title for question UIs (prefers `extra_fields.question_title`).
+  String get questionTitle {
+    final fromExtra = _asNullableString(extraFields['question_title']) ??
+        _asNullableString(extraFields['questionTitle']);
+    return (fromExtra ?? title).trim();
+  }
+
   /// Flat text values from main content, useful for simple text-first UIs.
   List<String> get mainContentValues =>
       mainContent.map((item) => item.value).toList(growable: false);

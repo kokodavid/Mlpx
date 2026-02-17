@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milpress/utils/app_colors.dart';
+import 'package:milpress/utils/supabase_config.dart';
 import '../models/assessment_v2_composites.dart';
+import '../models/course_assessment_progress_model.dart';
 import '../models/question_model.dart';
 import '../providers/course_assessment_providers.dart';
 import '../widgets/assessment_feedback.dart';
@@ -49,6 +51,10 @@ class _AssessmentPlayScreenState extends ConsumerState<AssessmentPlayScreen> {
   bool _showBreaker = false;
   bool _showFinalResults = false;
   bool _isResetScheduled = false;
+  bool _hasRestoredProgress = false;
+
+  /// Completed sublevel IDs fetched from Supabase on load.
+  Set<String> _completedSublevelIds = {};
 
   /// Scores per sublevel id.
   final Map<String, _SublevelScore> _sublevelScores = {};
@@ -56,12 +62,6 @@ class _AssessmentPlayScreenState extends ConsumerState<AssessmentPlayScreen> {
 
   _SublevelScore _scoreFor(String sublevelId) =>
       _sublevelScores.putIfAbsent(sublevelId, () => _SublevelScore());
-
-  int get _totalCorrect =>
-      _sublevelScores.values.fold(0, (sum, s) => sum + s.correct);
-
-  int get _totalAnswered =>
-      _sublevelScores.values.fold(0, (sum, s) => sum + s.total);
 
   String _scoreKeyFor({
     required String sublevelId,
@@ -77,6 +77,51 @@ class _AssessmentPlayScreenState extends ConsumerState<AssessmentPlayScreen> {
     _showFinalResults = false;
     _sublevelScores.clear();
     _scoredQuestionKeys.clear();
+    _hasRestoredProgress = false;
+  }
+
+  /// Save progress for the completed sublevel to Supabase.
+  void _saveSublevelProgress(String sublevelId) {
+    final userId = SupabaseConfig.currentUser?.id;
+    if (userId == null) return;
+
+    final score = _sublevelScores[sublevelId];
+    final progress = CourseAssessmentProgress(
+      id: sublevelId, // placeholder — Supabase upsert uses user_id+sublevel_id
+      userId: userId,
+      sublevelId: sublevelId,
+      assessmentId: widget.assessmentId,
+      score: score?.correct,
+      attempts: 1,
+      completedAt: DateTime.now(),
+    );
+
+    ref.read(saveAssessmentProgressProvider(progress));
+    _completedSublevelIds.add(sublevelId);
+  }
+
+  /// Restore flow position from previously completed sublevels.
+  void _restoreProgressIfNeeded(List<_PlayableSublevel> sublevels) {
+    if (_hasRestoredProgress) return;
+    _hasRestoredProgress = true;
+
+    // Find the first sublevel that hasn't been completed.
+    var resumeIndex = 0;
+    for (var i = 0; i < sublevels.length; i++) {
+      if (_completedSublevelIds.contains(sublevels[i].id)) {
+        resumeIndex = i + 1;
+      } else {
+        break;
+      }
+    }
+
+    if (resumeIndex >= sublevels.length) {
+      // All sublevels completed — show final results.
+      _showFinalResults = true;
+    } else if (resumeIndex > 0) {
+      _currentSublevelIndex = resumeIndex;
+      _currentQuestionIndex = 0;
+    }
   }
 
   bool _isFlowStateValid(List<_PlayableSublevel> sublevels) {
@@ -216,6 +261,9 @@ class _AssessmentPlayScreenState extends ConsumerState<AssessmentPlayScreen> {
           _currentQuestionIndex++;
         } else {
           _showBreaker = true;
+          _saveSublevelProgress(
+            sublevels[answeredSublevelIndex].id,
+          );
         }
       });
     });
@@ -380,6 +428,8 @@ class _AssessmentPlayScreenState extends ConsumerState<AssessmentPlayScreen> {
   Widget build(BuildContext context) {
     final assessmentAsync =
         ref.watch(assessmentByIdProvider(widget.assessmentId));
+    final progressAsync =
+        ref.watch(assessmentProgressProvider(widget.assessmentId));
 
     return Scaffold(
       backgroundColor: AppColors.sandyLight,
@@ -411,6 +461,15 @@ class _AssessmentPlayScreenState extends ConsumerState<AssessmentPlayScreen> {
             return _buildEmptyState();
           }
 
+          // Populate completed sublevel IDs from fetched progress.
+          progressAsync.whenData((progressList) {
+            _completedSublevelIds = progressList
+                .where((p) => p.completedAt != null)
+                .map((p) => p.sublevelId)
+                .toSet();
+            _restoreProgressIfNeeded(sublevels);
+          });
+
           _scheduleFlowResetIfNeeded(sublevels);
 
           if (!_isFlowStateValid(sublevels)) {
@@ -418,19 +477,41 @@ class _AssessmentPlayScreenState extends ConsumerState<AssessmentPlayScreen> {
           }
 
           if (_showFinalResults) {
+            // Build scores from Supabase progress (source of truth).
+            final progressList = progressAsync.value ?? const [];
+            final progressBySubLevel = <String, int>{};
+            for (final p in progressList) {
+              if (p.completedAt != null) {
+                progressBySubLevel[p.sublevelId] = p.score ?? 0;
+              }
+            }
+
+            final categoryScores = sublevels.map((sublevel) {
+              final total = sublevel.questions.length;
+              // Prefer in-memory score for the current session (just
+              // completed), fall back to Supabase for previously
+              // completed sublevels.
+              final inMemory = _sublevelScores[sublevel.id];
+              final correct = inMemory != null
+                  ? inMemory.correct
+                  : (progressBySubLevel[sublevel.id] ?? 0);
+              return CategoryScore(
+                label: sublevel.title,
+                displayLetter: sublevel.displayLetter,
+                correct: correct,
+                total: inMemory != null ? inMemory.total : total,
+              );
+            }).toList(growable: false);
+
+            final totalCorrect =
+                categoryScores.fold(0, (sum, c) => sum + c.correct);
+            final totalAnswered =
+                categoryScores.fold(0, (sum, c) => sum + c.total);
+
             return AssessmentFeedback.finalResult(
-              correctCount: _totalCorrect,
-              totalCount: _totalAnswered,
-              categoryScores: sublevels
-                  .map(
-                    (sublevel) => CategoryScore(
-                      label: sublevel.title,
-                      displayLetter: sublevel.displayLetter,
-                      correct: _sublevelScores[sublevel.id]?.correct ?? 0,
-                      total: _sublevelScores[sublevel.id]?.total ?? 0,
-                    ),
-                  )
-                  .toList(growable: false),
+              correctCount: totalCorrect,
+              totalCount: totalAnswered,
+              categoryScores: categoryScores,
               onDone: () => Navigator.of(context).pop(),
             );
           }

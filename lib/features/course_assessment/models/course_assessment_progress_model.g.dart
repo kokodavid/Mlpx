@@ -1,29 +1,28 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'assessment_v2_progress_model.dart';
+part of 'course_assessment_progress_model.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator
 // **************************************************************************
 
-class AssessmentV2ProgressAdapter extends TypeAdapter<AssessmentV2Progress> {
+class CourseAssessmentProgressAdapter
+    extends TypeAdapter<CourseAssessmentProgress> {
   @override
   final int typeId = 18;
 
   @override
-  AssessmentV2Progress read(BinaryReader reader) {
+  CourseAssessmentProgress read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return AssessmentV2Progress(
+    return CourseAssessmentProgress(
       id: fields[0] as String,
       userId: fields[1] as String,
       sublevelId: fields[2] as String,
       assessmentId: fields[3] as String,
       score: fields[4] as int?,
-      maxScore: fields[5] as int?,
-      isPassed: fields[6] as bool,
       attempts: fields[7] as int,
       answers: (fields[8] as Map?)?.cast<String, dynamic>(),
       startedAt: fields[9] as DateTime?,
@@ -34,9 +33,9 @@ class AssessmentV2ProgressAdapter extends TypeAdapter<AssessmentV2Progress> {
   }
 
   @override
-  void write(BinaryWriter writer, AssessmentV2Progress obj) {
+  void write(BinaryWriter writer, CourseAssessmentProgress obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -47,10 +46,6 @@ class AssessmentV2ProgressAdapter extends TypeAdapter<AssessmentV2Progress> {
       ..write(obj.assessmentId)
       ..writeByte(4)
       ..write(obj.score)
-      ..writeByte(5)
-      ..write(obj.maxScore)
-      ..writeByte(6)
-      ..write(obj.isPassed)
       ..writeByte(7)
       ..write(obj.attempts)
       ..writeByte(8)
@@ -71,7 +66,7 @@ class AssessmentV2ProgressAdapter extends TypeAdapter<AssessmentV2Progress> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is AssessmentV2ProgressAdapter &&
+      other is CourseAssessmentProgressAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

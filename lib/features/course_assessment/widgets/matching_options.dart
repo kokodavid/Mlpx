@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milpress/utils/app_colors.dart';
-import 'package:milpress/features/lessons_v2/widgets/lesson_audio_buttons.dart';
 import '../models/question_model.dart';
+import 'question_instruction_header.dart';
 
 class MatchingOptions extends ConsumerStatefulWidget {
   final AssessmentQuestion question;
@@ -67,18 +67,9 @@ class _MatchingOptionsState extends ConsumerState<MatchingOptions> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Prompt
-          Text(
-            q.prompt,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 12),
-
-          // Audio button
-          LessonAudioInlineButton(
+          QuestionInstructionHeader(
+            question: q,
             sourceId: '${widget.questionKey}-instruction',
-            url: q.audioUrl,
-            label: 'Click here to listen',
           ),
           const SizedBox(height: 18),
 
@@ -168,7 +159,7 @@ class _MatchFocusCard extends StatelessWidget {
             Text(
               targetContent,
               style: const TextStyle(
-                fontSize: 168,
+                fontSize: 120,
                 fontWeight: FontWeight.w900,
                 color: Colors.black,
                 height: 0.95,

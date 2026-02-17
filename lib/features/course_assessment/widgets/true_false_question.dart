@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milpress/utils/app_colors.dart';
-import 'package:milpress/features/lessons_v2/widgets/lesson_audio_buttons.dart';
 import '../models/question_model.dart';
 import '../providers/question_state_provider.dart';
+import 'question_instruction_header.dart';
 
 class TrueFalseQuestion extends ConsumerWidget {
   final AssessmentQuestion question;
@@ -33,35 +33,10 @@ class TrueFalseQuestion extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title
-          Text(
-            question.title,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+          QuestionInstructionHeader(
+            question: question,
+            sourceId: '$questionKey-instruction',
           ),
-          const SizedBox(height: 12),
-
-          // Audio prompt or text prompt
-          if (question.audioUrl.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.all(12),
-              child: LessonAudioInlineButton(
-                sourceId: '$questionKey-instruction',
-                url: question.audioUrl,
-                label: question.prompt,
-              ),
-            )
-          else
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text(
-                question.prompt,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: AppColors.primaryColor,
-                ),
-              ),
-            ),
-
           const SizedBox(height: 24),
 
           // Statement card

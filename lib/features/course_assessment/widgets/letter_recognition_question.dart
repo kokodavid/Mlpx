@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milpress/utils/app_colors.dart';
-import 'package:milpress/features/lessons_v2/widgets/lesson_audio_buttons.dart';
 import '../models/question_model.dart';
 import '../providers/question_state_provider.dart';
+import 'question_instruction_header.dart';
 
 class LetterRecognitionQuestion extends ConsumerWidget {
   final AssessmentQuestion question;
@@ -27,12 +27,11 @@ class LetterRecognitionQuestion extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title
-          Text(
-            question.title,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+          QuestionInstructionHeader(
+            question: question,
+            sourceId: '$questionKey-instruction',
+            audioLabel: 'Click to hear instructions',
           ),
-          const SizedBox(height: 12),
 
           // // Target letter display
           // if (question.targetLetter != null) ...[
@@ -59,17 +58,6 @@ class LetterRecognitionQuestion extends ConsumerWidget {
           //   const SizedBox(height: 16),
           // ],
 
-          // Audio prompt or text prompt
-            Container(
-              padding: const EdgeInsets.all(12),
-              child: LessonAudioInlineButton(
-                sourceId: '$questionKey-instruction',
-                url: question.audioUrl,
-                label: 'Click to hear instructions',
-              ),
-            ),
-            
-
           const SizedBox(height: 16),
 
           // Option grid — 2-column text-only letter tiles
@@ -91,7 +79,17 @@ class LetterRecognitionQuestion extends ConsumerWidget {
                 isCorrect: option.isCorrect,
                 isSelected: isSelected,
                 isChecked: state.hasChecked,
-                onTap: () => controller.toggleSelection(index),
+                onTap: () {
+                  // Enforce single-select behavior for letter recognition.
+                  if (isSelected) {
+                    controller.toggleSelection(index);
+                    return;
+                  }
+                  for (final i in state.selectedIndices.toList()) {
+                    controller.toggleSelection(i);
+                  }
+                  controller.toggleSelection(index);
+                },
               );
             },
           ),

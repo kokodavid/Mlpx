@@ -3,7 +3,7 @@ import 'package:milpress/utils/supabase_config.dart';
 import '../models/course_assessment_model.dart';
 import '../models/assessment_level_model.dart';
 import '../models/assessment_sublevel_model.dart';
-import '../models/assessment_v2_progress_model.dart';
+import '../models/course_assessment_progress_model.dart';
 import '../models/assessment_v2_composites.dart';
 
 class CourseAssessmentRepository {
@@ -154,21 +154,21 @@ class CourseAssessmentRepository {
   }
 
   /// Fetch all progress entries for a user on a given assessment
-  Future<List<AssessmentV2Progress>> fetchProgress(
+  Future<List<CourseAssessmentProgress>> fetchProgress(
       String assessmentId) async {
     try {
       final userId = SupabaseConfig.currentUser?.id;
       if (userId == null) return [];
 
       final rows = await SupabaseConfig.client
-          .from('assessment_v2_progress')
+          .from('course_assessment_progress')
           .select()
           .eq('user_id', userId)
           .eq('assessment_id', assessmentId);
 
       return (rows as List)
           .cast<Map<String, dynamic>>()
-          .map((row) => AssessmentV2Progress.fromJson(row))
+          .map((row) => CourseAssessmentProgress.fromJson(row))
           .toList();
     } catch (e) {
       debugPrint(
@@ -178,15 +178,16 @@ class CourseAssessmentRepository {
   }
 
   /// Save or update progress for a sublevel (upsert by user_id + sublevel_id)
-  Future<AssessmentV2Progress?> saveProgress(
-      AssessmentV2Progress progress) async {
+  Future<CourseAssessmentProgress?> saveProgress(
+      CourseAssessmentProgress progress) async {
     try {
       final data = progress.toJson();
+      data.remove('id');
       data.remove('created_at');
       data.remove('updated_at');
 
       final response = await SupabaseConfig.client
-          .from('assessment_v2_progress')
+          .from('course_assessment_progress')
           .upsert(
             data,
             onConflict: 'user_id,sublevel_id',
@@ -194,7 +195,7 @@ class CourseAssessmentRepository {
           .select()
           .single();
 
-      return AssessmentV2Progress.fromJson(response);
+      return CourseAssessmentProgress.fromJson(response);
     } catch (e) {
       debugPrint(
           'CourseAssessmentRepository: Failed to save progress: $e');
