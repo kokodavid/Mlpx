@@ -238,7 +238,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
         backgroundColor: AppColors.backgroundColor,
         appBar: AppBar(
           elevation: 0,
-          backgroundColor: Colors.white,
+          backgroundColor: AppColors.backgroundColor,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.black),
             onPressed: () => context.pop(),
@@ -298,10 +298,10 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
         primaryLabel == 'Finish' ? AppColors.correctAnswerColor : null;
 
     return Scaffold(
-      backgroundColor: AppColors.sandyLight,
+      backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: AppColors.sandyLight,
+        backgroundColor: AppColors.backgroundColor,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => context.pop(),

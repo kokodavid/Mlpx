@@ -44,124 +44,126 @@ class _DemonstrationStepState extends State<DemonstrationStep> {
             .toList();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              for (var i = 0; i < imageUrls.length; i++) ...[
-                SizedBox(
-                  width: 140,
-                  child: _SvgTab(
-                    url: imageUrls[i],
-                  ),
-                ),
-                if (i != imageUrls.length - 1)
-                  const SizedBox(width: 15),
-              ],
-            ],
-          ),
-          const SizedBox(height: 16),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: AppColors.primaryColor.withOpacity(0.2),
-              ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
             ),
-            child: Column(
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  height: 250,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: AppColors.accentColor,
-                    borderRadius: BorderRadius.circular(12),
+                for (var i = 0; i < imageUrls.length; i++) ...[
+                  SizedBox(
+                    width: 140,
+                    child: _SvgTab(
+                      url: imageUrls[i],
+                    ),
                   ),
-                  alignment: Alignment.center,
-                  child: TracingCanvas(controller: _tracingController),
+                  if (i != imageUrls.length - 1)
+                    const SizedBox(width: 15),
+                ],
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: AppColors.primaryColor.withOpacity(0.2),
                 ),
-                const SizedBox(height: 10),
-                GestureDetector(
-                  onTap: _tracingController.clear,
-                  child: Container(
-                    width: 60,
-                    height: 40,
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    height: 250,
+                    width: double.infinity,
                     decoration: BoxDecoration(
-                      color: AppColors.copBlue,
+                      color: AppColors.accentColor,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     alignment: Alignment.center,
-                    child: SvgPicture.asset(
-                      'assets/eraser.svg',
-                      width: 20,
-                      height: 20,
-                      colorFilter:
-                          const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                    child: TracingCanvas(controller: _tracingController),
+                  ),
+                  const SizedBox(height: 10),
+                  GestureDetector(
+                    onTap: _tracingController.clear,
+                    child: Container(
+                      width: 60,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.copBlue,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      alignment: Alignment.center,
+                      child: SvgPicture.asset(
+                        'assets/eraser.svg',
+                        width: 20,
+                        height: 20,
+                        colorFilter:
+                            const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 14),
-          // Container(
-          //   padding: const EdgeInsets.all(12),
-          //   decoration: BoxDecoration(
-          //     color: AppColors.correctAnswerColor.withOpacity(0.12),
-          //     borderRadius: BorderRadius.circular(12),
-          //     border: Border.all(
-          //       color: AppColors.correctAnswerColor.withOpacity(0.3),
-          //     ),
-          //   ),
-          //   child: Row(
-          //     children: [
-          //       Container(
-          //         width: 36,
-          //         height: 36,
-          //         decoration: const BoxDecoration(
-          //           color: AppColors.correctAnswerColor,
-          //           shape: BoxShape.circle,
-          //         ),
-          //         child: const Icon(Icons.check, color: Colors.white),
-          //       ),
-          //       const SizedBox(width: 10),
-          //       Expanded(
-          //         child: Column(
-          //           crossAxisAlignment: CrossAxisAlignment.start,
-          //           children: [
-          //             Text(
-          //               feedbackTitle,
-          //               style: const TextStyle(
-          //                 fontSize: 14,
-          //                 fontWeight: FontWeight.w600,
-          //                 color: AppColors.correctAnswerColor,
-          //               ),
-          //             ),
-          //             Text(
-          //               feedbackBody,
-          //               style: TextStyle(
-          //                 fontSize: 12,
-          //                 color: AppColors.correctAnswerColor.withOpacity(0.9),
-          //               ),
-          //             ),
-          //           ],
-          //         ),
-          //       ),
-          //     ],
-          //   ),
-          // ),
-        ],
+            const SizedBox(height: 14),
+            // Container(
+            //   padding: const EdgeInsets.all(12),
+            //   decoration: BoxDecoration(
+            //     color: AppColors.correctAnswerColor.withOpacity(0.12),
+            //     borderRadius: BorderRadius.circular(12),
+            //     border: Border.all(
+            //       color: AppColors.correctAnswerColor.withOpacity(0.3),
+            //     ),
+            //   ),
+            //   child: Row(
+            //     children: [
+            //       Container(
+            //         width: 36,
+            //         height: 36,
+            //         decoration: const BoxDecoration(
+            //           color: AppColors.correctAnswerColor,
+            //           shape: BoxShape.circle,
+            //         ),
+            //         child: const Icon(Icons.check, color: Colors.white),
+            //       ),
+            //       const SizedBox(width: 10),
+            //       Expanded(
+            //         child: Column(
+            //           crossAxisAlignment: CrossAxisAlignment.start,
+            //           children: [
+            //             Text(
+            //               feedbackTitle,
+            //               style: const TextStyle(
+            //                 fontSize: 14,
+            //                 fontWeight: FontWeight.w600,
+            //                 color: AppColors.correctAnswerColor,
+            //               ),
+            //             ),
+            //             Text(
+            //               feedbackBody,
+            //               style: TextStyle(
+            //                 fontSize: 12,
+            //                 color: AppColors.correctAnswerColor.withOpacity(0.9),
+            //               ),
+            //             ),
+            //           ],
+            //         ),
+            //       ),
+            //     ],
+            //   ),
+            // ),
+          ],
+        ),
       ),
     );
   }
