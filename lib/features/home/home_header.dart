@@ -34,7 +34,7 @@ class HomeHeader extends StatelessWidget {
           bottomRight: Radius.circular(24),
         ),
       ),
-      padding: const EdgeInsets.only(top: 52, left: 20, right: 20, bottom: 24),
+      padding: const EdgeInsets.only(top: 30, left: 20, right: 20, bottom: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

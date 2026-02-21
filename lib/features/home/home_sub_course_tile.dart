@@ -37,7 +37,7 @@ class HomeSubCourseTile extends StatelessWidget {
 
     return Container(
       margin: margin,
-      padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
+      padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
       decoration: BoxDecoration(
         color: AppColors.whiteSmoke,
         borderRadius: BorderRadius.circular(34),
@@ -199,7 +199,7 @@ class _InfoPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 5),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
         color: const Color(0xFFF2F2F2),
@@ -217,7 +217,7 @@ class _InfoPill extends StatelessWidget {
           Text(
             label,
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: 12,
               color: Color(0xFF6C6C6C),
               fontWeight: FontWeight.w500,
             ),

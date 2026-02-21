@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:milpress/features/home/course_preview_tile.dart';
 import 'package:milpress/utils/app_colors.dart';
 
 class HomeCourseTile extends StatelessWidget {
@@ -10,7 +11,8 @@ class HomeCourseTile extends StatelessWidget {
   final bool allLessonsComplete;
   final bool allAssessmentsComplete;
   final VoidCallback? onTap;
-  final VoidCallback? onPreviewTap;
+  final String previewUrl;
+  final String previewSourceId;
   final EdgeInsetsGeometry margin;
 
   const HomeCourseTile({
@@ -18,155 +20,90 @@ class HomeCourseTile extends StatelessWidget {
     required this.title,
     required this.courseLabel,
     required this.levelLabel,
+    required this.previewUrl,
+    required this.previewSourceId,
     this.introductionTitle = 'Introduction Audio',
     this.previewText = 'Tap to preview this course',
     this.allLessonsComplete = false,
     this.allAssessmentsComplete = false,
     this.onTap,
-    this.onPreviewTap,
     this.margin = const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: margin,
-        padding: const EdgeInsets.fromLTRB(15, 20, 15, 18),
-        decoration: BoxDecoration(
-          color: AppColors.whiteSmoke,
-          borderRadius: BorderRadius.circular(34),
-          border: Border.all(
-            color: AppColors.borderColor,
-            width: 1.2,
-          ),
+    return Container(
+      margin: margin,
+      padding: const EdgeInsets.fromLTRB(15, 20, 15, 18),
+      decoration: BoxDecoration(
+        color: AppColors.whiteSmoke,
+        borderRadius: BorderRadius.circular(34),
+        border: Border.all(
+          color: AppColors.borderColor,
+          width: 1.2,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 25,
-                height: 1.2,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF10131A),
-              ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 25,
+              height: 1.2,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF10131A),
             ),
-            const SizedBox(height: 18),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              alignment: WrapAlignment.center,
+          ),
+          const SizedBox(height: 18),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            alignment: WrapAlignment.center,
+            children: [
+              _MetaPill(
+                icon: Icons.school_outlined,
+                text: courseLabel,
+                borderColor: AppColors.primaryColor,
+                foregroundColor: AppColors.primaryColor,
+              ),
+              _MetaPill(
+                text: levelLabel.toUpperCase(),
+                borderColor: const Color(0xFFDCD7CF),
+                foregroundColor: const Color(0xFF7B7B7B),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          CoursePreviewTile(
+            url: previewUrl,
+            sourceId: previewSourceId,
+          ),
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.borderColor),
+              color: const Color(0xFFF5F5F5),
+            ),
+            child: Column(
               children: [
-                _MetaPill(
-                  icon: Icons.school_outlined,
-                  text: courseLabel,
-                  borderColor: AppColors.primaryColor,
-                  foregroundColor: AppColors.primaryColor,
+                _CompletionRow(
+                  label: 'All Lessons Complete',
+                  isComplete: allLessonsComplete,
                 ),
-                _MetaPill(
-                  text: levelLabel.toUpperCase(),
-                  borderColor: const Color(0xFFDCD7CF),
-                  foregroundColor: const Color(0xFF7B7B7B),
+                const SizedBox(height: 10),
+                _CompletionRow(
+                  label: 'All Assessments Complete',
+                  isComplete: allAssessmentsComplete,
                 ),
               ],
             ),
-            const SizedBox(height: 18),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.borderColor),
-                color: const Color(0xFFF5F5F5),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    introductionTitle,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF10131A),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: onPreviewTap,
-                      borderRadius: BorderRadius.circular(20),
-                      child: Ink(
-                        width: double.infinity,
-                        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-                        decoration: BoxDecoration(
-                          color: AppColors.whiteSmoke,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppColors.borderColor),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 35,
-                              height: 35,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: AppColors.primaryColor,
-                              ),
-                              child: const Icon(
-                                Icons.volume_up_outlined,
-                                color: Colors.white,
-                                size: 15,
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Text(
-                                previewText,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppColors.textColor,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.borderColor),
-                color: const Color(0xFFF5F5F5),
-              ),
-              child: Column(
-                children: [
-                  _CompletionRow(
-                    label: 'All Lessons Complete',
-                    isComplete: allLessonsComplete,
-                  ),
-                  const SizedBox(height: 10),
-                  _CompletionRow(
-                    label: 'All Assessments Complete',
-                    isComplete: allAssessmentsComplete,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

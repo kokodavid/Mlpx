@@ -4,7 +4,6 @@ import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import '../../providers/auth_provider.dart';
-import '../../providers/audio_service_provider.dart';
 import '../course/providers/course_provider.dart';
 import '../profile/providers/profile_provider.dart';
 import 'home_course_tile.dart';
@@ -39,18 +38,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Future<void> _openCourse(String courseId) async {
     if (!mounted) return;
     context.push('/course/$courseId');
-  }
-
-  Future<void> _playPreview(String? previewUrl) async {
-    if (previewUrl == null || previewUrl.isEmpty) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No preview audio available yet.')),
-      );
-      return;
-    }
-
-    await ref.read(audioServiceProvider.notifier).playAudio(previewUrl);
   }
 
   String _levelLabel(int level) {
@@ -251,8 +238,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         child: LayoutBuilder(
                           builder: (context, constraints) {
                             final pageViewHeight =
-                                (constraints.maxHeight * 0.74)
-                                    .clamp(320.0, 520.0);
+                                (constraints.maxHeight * 0.85)
+                                    .clamp(420.0, 560.0);
 
                             return SingleChildScrollView(
                               child: ConstrainedBox(
@@ -265,16 +252,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   children: [
                                     Column(
                                       children: [
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 20,
-                                          ),
-                                          child: Divider(
-                                            color: AppColors.borderColor
-                                                .withValues(alpha: 0.9),
-                                            height: 20,
-                                          ),
-                                        ),
+                                        // Padding(
+                                        //   padding: const EdgeInsets.symmetric(
+                                        //     horizontal: 20,
+                                        //   ),
+                                        //   child: Divider(
+                                        //     color: AppColors.borderColor
+                                        //         .withValues(alpha: 0.9),
+                                        //     height: 20,
+                                        //   ),
+                                        // ),
                                         SizedBox(
                                           height: pageViewHeight,
                                           child: PageView.builder(
@@ -366,10 +353,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                                     allAssessmentsComplete,
                                                 onTap: () =>
                                                     _openCourse(course.id),
-                                                onPreviewTap: () =>
-                                                    _playPreview(
-                                                  course.soundUrlPreview,
-                                                ),
+                                                previewUrl:
+                                                    course.soundUrlPreview ?? '',
+                                                previewSourceId:
+                                                    'course-preview-${course.id}',
                                               );
                                             },
                                           ),
