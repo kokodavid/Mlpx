@@ -32,13 +32,14 @@ class LessonProgressModelAdapter extends TypeAdapter<LessonProgressModel> {
       needsSync: fields[12] as bool,
       quizTotalQuestions: fields[13] as int?,
       lessonTitle: fields[14] as String?,
+      moduleId: fields[15] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, LessonProgressModel obj) {
     writer
-      ..writeByte(15)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -68,7 +69,9 @@ class LessonProgressModelAdapter extends TypeAdapter<LessonProgressModel> {
       ..writeByte(13)
       ..write(obj.quizTotalQuestions)
       ..writeByte(14)
-      ..write(obj.lessonTitle);
+      ..write(obj.lessonTitle)
+      ..writeByte(15)
+      ..write(obj.moduleId);
   }
 
   @override

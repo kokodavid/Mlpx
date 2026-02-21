@@ -22,6 +22,10 @@ class ModuleModel {
   final String lockMessage;
   @HiveField(8)
   final String description;
+  @HiveField(9)
+  final String moduleType;
+  @HiveField(10)
+  final String? assessmentId;
 
   ModuleModel({
     required this.id,
@@ -33,7 +37,11 @@ class ModuleModel {
     required this.locked,
     required this.lockMessage,
     required this.description,
+    this.moduleType = 'lesson',
+    this.assessmentId,
   });
+
+  bool get isAssessment => moduleType == 'assessment';
 
   factory ModuleModel.fromJson(Map<String, dynamic> json) => ModuleModel(
         id: json['id'] as String,
@@ -45,6 +53,8 @@ class ModuleModel {
         locked: json['locked'] as bool,
         lockMessage: json['lock_message'] as String,
         description: json['description'] as String,
+        moduleType: json['module_type'] as String? ?? 'lesson',
+        assessmentId: json['assessment_id'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -57,5 +67,7 @@ class ModuleModel {
         'locked': locked,
         'lock_message': lockMessage,
         'description': description,
+        'module_type': moduleType,
+        'assessment_id': assessmentId,
       };
 }

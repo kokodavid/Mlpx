@@ -124,8 +124,8 @@ class _ExampleCard extends StatelessWidget {
                 )
                     : Image.network(
                   imageUrl,
-                  width: 130,
-                  height: 90,
+                  width: 120,
+                  height: 80,
                   fit: BoxFit.cover,
                 ),
               ),

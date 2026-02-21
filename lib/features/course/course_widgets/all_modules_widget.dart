@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../course_models/complete_course_model.dart';
+import '../providers/course_provider.dart';
 import 'package:milpress/utils/app_colors.dart';
 import 'package:milpress/features/lessons_v2/models/lesson_models.dart';
 import 'package:milpress/features/lessons_v2/providers/lesson_providers.dart'
     as lessons_v2;
+import 'package:milpress/features/course_assessment/models/assessment_sublevel_model.dart';
+import 'package:milpress/features/course_assessment/providers/course_assessment_providers.dart';
 
 class AllModulesWidget extends ConsumerStatefulWidget {
   final List<ModuleWithLessons> modules;
@@ -14,6 +17,7 @@ class AllModulesWidget extends ConsumerStatefulWidget {
   final String? courseTitle;
   final int? totalModules;
   final int? totalLessons;
+  final Map<String, bool>? completedModulesOverride;
 
   const AllModulesWidget({
     Key? key,
@@ -23,6 +27,7 @@ class AllModulesWidget extends ConsumerStatefulWidget {
     this.courseTitle,
     this.totalModules,
     this.totalLessons,
+    this.completedModulesOverride,
   }) : super(key: key);
 
   @override
@@ -41,6 +46,13 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
   @override
   Widget build(BuildContext context) {
     final modules = widget.modules.toList();
+    final completedModulesAsync = widget.courseId == null
+        ? const AsyncValue<Map<String, bool>>.data(<String, bool>{})
+        : ref.watch(completedModulesProvider(widget.courseId!));
+    final completedModules = widget.completedModulesOverride ??
+        completedModulesAsync.value ??
+        const <String, bool>{};
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -58,24 +70,60 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
           itemBuilder: (context, index) {
             final module = modules[index];
             final expanded = _expanded[index];
-            final moduleLessonsAsync = ref.watch(
-              lessons_v2.moduleLessonsProvider(module.module.id),
-            );
+            final isAssessmentModule = module.module.isAssessment ||
+                (module.module.assessmentId?.trim().isNotEmpty ?? false);
+            final moduleLessonsAsync = isAssessmentModule
+                ? const AsyncValue<List<LessonDefinition>>.data(
+                    <LessonDefinition>[],
+                  )
+                : ref.watch(
+                    lessons_v2.moduleLessonsProvider(module.module.id),
+                  );
             final moduleLessons =
                 moduleLessonsAsync.value ?? const <LessonDefinition>[];
-            final completedLessonIdsAsync = ref.watch(
-              lessons_v2.completedLessonIdsV2Provider(module.module.id),
-            );
+            final completedLessonIdsAsync = isAssessmentModule
+                ? const AsyncValue<Set<String>>.data(<String>{})
+                : ref.watch(
+                    lessons_v2.completedLessonIdsV2Provider(module.module.id),
+                  );
             final completedLessonIds =
                 completedLessonIdsAsync.value ?? const <String>{};
+
+            // Assessment module: fetch sublevels and progress.
+            final assessmentId = module.module.assessmentId?.trim();
+            final hasAssessmentId =
+                isAssessmentModule && (assessmentId?.isNotEmpty ?? false);
+            final assessmentAsync = hasAssessmentId
+                ? ref.watch(assessmentByIdProvider(assessmentId!))
+                : null;
+            final assessmentProgressAsync = hasAssessmentId
+                ? ref.watch(assessmentProgressProvider(assessmentId!))
+                : null;
+            final assessmentSublevels = hasAssessmentId
+                ? (assessmentAsync?.value?.levels
+                        .expand((l) => l.sublevels)
+                        .toList() ??
+                    <AssessmentSublevel>[])
+                : <AssessmentSublevel>[];
+            final completedSublevelIds = hasAssessmentId
+                ? (assessmentProgressAsync?.value
+                        ?.where((p) => p.completedAt != null)
+                        .map((p) => p.sublevelId)
+                        .toSet() ??
+                    <String>{})
+                : <String>{};
+            final completedSublevelCount = completedSublevelIds.length;
+            final totalSublevelCount = assessmentSublevels.length;
             final completedLessonCount = completedLessonIds.length;
             final totalLessonCount = moduleLessons.length;
-            final isCompleted = totalLessonCount > 0 &&
-                completedLessonCount >= totalLessonCount;
-            final isOngoing = !isCompleted &&
-                (widget.ongoingModuleId == module.module.id);
+            final isCompleted = completedModules[module.module.id] ??
+                (totalLessonCount > 0 &&
+                    completedLessonCount >= totalLessonCount);
+            final isOngoing =
+                !isCompleted && (widget.ongoingModuleId == module.module.id);
             return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6),
               child: GestureDetector(
                 onTap: () {
                   setState(() {
@@ -115,7 +163,23 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
                                     color: Color(0xFF232B3A),
                                   ),
                                 ),
-                                if (moduleLessonsAsync.isLoading)
+                                if (isAssessmentModule)
+                                  Text(
+                                    totalSublevelCount == 0
+                                        ? (isCompleted
+                                            ? 'Assessment completed'
+                                            : 'Assessment pending')
+                                        : '$completedSublevelCount of $totalSublevelCount sections completed',
+                                    style: TextStyle(
+                                      color: isCompleted
+                                          ? Colors.green
+                                          : (isOngoing
+                                              ? Colors.orange
+                                              : Colors.grey),
+                                      fontSize: 14,
+                                    ),
+                                  )
+                                else if (moduleLessonsAsync.isLoading)
                                   const Text(
                                     'Loading lessons...',
                                     style: TextStyle(
@@ -147,21 +211,25 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
                             ),
                             const Spacer(),
                             if (isCompleted)
-                              const Icon(Icons.check_circle, color: Colors.green, size: 24)
+                              const Icon(Icons.check_circle,
+                                  color: Colors.green, size: 24)
                             else if (isOngoing)
-                              const Icon(Icons.timer, color: Colors.orange, size: 24),
+                              const Icon(Icons.timer,
+                                  color: Colors.orange, size: 24),
                             // Chevron icon for expand/collapse
                             AnimatedRotation(
                               turns: expanded ? 0.5 : 0.0,
                               duration: const Duration(milliseconds: 200),
-                              child: const Icon(Icons.expand_more, size: 28, color: Colors.black38),
+                              child: const Icon(Icons.expand_more,
+                                  size: 28, color: Colors.black38),
                             ),
                           ],
                         ),
                       ),
                       if (expanded)
                         Container(
-                          padding: const EdgeInsets.only(left: 8, right: 8, bottom: 8),
+                          padding: const EdgeInsets.only(
+                              left: 8, right: 8, bottom: 8),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -172,18 +240,96 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
                                     child: CircularProgressIndicator(),
                                   ),
                                 ),
+                              if (isAssessmentModule &&
+                                  assessmentSublevels.isEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Text(
+                                    assessmentAsync?.isLoading == true
+                                        ? 'Loading sections...'
+                                        : (isCompleted
+                                            ? 'Assessment module complete.'
+                                            : 'Complete this assessment to finish the course.'),
+                                    style: const TextStyle(
+                                      color: AppColors.textColor,
+                                    ),
+                                  ),
+                                ),
+                              if (isAssessmentModule &&
+                                  assessmentSublevels.isNotEmpty)
+                                ...List.generate(assessmentSublevels.length,
+                                    (sublevelIdx) {
+                                  final sublevel =
+                                      assessmentSublevels[sublevelIdx];
+                                  final isSublevelCompleted =
+                                      completedSublevelIds
+                                          .contains(sublevel.id);
+                                  return Column(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 10),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              isSublevelCompleted
+                                                  ? Icons.check_circle
+                                                  : Icons.circle_outlined,
+                                              size: 20,
+                                              color: isSublevelCompleted
+                                                  ? AppColors
+                                                      .correctAnswerColor
+                                                  : AppColors.textColor,
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                sublevel.title,
+                                                style: const TextStyle(
+                                                  fontSize: 15,
+                                                  fontWeight:
+                                                      FontWeight.w500,
+                                                  color:
+                                                      AppColors.textColor,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      if (sublevelIdx <
+                                          assessmentSublevels.length - 1)
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.symmetric(
+                                                  horizontal: 8),
+                                          child: Divider(
+                                              height: 1,
+                                              color: Colors.grey[300]),
+                                        ),
+                                    ],
+                                  );
+                                }),
                               if (!moduleLessonsAsync.isLoading &&
+                                  !isAssessmentModule &&
                                   moduleLessons.isEmpty)
                                 const Padding(
                                   padding: EdgeInsets.all(12),
                                   child: Text(
                                     'No lessons available yet.',
-                                    style: TextStyle(color: AppColors.textColor),
+                                    style:
+                                        TextStyle(color: AppColors.textColor),
                                   ),
                                 ),
-                              ...List.generate(moduleLessons.length, (lessonIdx) {
+                              ...List.generate(moduleLessons.length,
+                                  (lessonIdx) {
                                 final lesson = moduleLessons[lessonIdx];
-                                
+
                                 return Column(
                                   children: [
                                     InkWell(
@@ -209,19 +355,23 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
                                       },
                                       borderRadius: BorderRadius.circular(12),
                                       child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 10),
                                         decoration: BoxDecoration(
                                           color: Colors.white,
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
                                         ),
                                         child: Row(
                                           children: [
                                             Icon(
-                                              completedLessonIds.contains(lesson.id)
+                                              completedLessonIds
+                                                      .contains(lesson.id)
                                                   ? Icons.check_circle
                                                   : Icons.circle_outlined,
                                               size: 20,
-                                              color: completedLessonIds.contains(lesson.id)
+                                              color: completedLessonIds
+                                                      .contains(lesson.id)
                                                   ? AppColors.correctAnswerColor
                                                   : AppColors.textColor,
                                             ),
@@ -242,8 +392,10 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
                                     ),
                                     if (lessonIdx < moduleLessons.length - 1)
                                       Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                                        child: Divider(height: 1, color: Colors.grey[300]),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8),
+                                        child: Divider(
+                                            height: 1, color: Colors.grey[300]),
                                       ),
                                   ],
                                 );

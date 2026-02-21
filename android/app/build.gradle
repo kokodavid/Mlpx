@@ -31,8 +31,8 @@ android {
         applicationId = "com.milpress.edu"
         minSdk = flutter.minSdkVersion
         targetSdk = 36
-        versionCode = 19
-        versionName = "1.1.2"
+        versionCode = 21
+        versionName = "1.1.4"
     }
 
     signingConfigs {
