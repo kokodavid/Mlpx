@@ -10,7 +10,6 @@ import 'package:milpress/features/reviews/review_screen.dart';
 import 'package:milpress/features/reviews/bookmarks_screen.dart';
 import 'package:milpress/features/reviews/lesson_history_screen.dart';
 import 'package:milpress/features/reviews/downloaded_lessons_screen.dart';
-import 'package:milpress/features/widgets/custom_bottom_nav.dart';
 import 'package:milpress/features/lesson/lesson_screen.dart';
 import 'package:milpress/features/lessons_v2/screens/lesson_attempt_screen.dart';
 import 'package:milpress/features/lessons_v2/models/lesson_models.dart';
@@ -125,78 +124,41 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: AppRoute.accountCreated.name,
         builder: (context, state) => AccountCreatedScreen(),
       ),
-      // Main app shell route with bottom navigation
-      ShellRoute(
-        builder: (context, state, child) {
-          final uri = state.uri;
-          int selectedIndex = 0;
-
-          if (uri.path.startsWith('/course')) {
-            selectedIndex = 1;
-          } else if (uri.path.startsWith('/review')) {
-            selectedIndex = 2;
-          }
-
-          return SafeArea(
-            child: Scaffold(
-              body: child,
-              bottomNavigationBar: CustomBottomNav(
-                currentIndex: selectedIndex,
-                onTap: (index) {
-                  switch (index) {
-                    case 0:
-                      context.go('/');
-                      break;
-                    case 1:
-                      context.go('/course');
-                      break;
-                    case 2:
-                      context.go('/review');
-                      break;
-                  }
-                },
-              ),
-            ),
-          );
-        },
+      // Home route - allows guest access
+      GoRoute(
+        path: '/',
+        name: AppRoute.home.name,
+        builder: AuthGuard.allowGuest(
+          builder: (context, state) => const HomeScreen(),
+        ),
+      ),
+      // Course routes - allow guest access
+      GoRoute(
+        path: '/course',
+        name: AppRoute.course.name,
+        builder: AuthGuard.allowGuest(
+          builder: (context, state) => const CourseScreen(),
+        ),
         routes: [
-          // Home route - allows guest access
           GoRoute(
-            path: '/',
-            name: AppRoute.home.name,
+            path: ':courseId',
+            name: AppRoute.courseDetails.name,
             builder: AuthGuard.allowGuest(
-              builder: (context, state) => const HomeScreen(),
-            ),
-          ),
-          // Course routes - allow guest access
-          GoRoute(
-            path: '/course',
-            name: AppRoute.course.name,
-            builder: AuthGuard.allowGuest(
-              builder: (context, state) => const CourseScreen(),
-            ),
-            routes: [
-              GoRoute(
-                path: ':courseId',
-                name: AppRoute.courseDetails.name,
-                builder: AuthGuard.allowGuest(
-                  builder: (context, state) {
-                    final courseId = state.pathParameters['courseId']!;
-                    return CourseDetailsScreen(courseId: courseId);
-                  },
-                ),
-              ),
-            ],
-          ),
-          // Review route - allows guest access
-          GoRoute(
-            path: '/review',
-            name: AppRoute.review.name,
-            builder: AuthGuard.allowGuest(
-              builder: (context, state) => const ReviewScreen(),
+              builder: (context, state) {
+                final courseId = state.pathParameters['courseId']!;
+                return CourseDetailsScreen(courseId: courseId);
+              },
             ),
           ),
         ],
+      ),
+      // Review route - allows guest access
+      GoRoute(
+        path: '/review',
+        name: AppRoute.review.name,
+        builder: AuthGuard.allowGuest(
+          builder: (context, state) => const ReviewScreen(),
+        ),
       ),
       // Standalone routes (no bottom nav) - require authenticated user (not guest)
       GoRoute(

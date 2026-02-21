@@ -37,7 +37,7 @@ class CustomButton extends StatelessWidget {
             foregroundColor: textColor ?? theme.colorScheme.onPrimary,
             padding: padding,
             shape: RoundedRectangleBorder(
-              borderRadius: borderRadius ?? BorderRadius.circular(8.0),
+              borderRadius: borderRadius ?? BorderRadius.circular(5.0),
             ),
           )
         : OutlinedButton.styleFrom(
@@ -45,7 +45,7 @@ class CustomButton extends StatelessWidget {
             padding: padding,
             side: BorderSide(color: theme.primaryColor),
             shape: RoundedRectangleBorder(
-              borderRadius: borderRadius ?? BorderRadius.circular(8.0),
+              borderRadius: borderRadius ?? BorderRadius.circular(5.0),
             ),
           );
 
