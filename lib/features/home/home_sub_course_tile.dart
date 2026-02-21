@@ -8,7 +8,10 @@ class HomeSubCourseTile extends StatelessWidget {
   final bool isEligible;
   final String eligibilityText;
   final String buttonText;
+  final bool isCompleted;
   final VoidCallback? onStartCourse;
+  final VoidCallback? onReviewCourse;
+  final VoidCallback? onRestartCourse;
   final EdgeInsetsGeometry margin;
 
   const HomeSubCourseTile({
@@ -18,7 +21,10 @@ class HomeSubCourseTile extends StatelessWidget {
     this.isEligible = true,
     this.eligibilityText = 'You are eligible to start this level',
     this.buttonText = 'Start Course',
+    this.isCompleted = false,
     this.onStartCourse,
+    this.onReviewCourse,
+    this.onRestartCourse,
     this.margin = const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
   });
 
@@ -56,53 +62,125 @@ class HomeSubCourseTile extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: iconBackground,
+          if (isCompleted) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 22,
+                  height: 22,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.successColor,
+                  ),
+                  child: const Icon(
+                    Icons.check,
+                    size: 13,
+                    color: Colors.white,
+                  ),
                 ),
-                child: Icon(
-                  Icons.check,
-                  size: 10,
-                  color: eligibilityColor,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Flexible(
-                child: Text(
-                  eligibilityText,
+                const SizedBox(width: 10),
+                const Text(
+                  'All module completed',
                   style: TextStyle(
-                    fontSize: 12,
-                    color: eligibilityColor,
+                    fontSize: 13,
+                    color: AppColors.successColor,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: CustomButton(
-              text: buttonText,
-              onPressed: (isEligible && onStartCourse != null)
-                  ? onStartCourse!
-                  : () {},
-              isFullWidth: true,
-              isPrimary: true,
-              height: 48,
-              backgroundColor:
-                  isEligible ? AppColors.primaryColor : AppColors.textColor,
-              textColor: Colors.white,
-              fontSize: 16,
-              borderRadius: BorderRadius.circular(10),
+              ],
             ),
-          ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: CustomButton(
+                    text: 'Review Course',
+                    onPressed: onReviewCourse ?? () {},
+                    isFullWidth: true,
+                    isPrimary: true,
+                    height: 48,
+                    backgroundColor: AppColors.successColor,
+                    textColor: Colors.white,
+                    fontSize: 16,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: OutlinedButton(
+                    onPressed: onRestartCourse,
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      side: const BorderSide(
+                        color: AppColors.successColor,
+                        width: 1.5,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      backgroundColor: Colors.white,
+                    ),
+                    child: const Icon(
+                      Icons.replay_rounded,
+                      color: AppColors.successColor,
+                      size: 22,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: iconBackground,
+                  ),
+                  child: Icon(
+                    Icons.check,
+                    size: 10,
+                    color: eligibilityColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Flexible(
+                  child: Text(
+                    eligibilityText,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: eligibilityColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: CustomButton(
+                text: buttonText,
+                onPressed: (isEligible && onStartCourse != null)
+                    ? onStartCourse!
+                    : () {},
+                isFullWidth: true,
+                isPrimary: true,
+                height: 48,
+                backgroundColor:
+                    isEligible ? AppColors.primaryColor : AppColors.textColor,
+                textColor: Colors.white,
+                fontSize: 16,
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ],
         ],
       ),
     );

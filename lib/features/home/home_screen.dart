@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import '../../providers/auth_provider.dart';
 import '../../providers/audio_service_provider.dart';
 import '../course/providers/course_provider.dart';
+import '../course_assessment/providers/course_assessment_providers.dart';
 import '../profile/providers/profile_provider.dart';
 import 'home_course_tile.dart';
 import 'home_header.dart';
@@ -79,6 +80,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final authAsync = ref.watch(authProvider);
     final coursesAsync = ref.watch(coursesWithDetailsProvider);
     final activeCourseAsync = ref.watch(activeCourseWithDetailsProvider);
+    final hasAttemptedAnyCourseAsync = ref.watch(hasAttemptedAnyCourseProvider);
 
     ref.listen<AsyncValue<User?>>(authProvider, (previous, next) {
       next.whenData((user) {
@@ -191,6 +193,77 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     activeLevel: activeLevel,
                   );
 
+                  // Completion state for the selected course
+                  final selectedCompleteCourse = ref
+                      .watch(
+                        completeCourseProvider(selectedCourse.course.id),
+                      )
+                      .valueOrNull;
+                  final selectedCompletedMap = ref
+                      .watch(
+                        completedModulesProvider(selectedCourse.course.id),
+                      )
+                      .valueOrNull;
+
+                  bool selectedAllLessonsComplete = false;
+                  bool selectedAllAssessmentsComplete = false;
+                  if (selectedCompleteCourse != null &&
+                      selectedCompletedMap != null) {
+                    final lessonModules = selectedCompleteCourse.modules
+                        .where((m) => !m.module.isAssessment)
+                        .toList();
+                    selectedAllLessonsComplete = lessonModules.isNotEmpty &&
+                        lessonModules.every(
+                          (m) => selectedCompletedMap[m.module.id] == true,
+                        );
+
+                    final assessmentModules = selectedCompleteCourse.modules
+                        .where(
+                          (m) =>
+                              m.module.isAssessment ||
+                              (m.module.assessmentId?.trim().isNotEmpty ??
+                                  false),
+                        )
+                        .toList();
+                    if (assessmentModules.isNotEmpty) {
+                      selectedAllAssessmentsComplete =
+                          assessmentModules.every((m) {
+                        final assessmentId = m.module.assessmentId?.trim();
+                        if (assessmentId == null || assessmentId.isEmpty) {
+                          return false;
+                        }
+                        final assessment = ref
+                            .watch(assessmentByIdProvider(assessmentId))
+                            .valueOrNull;
+                        final progress = ref
+                            .watch(assessmentProgressProvider(assessmentId))
+                            .valueOrNull;
+                        if (assessment == null || progress == null) {
+                          return false;
+                        }
+                        final allSublevels = [
+                          for (final l in assessment.levels) ...l.sublevels,
+                        ];
+                        if (allSublevels.isEmpty) return false;
+                        final completedIds = progress
+                            .where((p) => p.completedAt != null)
+                            .map((p) => p.sublevelId)
+                            .toSet();
+                        return allSublevels
+                            .every((s) => completedIds.contains(s.id));
+                      });
+                    }
+                  }
+                  final isCourseCompleted = selectedAllLessonsComplete &&
+                      selectedAllAssessmentsComplete;
+                  final hasAttemptedAnyCourse =
+                      hasAttemptedAnyCourseAsync.valueOrNull ?? false;
+                  final courseButtonText = !isEligible
+                      ? 'Locked'
+                      : (hasAttemptedAnyCourse
+                          ? 'Continue course'
+                          : 'Start Course');
+
                   return Column(
                     children: [
                       Expanded(
@@ -236,6 +309,105 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                                   sortedCourses[index];
                                               final course =
                                                   courseWithDetails.course;
+
+                                              final completeCourse = ref
+                                                  .watch(completeCourseProvider(
+                                                    course.id,
+                                                  ))
+                                                  .valueOrNull;
+                                              final completedMap = ref
+                                                  .watch(
+                                                      completedModulesProvider(
+                                                    course.id,
+                                                  ))
+                                                  .valueOrNull;
+
+                                              bool allLessonsComplete = false;
+                                              bool allAssessmentsComplete =
+                                                  false;
+                                              if (completeCourse != null &&
+                                                  completedMap != null) {
+                                                final lessonModules =
+                                                    completeCourse
+                                                        .modules
+                                                        .where((m) => !m.module
+                                                            .isAssessment)
+                                                        .toList();
+                                                allLessonsComplete =
+                                                    lessonModules.isNotEmpty &&
+                                                        lessonModules.every(
+                                                          (m) =>
+                                                              completedMap[m
+                                                                  .module.id] ==
+                                                              true,
+                                                        );
+
+                                                final assessmentModules =
+                                                    completeCourse.modules
+                                                        .where((m) =>
+                                                            m.module
+                                                                .isAssessment ||
+                                                            (m.module
+                                                                    .assessmentId
+                                                                    ?.trim()
+                                                                    .isNotEmpty ??
+                                                                false))
+                                                        .toList();
+                                                if (assessmentModules
+                                                    .isNotEmpty) {
+                                                  allAssessmentsComplete =
+                                                      assessmentModules
+                                                          .every((m) {
+                                                    final assessmentId = m
+                                                        .module.assessmentId
+                                                        ?.trim();
+                                                    if (assessmentId == null ||
+                                                        assessmentId.isEmpty) {
+                                                      return false;
+                                                    }
+                                                    final assessment = ref
+                                                        .watch(
+                                                          assessmentByIdProvider(
+                                                            assessmentId,
+                                                          ),
+                                                        )
+                                                        .valueOrNull;
+                                                    final progress = ref
+                                                        .watch(
+                                                          assessmentProgressProvider(
+                                                            assessmentId,
+                                                          ),
+                                                        )
+                                                        .valueOrNull;
+                                                    if (assessment == null ||
+                                                        progress == null) {
+                                                      return false;
+                                                    }
+                                                    final allSublevels = [
+                                                      for (final level
+                                                          in assessment.levels)
+                                                        ...level.sublevels,
+                                                    ];
+                                                    if (allSublevels.isEmpty) {
+                                                      return false;
+                                                    }
+                                                    final completedSublevelIds =
+                                                        progress
+                                                            .where((p) =>
+                                                                p.completedAt !=
+                                                                null)
+                                                            .map((p) =>
+                                                                p.sublevelId)
+                                                            .toSet();
+                                                    return allSublevels.every(
+                                                      (s) =>
+                                                          completedSublevelIds
+                                                              .contains(s.id),
+                                                    );
+                                                  });
+                                                }
+                                              }
+
                                               return HomeCourseTile(
                                                 margin:
                                                     const EdgeInsets.symmetric(
@@ -247,6 +419,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                                     'Course ${index + 1}',
                                                 levelLabel:
                                                     _levelLabel(course.level),
+                                                allLessonsComplete:
+                                                    allLessonsComplete,
+                                                allAssessmentsComplete:
+                                                    allAssessmentsComplete,
                                                 onTap: () =>
                                                     _openCourse(course.id),
                                                 onPreviewTap: () =>
@@ -281,14 +457,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                           modulesCount: selectedCourse.totalModules,
                           lessonsCount: selectedCourse.totalLessons,
+                          isCompleted: isCourseCompleted,
                           isEligible: isEligible,
                           eligibilityText: isEligible
                               ? 'You are eligible to start this level'
                               : 'Complete previous levels to unlock this level',
-                          buttonText: isEligible ? 'Start Course' : 'Locked',
+                          buttonText: courseButtonText,
                           onStartCourse: isEligible
                               ? () => _openCourse(selectedCourse.course.id)
                               : null,
+                          onReviewCourse: () => context.push(
+                            '/course/${selectedCourse.course.id}',
+                            extra: {'isCompletedCourse': true},
+                          ),
+                          onRestartCourse: () =>
+                              _openCourse(selectedCourse.course.id),
                         ),
                       ),
                     ],

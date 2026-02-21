@@ -7,6 +7,8 @@ class HomeCourseTile extends StatelessWidget {
   final String levelLabel;
   final String introductionTitle;
   final String previewText;
+  final bool allLessonsComplete;
+  final bool allAssessmentsComplete;
   final VoidCallback? onTap;
   final VoidCallback? onPreviewTap;
   final EdgeInsetsGeometry margin;
@@ -18,6 +20,8 @@ class HomeCourseTile extends StatelessWidget {
     required this.levelLabel,
     this.introductionTitle = 'Introduction Audio',
     this.previewText = 'Tap to preview this course',
+    this.allLessonsComplete = false,
+    this.allAssessmentsComplete = false,
     this.onTap,
     this.onPreviewTap,
     this.margin = const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -135,13 +139,78 @@ class HomeCourseTile extends StatelessWidget {
                       ),
                     ),
                   ),
-                
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.borderColor),
+                color: const Color(0xFFF5F5F5),
+              ),
+              child: Column(
+                children: [
+                  _CompletionRow(
+                    label: 'All Lessons Complete',
+                    isComplete: allLessonsComplete,
+                  ),
+                  const SizedBox(height: 10),
+                  _CompletionRow(
+                    label: 'All Assessments Complete',
+                    isComplete: allAssessmentsComplete,
+                  ),
                 ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _CompletionRow extends StatelessWidget {
+  final String label;
+  final bool isComplete;
+
+  const _CompletionRow({required this.label, required this.isComplete});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isComplete ? AppColors.successColor : Colors.transparent,
+            border: isComplete
+                ? null
+                : Border.all(
+                    color: const Color(0xFFDCD7CF),
+                    width: 1.5,
+                  ),
+          ),
+          child: isComplete
+              ? const Icon(Icons.check, color: Colors.white, size: 14)
+              : null,
+        ),
+        const SizedBox(width: 10),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: isComplete
+                ? const Color(0xFF10131A)
+                : const Color(0xFF7B7B7B),
+          ),
+        ),
+      ],
     );
   }
 }

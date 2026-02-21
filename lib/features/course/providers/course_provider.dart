@@ -19,6 +19,57 @@ final courseServiceProvider = Provider<CourseService>((ref) {
   return CourseService(supabase);
 });
 
+final hasAttemptedAnyCourseProvider = FutureProvider<bool>((ref) async {
+  final userId = SupabaseConfig.currentUser?.id;
+  if (userId == null) {
+    return false;
+  }
+
+  try {
+    final courseProgressRows = await SupabaseConfig.client
+        .from('course_progress')
+        .select('id')
+        .eq('user_id', userId)
+        .limit(1);
+    if (courseProgressRows.isNotEmpty) {
+      return true;
+    }
+  } catch (e) {
+    debugPrint(
+        'hasAttemptedAnyCourseProvider: course_progress query failed: $e');
+  }
+
+  try {
+    final lessonProgressRows = await SupabaseConfig.client
+        .from('lesson_progress')
+        .select('id')
+        .eq('user_id', userId)
+        .limit(1);
+    if (lessonProgressRows.isNotEmpty) {
+      return true;
+    }
+  } catch (e) {
+    debugPrint(
+        'hasAttemptedAnyCourseProvider: lesson_progress query failed: $e');
+  }
+
+  try {
+    final assessmentProgressRows = await SupabaseConfig.client
+        .from('course_assessment_progress')
+        .select('id')
+        .eq('user_id', userId)
+        .limit(1);
+    if (assessmentProgressRows.isNotEmpty) {
+      return true;
+    }
+  } catch (e) {
+    debugPrint(
+        'hasAttemptedAnyCourseProvider: course_assessment_progress query failed: $e');
+  }
+
+  return false;
+});
+
 String _normalizeAssessmentKey(String value) => value.trim().toLowerCase();
 
 bool _isAssessmentModule(ModuleWithLessons module) {
