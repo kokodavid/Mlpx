@@ -126,9 +126,6 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
     final courseDetailsProgressAsync =
         ref.watch(courseDetailsProgressProvider(widget.courseId));
 
-    // Watch the auto-refresh provider to ensure data is always fresh
-    ref.watch(autoRefreshCourseDataProvider(widget.courseId));
-
     // Watch the stream-based refresh for immediate updates
     ref.watch(courseProgressRefreshStreamProvider(widget.courseId));
     ref.listen<AsyncValue<OngoingLessonInfo?>>(

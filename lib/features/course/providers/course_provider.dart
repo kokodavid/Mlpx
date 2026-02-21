@@ -8,7 +8,6 @@ import 'package:milpress/features/user_progress/providers/course_progress_provid
 import 'package:milpress/utils/supabase_config.dart';
 import 'package:milpress/features/user_progress/models/course_progress_model.dart';
 import 'package:milpress/features/user_progress/providers/user_progress_providers.dart';
-import 'package:milpress/features/assessment/providers/assessment_result_provider.dart';
 import 'package:milpress/features/course_assessment/providers/course_assessment_providers.dart';
 import 'package:milpress/features/lessons_v2/models/lesson_models.dart';
 import 'package:milpress/features/lessons_v2/providers/lesson_providers.dart'
@@ -26,70 +25,35 @@ final hasAttemptedAnyCourseProvider = FutureProvider<bool>((ref) async {
   }
 
   try {
-    final courseProgressRows = await SupabaseConfig.client
-        .from('course_progress')
-        .select('id')
-        .eq('user_id', userId)
-        .limit(1);
-    if (courseProgressRows.isNotEmpty) {
-      return true;
-    }
+    final results = await Future.wait([
+      SupabaseConfig.client
+          .from('course_progress')
+          .select('id')
+          .eq('user_id', userId)
+          .limit(1),
+      SupabaseConfig.client
+          .from('lesson_progress')
+          .select('id')
+          .eq('user_id', userId)
+          .limit(1),
+      SupabaseConfig.client
+          .from('course_assessment_progress')
+          .select('id')
+          .eq('user_id', userId)
+          .limit(1),
+    ]);
+    return results.any((rows) => (rows as List).isNotEmpty);
   } catch (e) {
-    debugPrint(
-        'hasAttemptedAnyCourseProvider: course_progress query failed: $e');
+    debugPrint('hasAttemptedAnyCourseProvider: query failed: $e');
+    return false;
   }
-
-  try {
-    final lessonProgressRows = await SupabaseConfig.client
-        .from('lesson_progress')
-        .select('id')
-        .eq('user_id', userId)
-        .limit(1);
-    if (lessonProgressRows.isNotEmpty) {
-      return true;
-    }
-  } catch (e) {
-    debugPrint(
-        'hasAttemptedAnyCourseProvider: lesson_progress query failed: $e');
-  }
-
-  try {
-    final assessmentProgressRows = await SupabaseConfig.client
-        .from('course_assessment_progress')
-        .select('id')
-        .eq('user_id', userId)
-        .limit(1);
-    if (assessmentProgressRows.isNotEmpty) {
-      return true;
-    }
-  } catch (e) {
-    debugPrint(
-        'hasAttemptedAnyCourseProvider: course_assessment_progress query failed: $e');
-  }
-
-  return false;
 });
-
-String _normalizeAssessmentKey(String value) => value.trim().toLowerCase();
 
 bool _isAssessmentModule(ModuleWithLessons module) {
   final moduleType = module.module.moduleType.trim().toLowerCase();
   final hasAssessmentId =
       module.module.assessmentId?.trim().isNotEmpty ?? false;
   return moduleType == 'assessment' || hasAssessmentId;
-}
-
-bool _isAssessmentModuleCompleted(
-  ModuleWithLessons module,
-  Set<String> completedAssessmentKeys,
-  bool hasCompletedAnyAssessment,
-) {
-  final assessmentId = module.module.assessmentId?.trim();
-  if (assessmentId != null && assessmentId.isNotEmpty) {
-    return completedAssessmentKeys
-        .contains(_normalizeAssessmentKey(assessmentId));
-  }
-  return hasCompletedAnyAssessment;
 }
 
 Future<int> _fetchTotalLessonsV2(
@@ -120,35 +84,28 @@ final coursesWithDetailsProvider =
   final courseService = ref.watch(courseServiceProvider);
   final courses = await courseService.getCourses();
 
-  print('Fetched courses from DB:');
-  for (final course in courses) {
-    print('  - ${course.title} (id: ${course.id}, level: ${course.level})');
-  }
-
-  final coursesWithDetails = <CourseWithDetails>[];
-  for (final course in courses) {
+  // Load all courses in parallel and share results via completeCourseProvider cache
+  final coursesWithDetails = await Future.wait(courses.map((course) async {
     try {
-      final completeCourse = await courseService.getCompleteCourse(course.id);
+      final completeCourse =
+          await ref.watch(completeCourseProvider(course.id).future);
       final totalModules = completeCourse.modules.length;
       final totalLessons =
           await _fetchTotalLessonsV2(ref, completeCourse.modules);
-      print(
-          '  -> ${course.title}: $totalModules modules, $totalLessons lessons');
-      coursesWithDetails.add(CourseWithDetails(
+      return CourseWithDetails(
         course: course,
         totalModules: totalModules,
         totalLessons: totalLessons,
-      ));
+      );
     } catch (e) {
-      print('  -> ${course.title}: 0 modules, 0 lessons (not cached)');
-      coursesWithDetails.add(CourseWithDetails(
+      return CourseWithDetails(
         course: course,
         totalModules: 0,
         totalLessons: 0,
-      ));
+      );
     }
-  }
-  print('Total coursesWithDetails: ${coursesWithDetails.length}');
+  }));
+
   return coursesWithDetails;
 });
 
@@ -159,27 +116,12 @@ final activeCourseWithDetailsProvider =
   // Sort by level ascending
   final sortedCourses = List<CourseWithDetails>.from(coursesWithDetails)
     ..sort((a, b) => a.course.level.compareTo(b.course.level));
-  // Try to find the lowest-level, not completed course
+  // Pick the first incomplete course by ascending level.
   for (final courseWithDetails in sortedCourses) {
     final course = courseWithDetails.course;
-    final completedModules =
-        await ref.watch(completedModulesProvider(course.id).future);
-    final totalModules = courseWithDetails.totalModules;
-    final completedModulesCount =
-        completedModules.values.where((completed) => completed).length;
-    if (completedModulesCount < totalModules) {
-      return courseWithDetails;
-    }
-  }
-  // If all are completed, try to promote the first upcoming course (by level, not completed)
-  for (final courseWithDetails in sortedCourses) {
-    final course = courseWithDetails.course;
-    final completedModules =
-        await ref.watch(completedModulesProvider(course.id).future);
-    final totalModules = courseWithDetails.totalModules;
-    final completedModulesCount =
-        completedModules.values.where((completed) => completed).length;
-    if (totalModules == 0 || completedModulesCount < totalModules) {
+    final isCompleted =
+        await ref.watch(courseCompletionProvider(course.id).future);
+    if (!isCompleted) {
       return courseWithDetails;
     }
   }
@@ -202,12 +144,9 @@ final completedCoursesWithDetailsProvider =
   // Check each course to see if it's completed
   for (final courseWithDetails in coursesWithDetails) {
     final course = courseWithDetails.course;
-    final completedModules =
-        await ref.watch(completedModulesProvider(course.id).future);
-    final totalModules = courseWithDetails.totalModules;
-    final completedModulesCount =
-        completedModules.values.where((completed) => completed).length;
-    if (completedModulesCount >= totalModules && totalModules > 0) {
+    final isCompleted =
+        await ref.watch(courseCompletionProvider(course.id).future);
+    if (isCompleted) {
       completedCourses.add(courseWithDetails);
     }
   }
@@ -226,12 +165,9 @@ final upcomingCoursesWithDetailsProvider =
   for (final courseWithDetails in coursesWithDetails) {
     final course = courseWithDetails.course;
     if (course.level <= activeLevel) continue; // Only higher levels than active
-    final completedModules =
-        await ref.watch(completedModulesProvider(course.id).future);
-    final totalModules = courseWithDetails.totalModules;
-    final completedModulesCount =
-        completedModules.values.where((completed) => completed).length;
-    if (totalModules == 0 || completedModulesCount < totalModules) {
+    final isCompleted =
+        await ref.watch(courseCompletionProvider(course.id).future);
+    if (!isCompleted) {
       upcomingCourses.add(courseWithDetails);
     }
   }
@@ -291,13 +227,6 @@ final completedModulesProvider =
     FutureProvider.family<Map<String, bool>, String>((ref, courseId) async {
   final completeCourse =
       await ref.watch(completeCourseProvider(courseId).future);
-  final latestAssessmentResult =
-      await ref.watch(latestAssessmentResultProvider.future);
-  final hasCompletedAnyAssessment = latestAssessmentResult != null;
-  final completedAssessmentKeys = latestAssessmentResult?.stageScores.keys
-          .map(_normalizeAssessmentKey)
-          .toSet() ??
-      <String>{};
   final moduleCompletion = await Future.wait(
     completeCourse.modules.map((module) async {
       final moduleId = module.module.id;
@@ -305,11 +234,32 @@ final completedModulesProvider =
         return MapEntry(moduleId, false);
       }
       if (_isAssessmentModule(module)) {
-        final isCompleted = _isAssessmentModuleCompleted(
-          module,
-          completedAssessmentKeys,
-          hasCompletedAnyAssessment,
-        );
+        final assessmentId = module.module.assessmentId?.trim();
+        if (assessmentId == null || assessmentId.isEmpty) {
+          return MapEntry(moduleId, false);
+        }
+        var isCompleted = false;
+        try {
+          final assessment =
+              await ref.watch(assessmentByIdProvider(assessmentId).future);
+          final assessmentProgress =
+              await ref.watch(assessmentProgressProvider(assessmentId).future);
+          final allSublevels = [
+            for (final level in (assessment?.levels ?? const []))
+              ...level.sublevels,
+          ];
+          if (allSublevels.isNotEmpty) {
+            final completedSublevelIds = assessmentProgress
+                .where((progress) => progress.completedAt != null)
+                .map((progress) => progress.sublevelId)
+                .toSet();
+            isCompleted = allSublevels.every(
+                (sublevel) => completedSublevelIds.contains(sublevel.id));
+          }
+        } catch (e) {
+          debugPrint(
+              'completedModulesProvider: failed assessment completion for module $moduleId: $e');
+        }
         return MapEntry(moduleId, isCompleted);
       }
       final lessons = await ref.watch(
@@ -327,6 +277,26 @@ final completedModulesProvider =
   );
 
   return Map<String, bool>.fromEntries(moduleCompletion);
+});
+
+// Single source of truth: a course is complete only when every module is complete.
+final courseCompletionProvider =
+    FutureProvider.family<bool, String>((ref, courseId) async {
+  final completeCourse =
+      await ref.watch(completeCourseProvider(courseId).future);
+  final totalModules = completeCourse.modules.length;
+  if (totalModules == 0) {
+    return false;
+  }
+
+  final completedModules =
+      await ref.watch(completedModulesProvider(courseId).future);
+  final completedCount = completeCourse.modules.where((module) {
+    final moduleId = module.module.id;
+    return moduleId.isNotEmpty && completedModules[moduleId] == true;
+  }).length;
+
+  return completedCount >= totalModules;
 });
 
 // Provider to get the ongoing module (first incomplete module)
@@ -764,12 +734,6 @@ class CourseWithDetails {
   });
 }
 
-final refreshCompleteCourseProvider =
-    FutureProvider.family<CompleteCourseModel, String>((ref, courseId) async {
-  final courseService = ref.watch(courseServiceProvider);
-  return courseService.getCompleteCourse(courseId);
-});
-
 // Course Progress Statistics Model
 class CourseProgressStats {
   final int totalModules;
@@ -813,6 +777,7 @@ final courseProgressRefreshStreamProvider =
 
   // Invalidate all related providers
   ref.invalidate(completedModulesProvider(courseId));
+  ref.invalidate(courseCompletionProvider(courseId));
   ref.invalidate(ongoingModuleProvider(courseId));
   ref.invalidate(courseProgressV2Provider(courseId));
   ref.invalidate(courseDetailsProgressProvider(courseId));
@@ -825,17 +790,11 @@ final courseProgressRefreshStreamProvider =
 // Provider to check and update course completion status
 final checkAndUpdateCourseCompletionProvider =
     FutureProvider.family<void, String>((ref, courseId) async {
-  final completeCourse =
-      await ref.watch(completeCourseProvider(courseId).future);
-  final completedModules =
-      await ref.watch(completedModulesProvider(courseId).future);
-
-  final totalModules = completeCourse.modules.length;
-  final completedModulesCount =
-      completedModules.values.where((completed) => completed).length;
+  final isCourseCompleted =
+      await ref.watch(courseCompletionProvider(courseId).future);
 
   // If all modules are completed, mark the course as completed
-  if (totalModules > 0 && completedModulesCount >= totalModules) {
+  if (isCourseCompleted) {
     final courseProgressId =
         await ref.watch(getOrCreateCourseProgressProvider(courseId).future);
     final existingCourseProgress =
@@ -861,23 +820,6 @@ final checkAndUpdateCourseCompletionProvider =
       debugPrint('Course $courseId marked as completed');
     }
   }
-});
-
-// Enhanced provider that automatically refreshes all course-related data
-final autoRefreshCourseDataProvider =
-    FutureProvider.family<void, String>((ref, courseId) async {
-  // Watch the refresh provider to trigger updates
-  ref.watch(courseProgressRefreshProvider);
-
-  // Invalidate all related providers to ensure fresh data
-  ref.invalidate(completedModulesProvider(courseId));
-  ref.invalidate(ongoingModuleProvider(courseId));
-  ref.invalidate(courseProgressV2Provider(courseId));
-  ref.invalidate(courseDetailsProgressProvider(courseId));
-  ref.invalidate(ongoingLessonInfoV2Provider(courseId));
-
-  debugPrint(
-      'AutoRefreshCourseDataProvider: Refreshed all data for course $courseId');
 });
 
 // Assessment Course Suggestions Provider

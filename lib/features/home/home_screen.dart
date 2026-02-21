@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import '../../providers/auth_provider.dart';
 import '../../providers/audio_service_provider.dart';
 import '../course/providers/course_provider.dart';
-import '../course_assessment/providers/course_assessment_providers.dart';
 import '../profile/providers/profile_provider.dart';
 import 'home_course_tile.dart';
 import 'home_header.dart';
@@ -22,6 +22,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   late final PageController _pageController;
   int _selectedIndex = 0;
+  bool _hasScrolledToActive = false;
 
   @override
   void initState() {
@@ -73,6 +74,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return selectedLevel <= activeLevel;
   }
 
+  Widget _buildLoadingIndicator() {
+    return Center(
+      child: LoadingAnimationWidget.fallingDot(
+        size: 70,
+        color: AppColors.primaryColor,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
@@ -110,9 +120,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
 
     if (authAsync.isLoading) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: AppColors.backgroundColor,
-        body: Center(child: CircularProgressIndicator()),
+        body: _buildLoadingIndicator(),
       );
     }
 
@@ -122,9 +132,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         context.go('/welcome');
       });
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: AppColors.lightBackground,
-        body: Center(child: CircularProgressIndicator()),
+        body: _buildLoadingIndicator(),
       );
     }
 
@@ -154,9 +164,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             Expanded(
               child: coursesAsync.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(),
-                ),
+                loading: _buildLoadingIndicator,
                 error: (error, _) => Center(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -180,9 +188,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   final sortedCourses = List<CourseWithDetails>.from(courses)
                     ..sort((a, b) => a.course.level.compareTo(b.course.level));
 
-                  final selectedIndex = _selectedIndex >= sortedCourses.length
-                      ? sortedCourses.length - 1
-                      : _selectedIndex;
+                  final allProgressLoaded = sortedCourses.every((c) {
+                    final completedMap =
+                        ref.watch(completedModulesProvider(c.course.id));
+                    final completion =
+                        ref.watch(courseCompletionProvider(c.course.id));
+                    return !completedMap.isLoading && !completion.isLoading;
+                  });
+
+                  if (!allProgressLoaded) return _buildLoadingIndicator();
+
+                  final activeCourseId =
+                      activeCourseAsync.valueOrNull?.course.id;
+                  final activeIndex = activeCourseId != null
+                      ? sortedCourses
+                          .indexWhere((c) => c.course.id == activeCourseId)
+                      : -1;
+                  final targetIndex =
+                      (activeIndex >= 0 ? activeIndex : 0)
+                          .clamp(0, sortedCourses.length - 1);
+
+                  if (!_hasScrolledToActive) {
+                    _hasScrolledToActive = true;
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!mounted) return;
+                      if (_pageController.hasClients && targetIndex != 0) {
+                        _pageController.jumpToPage(targetIndex);
+                      }
+                    });
+                  }
+
+                  final selectedIndex =
+                      (_hasScrolledToActive ? _selectedIndex : targetIndex)
+                          .clamp(0, sortedCourses.length - 1);
                   final selectedCourse = sortedCourses[selectedIndex];
                   final activeLevel = activeCourseAsync.maybeWhen(
                     data: (active) => active?.course.level,
@@ -193,69 +231,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     activeLevel: activeLevel,
                   );
 
-                  // Completion state for the selected course
-                  final selectedCompleteCourse = ref
-                      .watch(
-                        completeCourseProvider(selectedCourse.course.id),
-                      )
-                      .valueOrNull;
-                  final selectedCompletedMap = ref
-                      .watch(
-                        completedModulesProvider(selectedCourse.course.id),
-                      )
-                      .valueOrNull;
-
-                  bool selectedAllLessonsComplete = false;
-                  bool selectedAllAssessmentsComplete = false;
-                  if (selectedCompleteCourse != null &&
-                      selectedCompletedMap != null) {
-                    final lessonModules = selectedCompleteCourse.modules
-                        .where((m) => !m.module.isAssessment)
-                        .toList();
-                    selectedAllLessonsComplete = lessonModules.isNotEmpty &&
-                        lessonModules.every(
-                          (m) => selectedCompletedMap[m.module.id] == true,
-                        );
-
-                    final assessmentModules = selectedCompleteCourse.modules
-                        .where(
-                          (m) =>
-                              m.module.isAssessment ||
-                              (m.module.assessmentId?.trim().isNotEmpty ??
-                                  false),
-                        )
-                        .toList();
-                    if (assessmentModules.isNotEmpty) {
-                      selectedAllAssessmentsComplete =
-                          assessmentModules.every((m) {
-                        final assessmentId = m.module.assessmentId?.trim();
-                        if (assessmentId == null || assessmentId.isEmpty) {
-                          return false;
-                        }
-                        final assessment = ref
-                            .watch(assessmentByIdProvider(assessmentId))
-                            .valueOrNull;
-                        final progress = ref
-                            .watch(assessmentProgressProvider(assessmentId))
-                            .valueOrNull;
-                        if (assessment == null || progress == null) {
-                          return false;
-                        }
-                        final allSublevels = [
-                          for (final l in assessment.levels) ...l.sublevels,
-                        ];
-                        if (allSublevels.isEmpty) return false;
-                        final completedIds = progress
-                            .where((p) => p.completedAt != null)
-                            .map((p) => p.sublevelId)
-                            .toSet();
-                        return allSublevels
-                            .every((s) => completedIds.contains(s.id));
-                      });
-                    }
-                  }
-                  final isCourseCompleted = selectedAllLessonsComplete &&
-                      selectedAllAssessmentsComplete;
+                  final isCourseCompleted = ref
+                          .watch(
+                            courseCompletionProvider(selectedCourse.course.id),
+                          )
+                          .valueOrNull ??
+                      false;
                   final hasAttemptedAnyCourse =
                       hasAttemptedAnyCourseAsync.valueOrNull ?? false;
                   final courseButtonText = !isEligible
@@ -330,8 +311,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                                 final lessonModules =
                                                     completeCourse
                                                         .modules
-                                                        .where((m) => !m.module
-                                                            .isAssessment)
+                                                        .where((m) => !(m.module
+                                                                .isAssessment ||
+                                                            (m.module
+                                                                    .assessmentId
+                                                                    ?.trim()
+                                                                    .isNotEmpty ??
+                                                                false)))
                                                         .toList();
                                                 allLessonsComplete =
                                                     lessonModules.isNotEmpty &&
@@ -353,59 +339,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                                                     .isNotEmpty ??
                                                                 false))
                                                         .toList();
-                                                if (assessmentModules
-                                                    .isNotEmpty) {
-                                                  allAssessmentsComplete =
-                                                      assessmentModules
-                                                          .every((m) {
-                                                    final assessmentId = m
-                                                        .module.assessmentId
-                                                        ?.trim();
-                                                    if (assessmentId == null ||
-                                                        assessmentId.isEmpty) {
-                                                      return false;
-                                                    }
-                                                    final assessment = ref
-                                                        .watch(
-                                                          assessmentByIdProvider(
-                                                            assessmentId,
-                                                          ),
-                                                        )
-                                                        .valueOrNull;
-                                                    final progress = ref
-                                                        .watch(
-                                                          assessmentProgressProvider(
-                                                            assessmentId,
-                                                          ),
-                                                        )
-                                                        .valueOrNull;
-                                                    if (assessment == null ||
-                                                        progress == null) {
-                                                      return false;
-                                                    }
-                                                    final allSublevels = [
-                                                      for (final level
-                                                          in assessment.levels)
-                                                        ...level.sublevels,
-                                                    ];
-                                                    if (allSublevels.isEmpty) {
-                                                      return false;
-                                                    }
-                                                    final completedSublevelIds =
-                                                        progress
-                                                            .where((p) =>
-                                                                p.completedAt !=
-                                                                null)
-                                                            .map((p) =>
-                                                                p.sublevelId)
-                                                            .toSet();
-                                                    return allSublevels.every(
-                                                      (s) =>
-                                                          completedSublevelIds
-                                                              .contains(s.id),
-                                                    );
-                                                  });
-                                                }
+                                                allAssessmentsComplete =
+                                                    assessmentModules.isEmpty ||
+                                                        assessmentModules.every(
+                                                          (m) =>
+                                                              completedMap[m
+                                                                  .module.id] ==
+                                                              true,
+                                                        );
                                               }
 
                                               return HomeCourseTile(
