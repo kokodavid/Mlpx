@@ -6,6 +6,7 @@ class CourseProgressCard extends StatelessWidget {
   final int totalLessons;
   final int completedLessons;
   final int completedModules;
+  final double? completionPercentage;
 
   const CourseProgressCard({
     Key? key,
@@ -13,11 +14,20 @@ class CourseProgressCard extends StatelessWidget {
     required this.totalLessons,
     required this.completedLessons,
     required this.completedModules,
+    this.completionPercentage,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final progress = totalLessons > 0 ? completedLessons / totalLessons : 0.0;
+    final fallbackProgress =
+        totalLessons > 0 ? completedLessons / totalLessons : 0.0;
+    final progress = completionPercentage == null
+        ? fallbackProgress
+        : (completionPercentage! / 100).clamp(0.0, 1.0).toDouble();
+    final remainingLessons =
+        (totalLessons - completedLessons).clamp(0, totalLessons);
+    final hasPendingAssessment =
+        remainingLessons == 0 && progress < 1.0 && completionPercentage != null;
 
     return Container(
       width: double.infinity,
@@ -47,7 +57,9 @@ class CourseProgressCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '${totalLessons - completedLessons} lesson${totalLessons - completedLessons == 1 ? '' : 's'} remaining',
+            hasPendingAssessment
+                ? 'Assessment remaining'
+                : '$remainingLessons lesson${remainingLessons == 1 ? '' : 's'} remaining',
             style: const TextStyle(fontSize: 16, color: Colors.grey),
           ),
           const SizedBox(height: 18),
@@ -74,7 +86,8 @@ class CourseProgressCard extends StatelessWidget {
               value: progress,
               minHeight: 12,
               backgroundColor: AppColors.primaryColor.withOpacity(0.1),
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
             ),
           ),
         ],
