@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milpress/features/course/screens/course_screen.dart';
 import 'package:milpress/features/course/screens/course_details_screen.dart';
-import 'package:milpress/features/home/home_screen.dart';
+import 'package:milpress/features/home_v2/home_v2_screen.dart';
 import 'package:milpress/features/assessment/assessment_screen.dart';
 import 'package:milpress/features/assessment/models/assessment_config.dart';
 import 'package:milpress/features/reviews/review_screen.dart';
@@ -167,7 +167,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/',
             name: AppRoute.home.name,
             builder: AuthGuard.allowGuest(
-              builder: (context, state) => const HomeScreen(),
+              builder: (context, state) => const HomeV2Screen(),
             ),
           ),
           // Course routes - allow guest access
