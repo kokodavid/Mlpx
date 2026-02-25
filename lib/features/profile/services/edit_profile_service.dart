@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/profile_model.dart';
 
@@ -14,53 +13,16 @@ class EditProfileService {
       final user = _supabase.auth.currentUser;
       if (user == null) return false;
 
-      await _supabase
-          .from('profiles')
-          .update({
+      await _supabase.from('profiles').update({
         'first_name': firstName.trim(),
         'last_name': lastName.trim(),
         'updated_at': DateTime.now().toIso8601String(),
-      })
-          .eq('id', user.id);
+      }).eq('id', user.id);
 
       return true;
     } catch (e) {
       print('Error updating profile details: $e');
       return false;
-    }
-  }
-
-  /// Upload a new avatar image and return the public URL
-  Future<String?> uploadAvatar(String imagePath) async {
-    try {
-      final user = _supabase.auth.currentUser;
-      if (user == null) return null;
-
-      final fileExt = imagePath.split('.').last;
-      final fileName =
-          '${user.id}_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
-      final filePath = 'avatars/$fileName';
-
-      await _supabase.storage
-          .from('avatars')
-          .upload(filePath, File(imagePath));
-
-      final imageUrl =
-      _supabase.storage.from('avatars').getPublicUrl(filePath);
-
-      // Persist the new avatar URL to the profiles table
-      await _supabase
-          .from('profiles')
-          .update({
-        'avatar_url': imageUrl,
-        'updated_at': DateTime.now().toIso8601String(),
-      })
-          .eq('id', user.id);
-
-      return imageUrl;
-    } catch (e) {
-      print('Error uploading avatar: $e');
-      return null;
     }
   }
 

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:milpress/utils/app_colors.dart';
 import 'providers/bookmark_provider.dart';
 import 'models/bookmark_model.dart';
-import 'package:milpress/utils/app_colors.dart';
 
 class BookmarksScreen extends ConsumerWidget {
   const BookmarksScreen({Key? key}) : super(key: key);
@@ -13,19 +14,20 @@ class BookmarksScreen extends ConsumerWidget {
     final bookmarksAsync = ref.watch(userBookmarksProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8),
+      backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.lightBackground,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.of(context).pop(),
+          icon: const Icon(Icons.arrow_back, color: AppColors.copBlue),
+          onPressed: () => context.pop(),
         ),
         title: const Text(
-          'Saved Lessons',
+          'Bookmarked Lesson',
           style: TextStyle(
-            color: Color(0xFF232B3A),
-            fontWeight: FontWeight.normal,
+            color: AppColors.copBlue,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
           ),
         ),
         centerTitle: true,
@@ -33,80 +35,27 @@ class BookmarksScreen extends ConsumerWidget {
       body: bookmarksAsync.when(
         data: (bookmarks) {
           if (bookmarks.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.bookmark_border,
-                    size: 64,
-                    color: Colors.grey,
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'No bookmarked lessons yet',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Bookmark lessons to save them for later review',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            );
+            return _buildEmptyState();
           }
-
-          return ListView.separated(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-            itemCount: bookmarks.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final bookmark = bookmarks[index];
-              return _BookmarkCard(
-                bookmark: bookmark,
-                onRemove: () => _removeBookmark(context, ref, bookmark),
-                onTap: () => _navigateToLesson(context, bookmark),
-              );
-            },
-          );
+          return _buildList(context, ref, bookmarks);
         },
         loading: () => const Center(
-          child: CircularProgressIndicator(),
+          child: CircularProgressIndicator(color: AppColors.primaryColor),
         ),
-        error: (error, stack) => Center(
+        error: (error, _) => Center(
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                Icons.error,
-                size: 64,
-                color: Colors.red,
-              ),
-              const SizedBox(height: 16),
-              Text(
+              const Icon(Icons.error_outline, color: Colors.red, size: 48),
+              const SizedBox(height: 12),
+              const Text(
                 'Error loading bookmarks',
-                style: const TextStyle(
-                  fontSize: 18,
-                  color: Colors.red,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: TextStyle(color: Colors.red, fontSize: 16),
               ),
               const SizedBox(height: 8),
               Text(
                 error.toString(),
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
+                style: const TextStyle(color: Colors.grey, fontSize: 13),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -116,15 +65,91 @@ class BookmarksScreen extends ConsumerWidget {
     );
   }
 
+  // Empty state
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Double-layered soft circle with bookmark icon
+          Container(
+            width: 90,
+            height: 90,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.primaryColor.withOpacity(0.12),
+            ),
+            child: Center(
+              child: Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primaryColor.withOpacity(0.18),
+                ),
+                child: const Icon(
+                  Icons.bookmark,
+                  color: AppColors.primaryColor,
+                  size: 28,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'No bookmark lesson yet',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: AppColors.copBlue,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Bookmark lessons to save and review\nthem later.',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textColor,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Populated list
+  Widget _buildList(
+      BuildContext context,
+      WidgetRef ref,
+      List<BookmarkModel> bookmarks,
+      ) {
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      itemCount: bookmarks.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final bookmark = bookmarks[index];
+        return _BookmarkCard(
+          bookmark: bookmark,
+          onRemove: () => _removeBookmark(context, ref, bookmark),
+          onTap: () => _navigateToLesson(context, bookmark),
+        );
+      },
+    );
+  }
+
   Future<void> _removeBookmark(
-    BuildContext context,
-    WidgetRef ref,
-    BookmarkModel bookmark,
-  ) async {
-    // Show confirmation dialog
+      BuildContext context,
+      WidgetRef ref,
+      BookmarkModel bookmark,
+      ) async {
     final shouldRemove = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        shape:
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Remove Bookmark'),
         content: Text(
           'Are you sure you want to remove "${bookmark.lessonTitle}" from your bookmarks?',
@@ -168,7 +193,6 @@ class BookmarksScreen extends ConsumerWidget {
   }
 
   void _navigateToLesson(BuildContext context, BookmarkModel bookmark) {
-    // Navigate to the lesson with course context
     context.push('/lesson/${bookmark.lessonId}', extra: {
       'courseContext': {
         'courseId': bookmark.courseId,
@@ -181,6 +205,7 @@ class BookmarksScreen extends ConsumerWidget {
   }
 }
 
+// Bookmark card
 class _BookmarkCard extends StatelessWidget {
   final BookmarkModel bookmark;
   final VoidCallback onRemove;
@@ -194,98 +219,80 @@ class _BookmarkCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 0),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.orange.withOpacity(0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.orange.withOpacity(0.04),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    final dateStr = 'Time: ${DateFormat('MMM d, yyyy . h:mm a').format(bookmark.bookmarkedAt)}';
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
           children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.bookmark,
-                  size: 18,
-                  color: Colors.orange,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    bookmark.lessonTitle,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF232B3A),
+            // Green dot + text column
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Lesson name row with green dot
+                  Row(
+                    children: [
+                      const Icon(Icons.circle, size: 10, color: Colors.green),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          bookmark.lessonTitle,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.copBlue,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  // Date
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16),
+                    child: Text(
+                      dateStr,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textColor,
+                      ),
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                IconButton(
-                  onPressed: onRemove,
-                  icon: const Icon(
-                    Icons.delete_outline,
-                    color: Colors.red,
-                    size: 18,
-                  ),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(Icons.school, color: Colors.blue, size: 16),
-                const SizedBox(width: 4),
-                Text(
-                  '${bookmark.courseTitle} • ${bookmark.moduleTitle}',
-                  style: const TextStyle(fontSize: 12, color: Colors.blue),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Bookmarked: ${_formatDate(bookmark.bookmarkedAt)}',
-              style: const TextStyle(
-                fontSize: 10,
-                color: Colors.grey,
+                ],
               ),
+            ),
+
+            // Delete button
+            IconButton(
+              onPressed: onRemove,
+              icon: const Icon(
+                Icons.delete_outline,
+                color: Colors.red,
+                size: 20,
+              ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
             ),
           ],
         ),
       ),
     );
   }
-
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
-
-    if (difference.inDays == 0) {
-      return 'Today';
-    } else if (difference.inDays == 1) {
-      return 'Yesterday';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
-    } else {
-      return '${date.day}/${date.month}/${date.year}';
-    }
-  }
-} 
+}

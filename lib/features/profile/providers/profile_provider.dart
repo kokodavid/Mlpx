@@ -10,15 +10,10 @@ final profileServiceProvider = Provider<ProfileService>((ref) {
 });
 
 // Profile state provider
-final profileProvider = StateNotifierProvider<ProfileNotifier, AsyncValue<ProfileModel?>>((ref) {
+final profileProvider =
+StateNotifierProvider<ProfileNotifier, AsyncValue<ProfileModel?>>((ref) {
   final profileService = ref.watch(profileServiceProvider);
   return ProfileNotifier(profileService, ref);
-});
-
-// User stats provider
-final userStatsProvider = StateNotifierProvider<UserStatsNotifier, AsyncValue<Map<String, int>>>((ref) {
-  final profileService = ref.watch(profileServiceProvider);
-  return UserStatsNotifier(profileService);
 });
 
 class ProfileNotifier extends StateNotifier<AsyncValue<ProfileModel?>> {
@@ -29,7 +24,8 @@ class ProfileNotifier extends StateNotifier<AsyncValue<ProfileModel?>> {
   bool _isLoading = false;
   String? _lastLoadedUserId;
 
-  ProfileNotifier(this._profileService, this._ref) : super(const AsyncValue.loading()) {
+  ProfileNotifier(this._profileService, this._ref)
+      : super(const AsyncValue.loading()) {
     _setupAuthListener();
     _loadInitialProfile();
   }
@@ -50,23 +46,19 @@ class ProfileNotifier extends StateNotifier<AsyncValue<ProfileModel?>> {
         next.when(
           data: (user) {
             final previousUser = previous?.value;
-
-            if (user?.id != previousUser?.id && user?.id != _lastLoadedUserId) {
+            if (user?.id != previousUser?.id &&
+                user?.id != _lastLoadedUserId) {
               if (user != null) {
                 Future.microtask(() => loadProfile());
               } else {
                 _lastLoadedUserId = null;
-                if (_mounted) {
-                  state = const AsyncValue.data(null);
-                }
+                if (_mounted) state = const AsyncValue.data(null);
               }
             }
           },
           loading: () {},
           error: (_, __) {
-            if (_mounted) {
-              state = const AsyncValue.data(null);
-            }
+            if (_mounted) state = const AsyncValue.data(null);
           },
         );
       },
@@ -75,66 +67,46 @@ class ProfileNotifier extends StateNotifier<AsyncValue<ProfileModel?>> {
 
   void _loadInitialProfile() {
     final authState = _ref.read(authProvider);
-
     authState.when(
       data: (user) {
         if (user != null) {
           loadProfile();
         } else {
-          if (_mounted) {
-            state = const AsyncValue.data(null);
-          }
+          if (_mounted) state = const AsyncValue.data(null);
         }
       },
       loading: () {
-        if (_mounted) {
-          state = const AsyncValue.loading();
-        }
+        if (_mounted) state = const AsyncValue.loading();
       },
       error: (_, __) {
-        if (_mounted) {
-          state = const AsyncValue.data(null);
-        }
+        if (_mounted) state = const AsyncValue.data(null);
       },
     );
   }
 
   Future<void> loadProfile() async {
-    if (_isLoading) {
-      return;
-    }
+    if (_isLoading) return;
 
     final user = _ref.read(authProvider).value;
-
     if (user == null) {
       _lastLoadedUserId = null;
-      if (_mounted) {
-        state = const AsyncValue.data(null);
-      }
+      if (_mounted) state = const AsyncValue.data(null);
       return;
     }
 
-    if (_lastLoadedUserId == user.id && state.value != null) {
-      return;
-    }
+    if (_lastLoadedUserId == user.id && state.value != null) return;
 
     _isLoading = true;
-
-    if (_mounted) {
-      state = const AsyncValue.loading();
-    }
+    if (_mounted) state = const AsyncValue.loading();
 
     try {
       final profile = await _profileService.getCurrentUserProfile();
-
       if (_mounted) {
         _lastLoadedUserId = user.id;
         state = AsyncValue.data(profile);
       }
     } catch (error, stackTrace) {
-      if (_mounted) {
-        state = AsyncValue.error(error, stackTrace);
-      }
+      if (_mounted) state = AsyncValue.error(error, stackTrace);
     } finally {
       _isLoading = false;
     }
@@ -148,13 +120,9 @@ class ProfileNotifier extends StateNotifier<AsyncValue<ProfileModel?>> {
   Future<void> updateProfile(ProfileModel profile) async {
     try {
       final success = await _profileService.updateProfile(profile);
-      if (success && _mounted) {
-        state = AsyncValue.data(profile);
-      }
+      if (success && _mounted) state = AsyncValue.data(profile);
     } catch (error, stackTrace) {
-      if (_mounted) {
-        state = AsyncValue.error(error, stackTrace);
-      }
+      if (_mounted) state = AsyncValue.error(error, stackTrace);
     }
   }
 
@@ -164,14 +132,11 @@ class ProfileNotifier extends StateNotifier<AsyncValue<ProfileModel?>> {
       if (imageUrl != null && _mounted) {
         final currentProfile = state.value;
         if (currentProfile != null) {
-          final updatedProfile = currentProfile.copyWith(avatarUrl: imageUrl);
-          state = AsyncValue.data(updatedProfile);
+          state = AsyncValue.data(currentProfile.copyWith(avatarUrl: imageUrl));
         }
       }
     } catch (error, stackTrace) {
-      if (_mounted) {
-        state = AsyncValue.error(error, stackTrace);
-      }
+      if (_mounted) state = AsyncValue.error(error, stackTrace);
     }
   }
 
@@ -179,35 +144,9 @@ class ProfileNotifier extends StateNotifier<AsyncValue<ProfileModel?>> {
     try {
       await _profileService.signOut();
       _lastLoadedUserId = null;
-      if (_mounted) {
-        state = const AsyncValue.data(null);
-      }
+      if (_mounted) state = const AsyncValue.data(null);
     } catch (error, stackTrace) {
-      if (_mounted) {
-        state = AsyncValue.error(error, stackTrace);
-      }
+      if (_mounted) state = AsyncValue.error(error, stackTrace);
     }
-  }
-}
-
-class UserStatsNotifier extends StateNotifier<AsyncValue<Map<String, int>>> {
-  final ProfileService _profileService;
-
-  UserStatsNotifier(this._profileService) : super(const AsyncValue.loading()) {
-    loadStats();
-  }
-
-  Future<void> loadStats() async {
-    state = const AsyncValue.loading();
-    try {
-      final stats = await _profileService.getUserStats();
-      state = AsyncValue.data(stats);
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-    }
-  }
-
-  Future<void> refreshStats() async {
-    await loadStats();
   }
 }

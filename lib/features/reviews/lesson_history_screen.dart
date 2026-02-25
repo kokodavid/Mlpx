@@ -3,55 +3,202 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:milpress/features/reviews/providers/lesson_history_provider.dart';
 import 'package:milpress/features/user_progress/models/lesson_progress_model.dart';
+import 'package:milpress/utils/app_colors.dart';
 import 'package:go_router/go_router.dart';
 
-class LessonHistoryScreen extends ConsumerWidget {
+class LessonHistoryScreen extends ConsumerStatefulWidget {
   const LessonHistoryScreen({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LessonHistoryScreen> createState() =>
+      _LessonHistoryScreenState();
+}
+
+class _LessonHistoryScreenState extends ConsumerState<LessonHistoryScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final lessonHistoryAsync = ref.watch(lessonHistoryProvider);
+
     return Scaffold(
+      backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
-        title: const Text('Lesson History'),
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.lightBackground,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.copBlue),
+          onPressed: () => context.pop(),
+        ),
+        title: const Text(
+          'Lesson History',
+          style: TextStyle(
+            color: AppColors.copBlue,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        centerTitle: true,
       ),
-      backgroundColor: const Color(0xFFF8F8F8),
       body: lessonHistoryAsync.when(
         data: (lessons) {
           if (lessons.isEmpty) {
-            return const Center(
-              child: Text('No completed lessons yet.'),
-            );
+            return _buildEmptyState();
           }
-          return ListView.separated(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-            itemCount: lessons.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final lesson = lessons[index];
-              return _LessonHistoryCard(lesson: lesson);
-            },
+
+          // Filter by search query
+          final filtered = _searchQuery.isEmpty
+              ? lessons
+              : lessons.where((l) {
+            final title =
+            (l.lessonTitle ?? '').toLowerCase();
+            return title.contains(_searchQuery.toLowerCase());
+          }).toList();
+
+          return Column(
+            children: [
+              // Search bar
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (v) => setState(() => _searchQuery = v),
+                  style: const TextStyle(fontSize: 15),
+                  decoration: InputDecoration(
+                    hintText: 'Search History',
+                    hintStyle: const TextStyle(color: Colors.grey),
+                    prefixIcon:
+                    const Icon(Icons.search, color: Colors.grey, size: 20),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(
+                        vertical: 12, horizontal: 16),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ),
+
+              // List
+              Expanded(
+                child: filtered.isEmpty
+                    ? const Center(
+                  child: Text(
+                    'No results found.',
+                    style:
+                    TextStyle(color: Colors.grey, fontSize: 15),
+                  ),
+                )
+                    : ListView.separated(
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 8, horizontal: 16),
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, __) =>
+                  const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    return _LessonHistoryCard(
+                        lesson: filtered[index]);
+                  },
+                ),
+              ),
+            ],
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppColors.primaryColor),
+        ),
+        error: (e, _) => Center(
+          child: Text(
+            'Error: $e',
+            style: const TextStyle(color: Colors.red),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Empty state
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Layered circle icon
+          Container(
+            width: 90,
+            height: 90,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.primaryColor.withOpacity(0.12),
+            ),
+            child: Center(
+              child: Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primaryColor.withOpacity(0.18),
+                ),
+                child: const Icon(
+                  Icons.menu_book_rounded,
+                  color: AppColors.primaryColor,
+                  size: 30,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'No completed lesson yet',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: AppColors.copBlue,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'There are currently no completed lessons\nto display.',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textColor,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
 }
 
+// History card
 class _LessonHistoryCard extends StatelessWidget {
   final LessonProgressModel lesson;
   const _LessonHistoryCard({required this.lesson});
 
   @override
   Widget build(BuildContext context) {
+    final isCompleted = lesson.status == 'completed';
     final dateStr = lesson.completedAt != null
-        ? DateFormat('MMM d, yyyy • h:mm a').format(lesson.completedAt!)
-        : 'Unknown date';
+        ? 'Time: ${DateFormat('MMM d, yyyy . h:mm a').format(lesson.completedAt!)}'
+        : '';
+
+    // Label shown above the lesson title — "Lesson" or "Assessment"
+    final typeLabel =
+    lesson.lessonTitle?.toLowerCase().contains('assessment') == true
+        ? 'Assessment'
+        : 'Lesson';
+
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: () {
@@ -65,16 +212,14 @@ class _LessonHistoryCard extends StatelessWidget {
         });
       },
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 0),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.green.withOpacity(0.3)),
           boxShadow: [
             BoxShadow(
-              color: Colors.green.withOpacity(0.04),
-              blurRadius: 4,
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 6,
               offset: const Offset(0, 2),
             ),
           ],
@@ -82,63 +227,53 @@ class _LessonHistoryCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-          Row(
-            children: [
-              Icon(
-                lesson.status == 'completed' ? Icons.check_circle : Icons.circle_outlined,
-                size: 18,
-                color: lesson.status == 'completed' ? Colors.green : Colors.grey,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  lesson.lessonTitle ?? 'Lesson',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF232B3A),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+            // Type label row with green dot
+            Row(
+              children: [
+                Icon(
+                  Icons.circle,
+                  size: 10,
+                  color: isCompleted ? Colors.green : Colors.grey,
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Text(
-                lesson.status == 'completed' ? 'Completed' : 'Incomplete',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: lesson.status == 'completed' ? Colors.green : Colors.grey,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              if (lesson.quizScore != null) ...[
-                const SizedBox(width: 12),
-                Icon(Icons.assessment, color: Colors.blue, size: 16),
-                const SizedBox(width: 4),
+                const SizedBox(width: 6),
                 Text(
-                  'Score: ${lesson.quizScore}/${lesson.quizTotalQuestions ?? ''}',
-                  style: const TextStyle(fontSize: 12, color: Colors.blue),
+                  typeLabel,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textColor,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
-            ],
-          ),
-          if (lesson.completedAt != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              'Completed: $dateStr',
-              style: const TextStyle(
-                fontSize: 10,
-                color: Colors.grey,
-              ),
             ),
-          ],
+            const SizedBox(height: 4),
+
+            // Lesson title in green (like Image 2)
+            Text(
+              lesson.lessonTitle ?? 'Lesson',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: isCompleted ? Colors.green.shade700 : Colors.grey,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+
+            // Date/time
+            if (dateStr.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                dateStr,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textColor,
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
-} 
+}
