@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:milpress/features/widgets/custom_button.dart';
 import '../../../utils/app_colors.dart';
 import '../providers/edit_profile_provider.dart';
-import '../widgets/profile_avatar_picker.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -48,23 +46,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     });
   }
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-    );
-    if (picked != null && mounted) {
-      ref.read(editProfileProvider.notifier).uploadAvatar(picked.path);
-    }
-  }
-
-  String _buildInitials(String firstName, String lastName) {
-    final f = firstName.trim().isNotEmpty ? firstName.trim()[0] : '';
-    final l = lastName.trim().isNotEmpty ? lastName.trim()[0] : '';
-    return '$f$l';
-  }
-
   @override
   Widget build(BuildContext context) {
     final editState = ref.watch(editProfileProvider);
@@ -89,18 +70,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     });
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundColor,
+      backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
-        backgroundColor: AppColors.backgroundColor,
+        backgroundColor: AppColors.lightBackground,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: AppColors.copBlue),
           onPressed: () => context.pop(),
         ),
         title: const Text(
-          'Edit Profile',
+          'Profile Info',
           style: TextStyle(
-            color: Colors.black,
+            color: AppColors.copBlue,
             fontWeight: FontWeight.bold,
             fontSize: 20,
           ),
@@ -114,26 +95,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           children: [
             const SizedBox(height: 24),
 
-            // Avatar picker
-            if (profile != null)
-              Center(
-                child: ProfileAvatarPicker(
-                  avatarUrl: profile.avatarUrl,
-                  initials: _buildInitials(
-                    profile.firstName,
-                    profile.lastName,
-                  ),
-                  isLoading: editState.isLoading,
-                  onTap: _pickImage,
-                ),
-              ),
-            const SizedBox(height: 32),
-
             // First Name
             _buildLabel('First Name'),
             const SizedBox(height: 8),
             _buildTextField(
-              controller: _firstNameController,
+              controller: _controllersInitialised ? _firstNameController
+                  : TextEditingController(),
               hint: 'Enter first name',
               onChanged: (v) {
                 ref.read(editProfileProvider.notifier).setFirstName(v);
@@ -146,7 +113,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             _buildLabel('Last Name'),
             const SizedBox(height: 8),
             _buildTextField(
-              controller: _lastNameController,
+              controller: _controllersInitialised ? _lastNameController
+                  : TextEditingController(),
               hint: 'Enter last name',
               onChanged: (v) {
                 ref.read(editProfileProvider.notifier).setLastName(v);
@@ -167,7 +135,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             const Text(
               'You cannot update email address',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 14,
                 color: Color(0xFFFF9500),
               ),
             ),
@@ -195,7 +163,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               child: const Text(
                 'Change Password?',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
                   color: AppColors.errorShadowColor,
                   fontWeight: FontWeight.w500,
                 ),
@@ -215,7 +183,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ),
                 child: Text(
                   editState.errorMessage!,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppColors.errorColor,
                     fontSize: 13,
                   ),
@@ -224,13 +192,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               const SizedBox(height: 16),
             ],
 
-            // Update Profile button - FIXED COLOR
+            // Update Profile button
             CustomButton(
               text: 'Update Profile',
-              onPressed: (editState.isLoading || !_hasEdited) ? null : () =>
-                  ref.read(editProfileProvider.notifier).submitProfile(),
+              onPressed: (editState.isLoading || !_hasEdited)
+                  ? null
+                  : () => ref.read(editProfileProvider.notifier).submitProfile(),
               isFilled: true,
-              fillColor: !_hasEdited ? AppColors.textColor : AppColors.primaryColor,
+              fillColor: _hasEdited
+                  ? AppColors.primaryColor
+                  : AppColors.textColor,
               isLoading: editState.isLoading,
             ),
             const SizedBox(height: 32),
@@ -266,7 +237,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       onChanged: onChanged,
       style: const TextStyle(
         fontSize: 16,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w500,
       ),
       decoration: InputDecoration(
         hintText: hint,
@@ -276,7 +247,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide.none,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding:
+        const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         suffixIcon: suffixIcon,
       ),
     );

@@ -191,13 +191,13 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
           // Review route - allows guest access
-          GoRoute(
-            path: '/review',
-            name: AppRoute.review.name,
-            builder: AuthGuard.allowGuest(
-              builder: (context, state) => const ReviewScreen(),
-            ),
-          ),
+          // GoRoute(
+          //   path: '/review',
+          //   name: AppRoute.review.name,
+          //   builder: AuthGuard.allowGuest(
+          //     builder: (context, state) => const ReviewScreen(),
+          //   ),
+          // ),
         ],
       ),
       // Standalone routes (no bottom nav) - require authenticated user (not guest)

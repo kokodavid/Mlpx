@@ -1,95 +1,92 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../utils/app_colors.dart';
 import '../models/profile_model.dart';
 
-class ProfileHeaderWidget extends ConsumerWidget {
+class ProfileHeaderWidget extends StatelessWidget {
   final ProfileModel? profile;
-  final VoidCallback? onEditProfile;
 
   const ProfileHeaderWidget({
     super.key,
     this.profile,
-    this.onEditProfile,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+  Widget build(BuildContext context) {
+    final fullName = profile?.fullName.isNotEmpty == true
+        ? profile!.fullName
+        : profile?.email ?? 'User';
+    final email = profile?.email ?? 'No email available';
+
+    return Column(
+      children: [
+        // Avatar with stroke border
+        Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white,
+              width: 6.0,
+            ),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          CircleAvatar(
-            radius: 50,
-            backgroundImage: profile?.avatarUrl != null
+          child: CircleAvatar(
+            radius: 60,
+            backgroundColor: AppColors.primaryColor.withOpacity(0.15),
+            backgroundImage: (profile?.avatarUrl != null &&
+                profile!.avatarUrl!.isNotEmpty)
                 ? NetworkImage(profile!.avatarUrl!)
-                : (profile == null ? const AssetImage('assets/turtle.png') as ImageProvider : null),
-            child: profile != null && profile?.avatarUrl == null
+                : null,
+            child: (profile?.avatarUrl == null || profile!.avatarUrl!.isEmpty)
                 ? Text(
-              (profile?.fullName.isNotEmpty == true
-                  ? profile!.fullName
-                  : profile?.email ?? '')
-                  .substring(0, 1)
-                  .toUpperCase(),
-              style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
+              _initials(fullName),
+              style: const TextStyle(
+                fontSize: 40,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primaryColor,
+              ),
             )
                 : null,
           ),
-          const SizedBox(height: 16),
-          Text(
-            profile?.fullName.isNotEmpty == true
-                ? profile!.fullName
-                : profile?.email ?? 'User',
+        ),
+        const SizedBox(height: 12),
+
+        // Full name
+        Text(
+          fullName,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: AppColors.copBlue,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 6),
+
+        // Email inside white rounded pill
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Text(
+            email,
             style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppColors.copBlue,
+              fontSize: 13,
+              color: Color(0xFF9CA3AF),
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
-          Text(
-            profile?.email ?? 'No email available',
-            style: const TextStyle(
-              fontSize: 16,
-              color: AppColors.textColor,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          // const SizedBox(height: 16),
-          // SizedBox(
-          //   width: double.infinity,
-          //   child: ElevatedButton(
-          //     onPressed: onEditProfile,
-          //     style: ElevatedButton.styleFrom(
-          //       backgroundColor: AppColors.primaryColor,
-          //       foregroundColor: Colors.white,
-          //       shape: RoundedRectangleBorder(
-          //         borderRadius: BorderRadius.circular(12),
-          //       ),
-          //       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          //     ),
-          //     child: const Text(
-          //       'Edit Profile',
-          //       style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          //     ),
-          //   ),
-          // ),
-        ],
-      ),
+        ),
+      ],
     );
+  }
+
+  String _initials(String name) {
+    final parts = name.trim().split(' ');
+    if (parts.isEmpty) return '?';
+    if (parts.length == 1) {
+      return parts[0].isNotEmpty ? parts[0][0].toUpperCase() : '?';
+    }
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
   }
 }

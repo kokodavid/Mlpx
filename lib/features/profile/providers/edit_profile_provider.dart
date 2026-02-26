@@ -67,7 +67,6 @@ class EditProfileNotifier extends StateNotifier<EditProfileState> {
   /// Update the first name field in state
   void setFirstName(String value) {
     if (state.profile == null) return;
-
     state = state.copyWith(
       profile: state.profile!.copyWith(firstName: value),
       clearError: true,
@@ -78,21 +77,10 @@ class EditProfileNotifier extends StateNotifier<EditProfileState> {
   /// Update the last name field in state
   void setLastName(String value) {
     if (state.profile == null) return;
-
     state = state.copyWith(
       profile: state.profile!.copyWith(lastName: value),
       clearError: true,
       isSuccess: false,
-    );
-  }
-
-  /// Set a new local avatar path (before upload)
-  void setAvatarUrl(String? url) {
-    if (state.profile == null) return;
-
-    state = state.copyWith(
-      profile: state.profile!.copyWith(avatarUrl: url),
-      clearError: true,
     );
   }
 
@@ -129,39 +117,6 @@ class EditProfileNotifier extends StateNotifier<EditProfileState> {
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'An unexpected error occurred. Please try again.',
-      );
-    }
-  }
-
-  /// Upload a new avatar image, then refresh the profile provider
-  Future<void> uploadAvatar(String imagePath) async {
-    state = state.copyWith(isLoading: true, clearError: true);
-
-    try {
-      final imageUrl = await _service.uploadAvatar(imagePath);
-
-      if (imageUrl == null) {
-        state = state.copyWith(
-          isLoading: false,
-          errorMessage: 'Failed to upload image. Please try again.',
-        );
-        return;
-      }
-
-      // Update local state with new URL
-      if (state.profile != null) {
-        state = state.copyWith(
-          isLoading: false,
-          profile: state.profile!.copyWith(avatarUrl: imageUrl),
-        );
-      }
-
-      // Also sync avatar into profileProvider so the profile page updates
-      _ref.read(profileProvider.notifier).updateAvatar(imagePath);
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: 'An unexpected error occurred during upload.',
       );
     }
   }
