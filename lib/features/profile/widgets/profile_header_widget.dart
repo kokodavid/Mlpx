@@ -19,24 +19,33 @@ class ProfileHeaderWidget extends StatelessWidget {
 
     return Column(
       children: [
-        // Avatar — no edit badge
-        CircleAvatar(
-          radius: 52,
-          backgroundColor: AppColors.primaryColor.withOpacity(0.15),
-          backgroundImage: (profile?.avatarUrl != null &&
-              profile!.avatarUrl!.isNotEmpty)
-              ? NetworkImage(profile!.avatarUrl!)
-              : null,
-          child: (profile?.avatarUrl == null || profile!.avatarUrl!.isEmpty)
-              ? Text(
-            _initials(fullName),
-            style: const TextStyle(
-              fontSize: 38,
-              fontWeight: FontWeight.bold,
-              color: AppColors.primaryColor,
+        // Avatar with stroke border
+        Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white,
+              width: 6.0,
             ),
-          )
-              : null,
+          ),
+          child: CircleAvatar(
+            radius: 60,
+            backgroundColor: AppColors.primaryColor.withOpacity(0.15),
+            backgroundImage: (profile?.avatarUrl != null &&
+                profile!.avatarUrl!.isNotEmpty)
+                ? NetworkImage(profile!.avatarUrl!)
+                : null,
+            child: (profile?.avatarUrl == null || profile!.avatarUrl!.isEmpty)
+                ? Text(
+              _initials(fullName),
+              style: const TextStyle(
+                fontSize: 40,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primaryColor,
+              ),
+            )
+                : null,
+          ),
         ),
         const SizedBox(height: 12),
 
@@ -50,16 +59,23 @@ class ProfileHeaderWidget extends StatelessWidget {
           ),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
 
-        // Email
-        Text(
-          email,
-          style: const TextStyle(
-            fontSize: 13,
-            color: AppColors.textColor,
+        // Email inside white rounded pill
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
           ),
-          textAlign: TextAlign.center,
+          child: Text(
+            email,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFF9CA3AF),
+            ),
+            textAlign: TextAlign.center,
+          ),
         ),
       ],
     );

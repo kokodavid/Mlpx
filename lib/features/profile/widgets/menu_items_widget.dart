@@ -35,7 +35,25 @@ class MenuItemsWidget extends StatelessWidget {
               badge: const _Badge(count: 0),
               onTap: () => context.push('/bookmarks'),
             ),
-            const Divider(height: 1, indent: 52, endIndent: 0),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 0),
+              child: SizedBox(
+                height: 2.5,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white,
+                        Color(0xFFE8E8E8),
+                        Color(0xFFE8E8E8),
+                        Colors.white,
+                      ],
+                      stops: [0.0, 0.45, 0.55, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+            ),
             _buildMenuItem(
               context: context,
               icon: Icons.history,
@@ -158,10 +176,10 @@ class _Badge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
         color: AppColors.primaryColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         '$count',
