@@ -14,6 +14,7 @@ class LogoutButtonWidget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return SizedBox(
       width: double.infinity,
+      height: 52,
       child: ElevatedButton(
         onPressed: () => _showLogoutDialog(context),
         style: ElevatedButton.styleFrom(
@@ -21,16 +22,16 @@ class LogoutButtonWidget extends ConsumerWidget {
           foregroundColor: Colors.red.shade600,
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             side: BorderSide(color: Colors.red.shade200),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 16),
         ),
-        child: const Text(
-          'Logout',
+        child: Text(
+          'Sign Out',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
+            color: Colors.red.shade600,
           ),
         ),
       ),
@@ -42,18 +43,17 @@ class LogoutButtonWidget extends ConsumerWidget {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text(
-            'Logout',
+            'Sign Out',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color: AppColors.copBlue,
             ),
           ),
           content: const Text(
-            'Are you sure you want to logout?',
+            'Are you sure you want to sign out?',
             style: TextStyle(color: AppColors.textColor),
           ),
           actions: [
@@ -76,11 +76,11 @@ class LogoutButtonWidget extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: const Text('Logout'),
+              child: const Text('Sign Out'),
             ),
           ],
         );
       },
     );
   }
-} 
+}

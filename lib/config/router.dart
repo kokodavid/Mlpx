@@ -146,22 +146,47 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: ':courseId',
             name: AppRoute.courseDetails.name,
             builder: AuthGuard.allowGuest(
-              builder: (context, state) {
-                final courseId = state.pathParameters['courseId']!;
-                return CourseDetailsScreen(courseId: courseId);
-              },
+              builder: (context, state) => const HomeScreen(),
             ),
           ),
+          // Course routes - allow guest access
+          GoRoute(
+            path: '/course',
+            name: AppRoute.course.name,
+            builder: AuthGuard.allowGuest(
+              builder: (context, state) => const CourseScreen(),
+            ),
+            routes: [
+              GoRoute(
+                path: ':courseId',
+                name: AppRoute.courseDetails.name,
+                builder: AuthGuard.allowGuest(
+                  builder: (context, state) {
+                    final courseId = state.pathParameters['courseId']!;
+                    return CourseDetailsScreen(courseId: courseId);
+                  },
+                ),
+              ),
+            ],
+          ),
+          // Review route - allows guest access
+          // GoRoute(
+          //   path: '/review',
+          //   name: AppRoute.review.name,
+          //   builder: AuthGuard.allowGuest(
+          //     builder: (context, state) => const ReviewScreen(),
+          //   ),
+          // ),
         ],
       ),
       // Review route - allows guest access
-      GoRoute(
-        path: '/review',
-        name: AppRoute.review.name,
-        builder: AuthGuard.allowGuest(
-          builder: (context, state) => const ReviewScreen(),
-        ),
-      ),
+      // GoRoute(
+      //   path: '/review',
+      //   name: AppRoute.review.name,
+      //   builder: AuthGuard.allowGuest(
+      //     builder: (context, state) => const ReviewScreen(),
+      //   ),
+      // ),
       // Standalone routes (no bottom nav) - require authenticated user (not guest)
       GoRoute(
         path: '/lesson-attempt',

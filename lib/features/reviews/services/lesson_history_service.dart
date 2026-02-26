@@ -1,27 +1,23 @@
-import 'package:milpress/features/user_progress/models/lesson_progress_model.dart';
+import 'package:flutter/foundation.dart';
+import 'package:milpress/features/reviews/models/lesson_completion_model.dart';
 import 'package:milpress/utils/supabase_config.dart';
 
 class LessonHistoryService {
-  Future<List<LessonProgressModel>> getCompletedLessons(String userId) async {
+  Future<List<LessonCompletionModel>> getCompletedLessons(String userId) async {
     try {
       final response = await SupabaseConfig.client
-          .from('lesson_progress')
-          .select()
+          .from('lesson_completion')
+          .select('*, new_lessons(title, module_id)')
           .eq('user_id', userId)
-          .eq('status', 'completed')
-          .order('completed_at', ascending: false)
-          .order('updated_at', ascending: false);
-
-      if (response is! List) {
-        return [];
-      }
+          .not('completed_at', 'is', null)
+          .order('completed_at', ascending: false);
 
       return response
-          .map((row) => LessonProgressModel.fromJson(row))
+          .map((row) => LessonCompletionModel.fromJson(row))
           .toList();
     } catch (e) {
-      print('Error fetching lesson history from Supabase: $e');
+      debugPrint('Error fetching lesson history from Supabase: $e');
       return [];
     }
   }
-} 
+}

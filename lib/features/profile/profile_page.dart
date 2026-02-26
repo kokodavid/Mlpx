@@ -4,11 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../utils/app_colors.dart';
 import 'providers/profile_provider.dart';
 import 'widgets/profile_header_widget.dart';
-import 'widgets/stats_section_widget.dart';
 import 'widgets/menu_items_widget.dart';
 import 'widgets/logout_button_widget.dart';
-import 'widgets/loading_card.dart';
-import 'widgets/error_card.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
@@ -16,12 +13,11 @@ class ProfilePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(profileProvider);
-    final statsAsync = ref.watch(userStatsProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.lightBackground,
+      backgroundColor: const Color(0xFFF3F4F6),
       appBar: AppBar(
-        backgroundColor: AppColors.lightBackground,
+        backgroundColor: const Color(0xFFF3F4F6),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.copBlue),
@@ -36,59 +32,27 @@ class ProfilePage extends ConsumerWidget {
           ),
         ),
         centerTitle: true,
-        actions: [
-          TextButton(
-            onPressed: () => context.push('/edit-profile'),
-            child: const Text(
-              'Edit',
-              style: TextStyle(
-                color: AppColors.primaryColor,
-                fontWeight: FontWeight.w600,
-                fontSize: 15,
-              ),
-            ),
-          ),
-        ],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
+      body: profileAsync.when(
+        data: (profile) => _buildBody(context, ref, profile),
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppColors.primaryColor),
+        ),
+        error: (error, _) => Center(
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // Profile Header Section
-              profileAsync.when(
-                data: (profile) => ProfileHeaderWidget(
-                  profile: profile,
-                  onEditProfile: () {
-                    // TODO: Navigate to edit profile screen
-                  },
-                ),
-                loading: () => const LoadingCard(),
-                error: (error, stack) => ErrorCard(
-                  message: 'Failed to load profile',
-                  onRetry: () => ref.refresh(profileProvider),
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // Stats Section
-              statsAsync.when(
-                data: (stats) => StatsSectionWidget(stats: stats),
-                loading: () => const LoadingCard(),
-                error: (error, stack) => ErrorCard(
-                  message: 'Failed to load stats',
-                  onRetry: () => ref.refresh(userStatsProvider),
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // Menu Items
-              const MenuItemsWidget(),
-              const SizedBox(height: 32),
-
-              // Logout Button
-              LogoutButtonWidget(
-                onLogout: () => _handleLogout(ref),
+              const Icon(Icons.error_outline,
+                  color: AppColors.errorColor, size: 48),
+              const SizedBox(height: 12),
+              const Text('Failed to load profile'),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: () => ref.refresh(profileProvider),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryColor),
+                child: const Text('Retry',
+                    style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -97,11 +61,46 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 
+  Widget _buildBody(BuildContext context, WidgetRef ref, profile) {
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: [
+                  const SizedBox(height: 16),
+
+                  // Profile header (avatar + name + email)
+                  ProfileHeaderWidget(profile: profile),
+
+                  const SizedBox(height: 24),
+
+                  // Menu items card
+                  const MenuItemsWidget(),
+
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // Sign Out button pinned to bottom
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+          child: LogoutButtonWidget(
+            onLogout: () => _handleLogout(ref),
+          ),
+        ),
+      ],
+    );
+  }
+
   void _handleLogout(WidgetRef ref) async {
     try {
       await ref.read(profileProvider.notifier).signOut();
-    } catch (e) {
-      // Error handling is done in the provider
-    }
+    } catch (_) {}
   }
 }
