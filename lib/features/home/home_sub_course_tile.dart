@@ -30,6 +30,7 @@ class HomeSubCourseTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool hasNoLessons = !isCompleted && lessonsCount == 0;
     final eligibilityColor =
         isEligible ? const Color(0xFF6AA84F) : AppColors.textColor;
     final iconBackground =
@@ -133,48 +134,66 @@ class HomeSubCourseTile extends StatelessWidget {
               ],
             ),
           ] else ...[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: iconBackground,
-                  ),
-                  child: Icon(
-                    Icons.check,
-                    size: 10,
-                    color: eligibilityColor,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Flexible(
-                  child: Text(
-                    eligibilityText,
+            if (hasNoLessons)
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.hourglass_empty, color: Colors.orange, size: 16),
+                  SizedBox(width: 6),
+                  Text(
+                    'Lessons coming soon',
                     style: TextStyle(
                       fontSize: 12,
-                      color: eligibilityColor,
+                      color: Colors.orange,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              )
+            else
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: iconBackground,
+                    ),
+                    child: Icon(
+                      Icons.check,
+                      size: 10,
+                      color: eligibilityColor,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Text(
+                      eligibilityText,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: eligibilityColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
               child: CustomButton(
-                text: buttonText,
-                onPressed: (isEligible && onStartCourse != null)
+                text: hasNoLessons ? 'Locked' : buttonText,
+                onPressed: (isEligible && !hasNoLessons && onStartCourse != null)
                     ? onStartCourse!
                     : () {},
                 isFullWidth: true,
                 isPrimary: true,
                 height: 48,
-                backgroundColor:
-                    isEligible ? AppColors.primaryColor : AppColors.textColor,
+                backgroundColor: (isEligible && !hasNoLessons)
+                    ? AppColors.primaryColor
+                    : AppColors.textColor,
                 textColor: Colors.white,
                 fontSize: 16,
                 borderRadius: BorderRadius.circular(10),
