@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../utils/app_colors.dart';
+import '../../reviews/providers/bookmark_provider.dart';
 
-class MenuItemsWidget extends StatelessWidget {
+class MenuItemsWidget extends ConsumerWidget {
   const MenuItemsWidget({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bookmarkCount = ref.watch(bookmarkCountProvider).valueOrNull ?? 0;
     return Column(
       children: [
         // Card : Profile Info
@@ -32,7 +35,7 @@ class MenuItemsWidget extends StatelessWidget {
               icon: Icons.bookmark,
               title: 'Bookmark',
               subtitle: 'Find saved lesson(s) here',
-              badge: const _Badge(count: 0),
+              badge: _Badge(count: bookmarkCount),
               onTap: () => context.push('/bookmarks'),
             ),
             Padding(
@@ -54,14 +57,14 @@ class MenuItemsWidget extends StatelessWidget {
                 ),
               ),
             ),
-            _buildMenuItem(
-              context: context,
-              icon: Icons.history,
-              title: 'History',
-              subtitle: 'See attempted lessons',
-              badge: const _Badge(count: 0),
-              onTap: () => context.push('/lesson-history'),
-            ),
+            // _buildMenuItem(
+            //   context: context,
+            //   icon: Icons.history,
+            //   title: 'History',
+            //   subtitle: 'See attempted lessons',
+            //   badge: const _Badge(count: 0),
+            //   onTap: () => context.push('/lesson-history'),
+            // ),
           ],
         ),
 

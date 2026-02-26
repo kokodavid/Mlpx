@@ -193,14 +193,9 @@ class BookmarksScreen extends ConsumerWidget {
   }
 
   void _navigateToLesson(BuildContext context, BookmarkModel bookmark) {
-    context.push('/lesson/${bookmark.lessonId}', extra: {
-      'courseContext': {
-        'courseId': bookmark.courseId,
-        'courseTitle': bookmark.courseTitle,
-        'moduleId': bookmark.moduleId,
-        'moduleTitle': bookmark.moduleTitle,
-        'isFromBookmark': true,
-      },
+    context.push('/lesson-attempt', extra: {
+      'lessonId': bookmark.lessonId,
+      'isReattempt': true,
     });
   }
 }

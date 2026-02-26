@@ -153,56 +153,6 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
     }
   }
 
-  Future<Map<String, String>?> _resolveBookmarkContext(
-    LessonModel lesson,
-    Map<String, dynamic>? courseContext,
-  ) async {
-    final courseId = courseContext?['courseId'] as String?;
-    final courseTitle = courseContext?['courseTitle'] as String?;
-    final moduleId = courseContext?['moduleId'] as String?;
-    final moduleTitle = courseContext?['moduleTitle'] as String?;
-
-    if (courseId != null &&
-        courseTitle != null &&
-        moduleId != null &&
-        moduleTitle != null) {
-      return {
-        'courseId': courseId,
-        'courseTitle': courseTitle,
-        'moduleId': moduleId,
-        'moduleTitle': moduleTitle,
-      };
-    }
-
-    final fallbackModuleId = moduleId ?? lesson.moduleId;
-    if (fallbackModuleId.isEmpty) {
-      return null;
-    }
-
-    final module =
-        await ref.read(moduleFromSupabaseProvider(fallbackModuleId).future);
-    if (module == null) {
-      return null;
-    }
-
-    final resolvedCourseId = courseId ?? module.module.courseId;
-    if (resolvedCourseId.isEmpty) {
-      return null;
-    }
-
-    final course =
-        await ref.read(courseByIdProvider(resolvedCourseId).future);
-    final resolvedModuleTitle = moduleTitle ?? module.module.description;
-    final resolvedCourseTitle = courseTitle ?? course.title;
-
-    return {
-      'courseId': resolvedCourseId,
-      'courseTitle': resolvedCourseTitle,
-      'moduleId': fallbackModuleId,
-      'moduleTitle': resolvedModuleTitle,
-    };
-  }
-
   @override
   Widget build(BuildContext context) {
     final lessonAsync = ref.watch(lessonFromSupabaseProvider(widget.lessonId));
@@ -422,88 +372,9 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
                               );
                             },
                           ),
-                          Consumer(
-                            builder: (context, ref, child) {
-                              final isBookmarkedAsync = ref.watch(isLessonBookmarkedProvider(lesson.id));
-                              
-                              return isBookmarkedAsync.when(
-                                data: (isBookmarked) => LessonActionButton(
-                                  icon: isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                                  iconColor: isBookmarked
-                                      ? AppColors.correctAnswerColor
-                                      : null,
-                                  
-                                  label: isBookmarked ? 'Saved' : 'Save',
-                                  onTap: () async {
-                                    try {
-                                      if (isBookmarked) {
-                                        await ref.read(removeBookmarkProvider(lesson.id).future);
-                                        if (context.mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Removed from bookmarks'),
-                                              backgroundColor: Colors.orange,
-                                            ),
-                                          );
-                                        }
-                                      } else {
-                                        final courseContext = extra?['courseContext'] as Map<String, dynamic>?;
-                                        final resolvedContext =
-                                            await _resolveBookmarkContext(lesson, courseContext);
-
-                                        if (resolvedContext != null) {
-                                          await ref.read(addBookmarkProvider({
-                                            'lessonId': lesson.id,
-                                            'courseId': resolvedContext['courseId']!,
-                                            'moduleId': resolvedContext['moduleId']!,
-                                            'lessonTitle': lesson.title,
-                                            'courseTitle': resolvedContext['courseTitle']!,
-                                            'moduleTitle': resolvedContext['moduleTitle']!,
-                                          }).future);
-                                          
-                                          if (context.mounted) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(
-                                                content: Text('Added to bookmarks'),
-                                                backgroundColor: Colors.green,
-                                              ),
-                                            );
-                                          }
-                                        } else {
-                                          if (context.mounted) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(
-                                                content: Text('Unable to bookmark: Missing course information'),
-                                                backgroundColor: Colors.red,
-                                              ),
-                                            );
-                                          }
-                                        }
-                                      }
-                                    } catch (e) {
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text('Error: $e'),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  },
-                                ),
-                                loading: () => LessonActionButton(
-                                  icon: Icons.bookmark_border,
-                                  label: 'Save',
-                                  onTap: () {},
-                                ),
-                                error: (_, __) => LessonActionButton(
-                                  icon: Icons.bookmark_border,
-                                  label: 'Save',
-                                  onTap: () {},
-                                ),
-                              );
-                            },
+                          _BookmarkActionButton(
+                            lesson: lesson,
+                            courseContext: extra?['courseContext'] as Map<String, dynamic>?,
                           ),
                           LessonActionButton(
                             icon: Icons.share,
@@ -979,6 +850,175 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
       ),
       loading: () => const Scaffold(
         body: Center(child: CircularProgressIndicator()),
+      ),
+    );
+  }
+}
+
+class _BookmarkActionButton extends ConsumerStatefulWidget {
+  final LessonModel lesson;
+  final Map<String, dynamic>? courseContext;
+
+  const _BookmarkActionButton({
+    required this.lesson,
+    this.courseContext,
+  });
+
+  @override
+  ConsumerState<_BookmarkActionButton> createState() =>
+      _BookmarkActionButtonState();
+}
+
+class _BookmarkActionButtonState extends ConsumerState<_BookmarkActionButton> {
+  bool _isLoading = false;
+
+  Future<Map<String, String>?> _resolveBookmarkContext() async {
+    final courseContext = widget.courseContext;
+    final courseId = courseContext?['courseId'] as String?;
+    final courseTitle = courseContext?['courseTitle'] as String?;
+    final moduleId = courseContext?['moduleId'] as String?;
+    final moduleTitle = courseContext?['moduleTitle'] as String?;
+
+    if (courseId != null &&
+        courseTitle != null &&
+        moduleId != null &&
+        moduleTitle != null) {
+      return {
+        'courseId': courseId,
+        'courseTitle': courseTitle,
+        'moduleId': moduleId,
+        'moduleTitle': moduleTitle,
+      };
+    }
+
+    final fallbackModuleId = moduleId ?? widget.lesson.moduleId;
+    if (fallbackModuleId.isEmpty) return null;
+
+    final module =
+        await ref.read(moduleFromSupabaseProvider(fallbackModuleId).future);
+    if (module == null) return null;
+
+    final resolvedCourseId = courseId ?? module.module.courseId;
+    if (resolvedCourseId.isEmpty) return null;
+
+    final course = await ref.read(courseByIdProvider(resolvedCourseId).future);
+
+    return {
+      'courseId': resolvedCourseId,
+      'courseTitle': courseTitle ?? course.title,
+      'moduleId': fallbackModuleId,
+      'moduleTitle': moduleTitle ?? module.module.description,
+    };
+  }
+
+  Future<void> _onTap(bool isBookmarked) async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+    try {
+      if (isBookmarked) {
+        await ref.read(removeBookmarkProvider(widget.lesson.id).future);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Removed from bookmarks'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      } else {
+        final resolvedContext = await _resolveBookmarkContext();
+        if (resolvedContext != null) {
+          await ref.read(addBookmarkProvider({
+            'lessonId': widget.lesson.id,
+            'courseId': resolvedContext['courseId']!,
+            'moduleId': resolvedContext['moduleId']!,
+            'lessonTitle': widget.lesson.title,
+            'courseTitle': resolvedContext['courseTitle']!,
+            'moduleTitle': resolvedContext['moduleTitle']!,
+          }).future);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Added to bookmarks'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Unable to bookmark: Missing course information'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 4,
+                ),
+              ],
+            ),
+            child: const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.primaryColor,
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text('Save', style: TextStyle(fontSize: 13)),
+        ],
+      );
+    }
+
+    final isBookmarkedAsync =
+        ref.watch(isLessonBookmarkedProvider(widget.lesson.id));
+    return isBookmarkedAsync.when(
+      data: (isBookmarked) => LessonActionButton(
+        icon: isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+        iconColor: isBookmarked ? AppColors.correctAnswerColor : null,
+        label: isBookmarked ? 'Saved' : 'Save',
+        onTap: () => _onTap(isBookmarked),
+      ),
+      loading: () => LessonActionButton(
+        icon: Icons.bookmark_border,
+        label: 'Save',
+        onTap: () {},
+      ),
+      error: (_, __) => LessonActionButton(
+        icon: Icons.bookmark_border,
+        label: 'Save',
+        onTap: () {},
       ),
     );
   }
