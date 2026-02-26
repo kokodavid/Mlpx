@@ -98,7 +98,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                       onPressed: () async {
                         // Stop audio session before navigating
                         await ref.read(audioSessionProvider.notifier).stopSession('welcome_screen');
-                        context.go('/course-prep');
+                        context.go('/signup');
                       },
                       isFilled: true,
                     ),

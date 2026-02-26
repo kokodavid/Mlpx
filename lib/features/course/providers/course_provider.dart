@@ -32,8 +32,8 @@ final hasAttemptedAnyCourseProvider = FutureProvider<bool>((ref) async {
           .eq('user_id', userId)
           .limit(1),
       SupabaseConfig.client
-          .from('lesson_progress')
-          .select('id')
+          .from('lesson_completion')
+          .select('lesson_id')
           .eq('user_id', userId)
           .limit(1),
       SupabaseConfig.client

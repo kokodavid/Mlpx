@@ -191,9 +191,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ? sortedCourses
                           .indexWhere((c) => c.course.id == activeCourseId)
                       : -1;
-                  final targetIndex =
-                      (activeIndex >= 0 ? activeIndex : 0)
-                          .clamp(0, sortedCourses.length - 1);
+                  final targetIndex = (activeIndex >= 0 ? activeIndex : 0)
+                      .clamp(0, sortedCourses.length - 1);
 
                   if (!_hasScrolledToActive) {
                     _hasScrolledToActive = true;
@@ -327,7 +326,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                                                 false))
                                                         .toList();
                                                 allAssessmentsComplete =
-                                                    assessmentModules.isEmpty ||
+                                                    assessmentModules
+                                                            .isNotEmpty &&
                                                         assessmentModules.every(
                                                           (m) =>
                                                               completedMap[m
@@ -354,7 +354,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                                 onTap: () =>
                                                     _openCourse(course.id),
                                                 previewUrl:
-                                                    course.soundUrlPreview ?? '',
+                                                    course.soundUrlPreview ??
+                                                        '',
                                                 previewSourceId:
                                                     'course-preview-${course.id}',
                                               );

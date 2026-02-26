@@ -117,6 +117,9 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
     final extra = GoRouterState.of(context).extra as Map<String, dynamic>?;
     final isCompletedCourse = extra?['isCompletedCourse'] as bool? ?? false;
 
+    final activeCourseAsync = ref.watch(activeCourseWithDetailsProvider);
+    final courseCompletionAsync =
+        ref.watch(courseCompletionProvider(widget.courseId));
     final completeCourseAsync =
         ref.watch(completeCourseProvider(widget.courseId));
     final ongoingLessonInfoAsync =
@@ -125,6 +128,9 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
         ref.watch(ongoingModuleProvider(widget.courseId));
     final courseDetailsProgressAsync =
         ref.watch(courseDetailsProgressProvider(widget.courseId));
+    final isActiveCourse =
+        activeCourseAsync.valueOrNull?.course.id == widget.courseId;
+    final providerSaysCompleted = courseCompletionAsync.valueOrNull ?? false;
 
     // Watch the stream-based refresh for immediate updates
     ref.watch(courseProgressRefreshStreamProvider(widget.courseId));
@@ -165,7 +171,7 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.black),
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => context.go('/'),
           ),
           actions: const [
             Padding(
@@ -203,6 +209,14 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
                       detailsData.stats.totalModules,
               orElse: () => false,
             );
+            final isCourseCompleted = isCompletedCourse ||
+                providerSaysCompleted ||
+                allModulesCompleted;
+            final headerStatus = isCourseCompleted
+                ? CourseHeaderStatus.completed
+                : (isActiveCourse
+                    ? CourseHeaderStatus.active
+                    : CourseHeaderStatus.none);
             return RefreshIndicator(
               onRefresh: () async {
                 // Force refresh the course data
@@ -227,6 +241,7 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
                         level: completeCourse.course.level,
                         totalModules: completeCourse.modules.length,
                         totalLessons: totalLessons,
+                        status: headerStatus,
                       ),
                       const SizedBox(
                           height:
