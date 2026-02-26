@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:milpress/features/reviews/models/lesson_completion_model.dart';
 import 'package:milpress/features/reviews/providers/lesson_history_provider.dart';
-import 'package:milpress/features/user_progress/models/lesson_progress_model.dart';
 import 'package:milpress/utils/app_colors.dart';
 import 'package:go_router/go_router.dart';
 
@@ -57,8 +57,7 @@ class _LessonHistoryScreenState extends ConsumerState<LessonHistoryScreen> {
           final filtered = _searchQuery.isEmpty
               ? lessons
               : lessons.where((l) {
-            final title =
-            (l.lessonTitle ?? '').toLowerCase();
+            final title = (l.lessonTitle ?? '').toLowerCase();
             return title.contains(_searchQuery.toLowerCase());
           }).toList();
 
@@ -183,12 +182,11 @@ class _LessonHistoryScreenState extends ConsumerState<LessonHistoryScreen> {
 
 // History card
 class _LessonHistoryCard extends StatelessWidget {
-  final LessonProgressModel lesson;
+  final LessonCompletionModel lesson;
   const _LessonHistoryCard({required this.lesson});
 
   @override
   Widget build(BuildContext context) {
-    final isCompleted = lesson.status == 'completed';
     final dateStr = lesson.completedAt != null
         ? 'Time: ${DateFormat('MMM d, yyyy . h:mm a').format(lesson.completedAt!)}'
         : '';
@@ -218,7 +216,7 @@ class _LessonHistoryCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -230,10 +228,10 @@ class _LessonHistoryCard extends StatelessWidget {
             // Type label row with green dot
             Row(
               children: [
-                Icon(
+                const Icon(
                   Icons.circle,
                   size: 10,
-                  color: isCompleted ? Colors.green : Colors.grey,
+                  color: Colors.green,
                 ),
                 const SizedBox(width: 6),
                 Text(
@@ -248,13 +246,13 @@ class _LessonHistoryCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
 
-            // Lesson title in green (like Image 2)
+            // Lesson title
             Text(
               lesson.lessonTitle ?? 'Lesson',
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: isCompleted ? Colors.green.shade700 : Colors.grey,
+                color: Colors.green.shade700,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
