@@ -249,27 +249,13 @@ class _AppVersionSection extends StatelessWidget {
         ? 'Version $version ($buildNumber)'
         : '';
 
-    return Column(
-      children: [
-        const Text(
-          'Version',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textColor,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          versionText.isNotEmpty ? versionText : '—',
-          style: const TextStyle(
-            fontSize: 14,
-            color: AppColors.textColor,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
+    return Text(
+      versionText.isNotEmpty ? versionText : '—',
+      style: const TextStyle(
+        fontSize: 16,
+        color: AppColors.textColor,
+      ),
+      textAlign: TextAlign.center,
     );
   }
 }
