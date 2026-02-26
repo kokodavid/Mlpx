@@ -1,9 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../../utils/app_colors.dart';
 
-class AboutScreen extends StatelessWidget {
+class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
+
+  @override
+  State<AboutScreen> createState() => _AboutScreenState();
+}
+
+class _AboutScreenState extends State<AboutScreen> {
+  String _version = '';
+  String _buildNumber = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    if (mounted) {
+      setState(() {
+        _version = info.version;
+        _buildNumber = info.buildNumber;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +86,7 @@ class AboutScreen extends StatelessWidget {
 
             const SizedBox(height: 32),
 
-            //  Contact / links card
+            // Contact / links card
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -118,6 +143,16 @@ class AboutScreen extends StatelessWidget {
                 ],
               ),
             ),
+
+            const SizedBox(height: 32),
+
+            // Version section
+            _AppVersionSection(
+              version: _version,
+              buildNumber: _buildNumber,
+            ),
+
+            const SizedBox(height: 16),
           ],
         ),
       ),
@@ -194,6 +229,47 @@ class AboutScreen extends StatelessWidget {
       indent: 64,
       endIndent: 0,
       color: AppColors.borderColor,
+    );
+  }
+}
+
+// App version section
+class _AppVersionSection extends StatelessWidget {
+  final String version;
+  final String buildNumber;
+
+  const _AppVersionSection({
+    required this.version,
+    required this.buildNumber,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final versionText = version.isNotEmpty
+        ? 'Version $version ($buildNumber)'
+        : '';
+
+    return Column(
+      children: [
+        const Text(
+          'Version',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textColor,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          versionText.isNotEmpty ? versionText : '—',
+          style: const TextStyle(
+            fontSize: 14,
+            color: AppColors.textColor,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 }

@@ -32,27 +32,6 @@ class ProfilePage extends ConsumerWidget {
           ),
         ),
         centerTitle: true,
-        actions: [
-          // Avatar upload status indicator
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: profileAsync.when(
-              data: (profile) => profile?.avatarUrl != null
-                  ? const Icon(Icons.cloud_done, color: Colors.green, size: 22)
-                  : const Icon(Icons.cloud_upload_outlined,
-                  color: Colors.redAccent, size: 22),
-              loading: () => const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: AppColors.primaryColor,
-                ),
-              ),
-              error: (_, __) => const SizedBox.shrink(),
-            ),
-          ),
-        ],
       ),
       body: profileAsync.when(
         data: (profile) => _buildBody(context, ref, profile),
@@ -102,28 +81,6 @@ class ProfilePage extends ConsumerWidget {
                   const MenuItemsWidget(),
 
                   const SizedBox(height: 24),
-
-                  // Clear App Data link
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: GestureDetector(
-                      onTap: () =>
-                          MenuItemsWidget.showClearDataDialog(context),
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 4),
-                        child: Text(
-                          'Clear App Data',
-                          style: TextStyle(
-                            color: Colors.red,
-                            fontWeight: FontWeight.w500,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
                 ],
               ),
             ),
@@ -132,8 +89,7 @@ class ProfilePage extends ConsumerWidget {
 
         // Sign Out button pinned to bottom
         Padding(
-          padding:
-          const EdgeInsets.fromLTRB(16, 0, 16, 32),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
           child: LogoutButtonWidget(
             onLogout: () => _handleLogout(ref),
           ),

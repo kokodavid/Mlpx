@@ -1,94 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../utils/app_colors.dart';
-import 'package:milpress/services/data_clear_service.dart';
 
-class MenuItemsWidget extends ConsumerWidget {
+class MenuItemsWidget extends StatelessWidget {
   const MenuItemsWidget({super.key});
 
-  static void showClearDataDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Clear All Data'),
-          content: const Text(
-            'This will delete all your local data including:\n'
-                '• Assessment results\n'
-                '• Course progress\n'
-                '• Bookmarks\n'
-                '• Learning history\n'
-                '• App settings\n\n'
-                'This action cannot be undone. Are you sure?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                _clearAllData(context);
-              },
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Clear All Data'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  static Future<void> _clearAllData(BuildContext context) async {
-    try {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const AlertDialog(
-          content: Row(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 16),
-              Text('Clearing all data...'),
-            ],
-          ),
-        ),
-      );
-
-      await DataClearService.clearAllData();
-
-      if (context.mounted) Navigator.of(context).pop();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('All data cleared successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        context.go('/welcome');
-      }
-    } catch (e) {
-      if (context.mounted) Navigator.of(context).pop();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error clearing data: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Column(
       children: [
-        //  Card : Profile Info
+        // Card : Profile Info
         _buildCard(
           children: [
             _buildMenuItem(
