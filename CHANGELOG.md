@@ -32,4 +32,4 @@ All notable changes to this project will be documented in this file.
 ## [1.0.4] - Previous Release
 - Initial release with assessment functionality
 - Course management and progress tracking
-- Biometric authentication support 
+- FBiometric authentication support 
