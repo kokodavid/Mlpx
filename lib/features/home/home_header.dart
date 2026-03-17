@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:milpress/features/home/widgets/help_video_dialog.dart';
 import 'package:milpress/utils/app_colors.dart';
 
 class HomeHeader extends StatelessWidget {
@@ -77,6 +78,7 @@ class HomeHeader extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(width: 10),
               Opacity(
                 opacity: disabledOpacity,
                 child: Material(
@@ -137,6 +139,37 @@ class HomeHeader extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: GestureDetector(
+              onTap: () => showDialog(
+                context: context,
+                builder: (_) => const HelpVideoDialog(),
+              ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: AppColors.copBlue.withValues(alpha: 0.6),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Need help'),
+                    SizedBox(width: 6),
+                    Icon(
+                      Icons.help_outline,
+                      color: AppColors.primaryColor,
+                      size: 22,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
