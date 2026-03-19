@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:milpress/features/lesson/lesson_widgets/video_player_widget.dart';
 
 class HelpVideoDialog extends StatelessWidget {
-  const HelpVideoDialog({Key? key}) : super(key: key);
+  final String? videoUrl;
 
-  static const String _placeholderVideoUrl =
-      'https://www.w3schools.com/html/mov_bbb.mp4'; // TODO: replace with real URL
+  const HelpVideoDialog({Key? key, this.videoUrl}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final url = videoUrl ?? '';
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
@@ -31,11 +31,17 @@ class HelpVideoDialog extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            const VideoPlayerWidget(
-              videoUrl: _placeholderVideoUrl,
-              height: 200,
-              borderRadius: 12,
-            ),
+            if (url.isNotEmpty)
+              VideoPlayerWidget(
+                videoUrl: url,
+                height: 200,
+                borderRadius: 12,
+              )
+            else
+              const SizedBox(
+                height: 200,
+                child: Center(child: Text('Video not available')),
+              ),
           ],
         ),
       ),

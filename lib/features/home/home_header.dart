@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:milpress/features/home/providers/app_content_provider.dart';
 import 'package:milpress/features/home/widgets/help_video_dialog.dart';
 import 'package:milpress/utils/app_colors.dart';
 
-class HomeHeader extends StatelessWidget {
+class HomeHeader extends ConsumerWidget {
   final String userName;
   final String? profileImageUrl;
   final bool isGuestUser;
@@ -18,7 +20,8 @@ class HomeHeader extends StatelessWidget {
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final helpVideoUrl = ref.watch(appContentProvider).valueOrNull?.helpVideoUrl;
     final now = currentDateTime ?? DateTime.now();
     final dateText = _formatHeaderDate(now);
     final greeting = _greetingForHour(now.hour);
@@ -147,27 +150,29 @@ class HomeHeader extends StatelessWidget {
             child: GestureDetector(
               onTap: () => showDialog(
                 context: context,
-                builder: (_) => const HelpVideoDialog(),
+                builder: (_) => HelpVideoDialog(videoUrl: helpVideoUrl),
               ),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
+                  color: AppColors.lightGrey2,
+                  borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: AppColors.copBlue.withValues(alpha: 0.6),
+                    color: AppColors.lightGrey,
                   ),
                 ),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Need help'),
-                    SizedBox(width: 6),
                     Icon(
                       Icons.help_outline,
                       color: AppColors.primaryColor,
                       size: 22,
                     ),
+                    SizedBox(width: 8),
+                    Text('Need help',style: TextStyle(color: AppColors.greyText,fontSize: 14),),
+                    
+                    
                   ],
                 ),
               ),

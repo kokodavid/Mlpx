@@ -9,6 +9,7 @@ import '../profile/providers/profile_provider.dart';
 import 'home_course_tile.dart';
 import 'home_header.dart';
 import 'home_sub_course_tile.dart';
+import 'widgets/home_intro_tile.dart';
 import 'package:go_router/go_router.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -185,14 +186,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                   if (!allProgressLoaded) return _buildLoadingIndicator();
 
+                  final hasAttemptedAnyCourse =
+                      hasAttemptedAnyCourseAsync.valueOrNull ?? false;
+
                   final activeCourseId =
                       activeCourseAsync.valueOrNull?.course.id;
                   final activeIndex = activeCourseId != null
                       ? sortedCourses
                           .indexWhere((c) => c.course.id == activeCourseId)
                       : -1;
-                  final targetIndex = (activeIndex >= 0 ? activeIndex : 0)
-                      .clamp(0, sortedCourses.length - 1);
+                  final targetIndex = !hasAttemptedAnyCourse
+                      ? 0
+                      : (activeIndex >= 0 ? activeIndex + 1 : 1)
+                          .clamp(0, sortedCourses.length);
 
                   if (!_hasScrolledToActive) {
                     _hasScrolledToActive = true;
@@ -204,10 +210,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     });
                   }
 
-                  final selectedIndex =
-                      (_hasScrolledToActive ? _selectedIndex : targetIndex)
-                          .clamp(0, sortedCourses.length - 1);
-                  final selectedCourse = sortedCourses[selectedIndex];
+                  final isOnIntroSlide = _selectedIndex == 0;
+                  final courseIndex =
+                      (_selectedIndex - 1).clamp(0, sortedCourses.length - 1);
+                  final selectedCourse = sortedCourses[courseIndex];
                   final activeLevel = activeCourseAsync.maybeWhen(
                     data: (active) => active?.course.level,
                     orElse: () => null,
@@ -223,8 +229,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           )
                           .valueOrNull ??
                       false;
-                  final hasAttemptedAnyCourse =
-                      hasAttemptedAnyCourseAsync.valueOrNull ?? false;
                   final courseButtonText = !isEligible
                       ? 'Locked'
                       : (hasAttemptedAnyCourse
@@ -241,39 +245,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     .clamp(420.0, 560.0);
 
                             return SingleChildScrollView(
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  minHeight: constraints.maxHeight,
-                                ),
-                                child: Column(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Column(
-                                      children: [
-                                        // Padding(
-                                        //   padding: const EdgeInsets.symmetric(
-                                        //     horizontal: 20,
-                                        //   ),
-                                        //   child: Divider(
-                                        //     color: AppColors.borderColor
-                                        //         .withValues(alpha: 0.9),
-                                        //     height: 20,
-                                        //   ),
-                                        // ),
-                                        SizedBox(
-                                          height: pageViewHeight,
-                                          child: PageView.builder(
+                              child: Column(
+                                children: [
+                                  SizedBox(
+                                    height: pageViewHeight,
+                                    child: PageView.builder(
                                             controller: _pageController,
-                                            itemCount: sortedCourses.length,
+                                            itemCount:
+                                                sortedCourses.length + 1,
                                             onPageChanged: (index) {
                                               setState(() {
                                                 _selectedIndex = index;
                                               });
                                             },
                                             itemBuilder: (context, index) {
+                                              if (index == 0) {
+                                                return const HomeIntroTile();
+                                              }
                                               final courseWithDetails =
-                                                  sortedCourses[index];
+                                                  sortedCourses[index - 1];
                                               final course =
                                                   courseWithDetails.course;
 
@@ -344,7 +334,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                                 ),
                                                 title: course.title,
                                                 courseLabel:
-                                                    'Course ${index + 1}',
+                                                    'Course $index',
                                                 levelLabel:
                                                     _levelLabel(course.level),
                                                 allLessonsComplete:
@@ -362,23 +352,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                             },
                                           ),
                                         ),
-                                      ],
+                                  const SizedBox(height: 12),
+                                  Padding(
+                                    padding:
+                                        const EdgeInsets.only(bottom: 14),
+                                    child: _CoursePageIndicator(
+                                      count: sortedCourses.length + 1,
+                                      currentIndex: _selectedIndex,
                                     ),
-                                    Padding(
-                                      padding:
-                                          const EdgeInsets.only(bottom: 14),
-                                      child: _CoursePageIndicator(
-                                        count: sortedCourses.length,
-                                        currentIndex: selectedIndex,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             );
                           },
                         ),
                       ),
+                      if (!isOnIntroSlide)
                       SafeArea(
                         top: false,
                         minimum: const EdgeInsets.only(bottom: 8),
