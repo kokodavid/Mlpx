@@ -19,6 +19,13 @@ class AppColors {
   static const Color copBlue = Color(0xFF142C44);
   static const Color promoCardColor = Color(0xFFE3CDFF);
   static const Color seaGreenColor = Color(0xFF4ECDC4);
+  static const Color whiteSmoke = Color(0xFFFBFBFB);
+  //#E7E7E7
+  static const Color lightGrey = Color(0xFFE7E7E7);
+  //#F6F6F6
+  static const Color lightGrey2 = Color(0xFFF6F6F6);
+  //#727272
+  static const Color greyText = Color(0xFF727272);
   
   // Add more colors as needed
 } 

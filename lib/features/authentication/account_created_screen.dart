@@ -13,7 +13,8 @@ class AccountCreatedScreen extends ConsumerStatefulWidget {
   const AccountCreatedScreen({super.key});
 
   @override
-  _AccountCreatedScreenState createState() => _AccountCreatedScreenState();
+  ConsumerState<AccountCreatedScreen> createState() =>
+      _AccountCreatedScreenState();
 }
 
 class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
@@ -66,14 +67,10 @@ class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
   }
 
   void _handlePostAuthenticationNavigation() {
-    final recommendedCourse = ref.read(recommendedCourseProvider);
-
-    if (recommendedCourse != null) {
-      ref.read(recommendedCourseProvider.notifier).clearRecommendedCourse();
-      context.go('/course/${recommendedCourse.id}');
-    } else {
-      context.go('/');
-    }
+    // Account created flow should always land users on home.
+    // Also clear any stale onboarding recommendation to avoid future misroutes.
+    ref.read(recommendedCourseProvider.notifier).clearRecommendedCourse();
+    context.go('/');
   }
 
   void _skipBiometrics() {

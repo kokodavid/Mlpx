@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:milpress/features/home/home_screen.dart';
 import 'package:milpress/utils/app_colors.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:milpress/features/widgets/custom_button.dart';
 import 'forgot_password_screen.dart';
-import '../../utils/supabase_config.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../widgets/loading_screen.dart';
 import '../../providers/auth_provider.dart';
 import 'package:milpress/features/on_boarding/providers/recommended_course_provider.dart';
 import 'providers/login_provider.dart';
@@ -40,7 +36,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _onPasswordChanged() {
-    ref.read(loginScreenProvider.notifier).validatePassword(_passwordController.text);
+    ref
+        .read(loginScreenProvider.notifier)
+        .validatePassword(_passwordController.text);
     // Clear error when user starts typing
     ref.read(loginScreenProvider.notifier).clearError();
   }
@@ -56,7 +54,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   void _handleBackButton() {
     final authState = ref.read(authStateProvider);
-    
+
     // If user is in guest mode, navigate back to home
     if (authState.isGuestUser) {
       context.go('/');
@@ -81,7 +79,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20.0),
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                minHeight: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
+                minHeight: MediaQuery.of(context).size.height -
+                    MediaQuery.of(context).padding.top -
+                    MediaQuery.of(context).padding.bottom,
               ),
               child: IntrinsicHeight(
                 child: Column(
@@ -104,7 +104,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 16),
                     const Text(
                       'Enter your personal detail',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 24),
                     TextField(
@@ -121,21 +122,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(
-                            color: !ref.watch(loginScreenProvider).isEmailValid ? Colors.red : Colors.transparent,
+                            color: !ref.watch(loginScreenProvider).isEmailValid
+                                ? Colors.red
+                                : Colors.transparent,
                             width: 1,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(
-                            color: !ref.watch(loginScreenProvider).isEmailValid ? Colors.red : AppColors.primaryColor,
+                            color: !ref.watch(loginScreenProvider).isEmailValid
+                                ? Colors.red
+                                : AppColors.primaryColor,
                             width: 2,
                           ),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        errorText: !ref.watch(loginScreenProvider).isEmailValid && _emailController.text.isNotEmpty 
-                          ? 'Please enter a valid email address' 
-                          : null,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        errorText:
+                            !ref.watch(loginScreenProvider).isEmailValid &&
+                                    _emailController.text.isNotEmpty
+                                ? 'Please enter a valid email address'
+                                : null,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -150,9 +158,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide.none,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
                         suffixIcon: IconButton(
-                          icon: Icon(_showPassword ? Icons.visibility : Icons.visibility_off),
+                          icon: Icon(_showPassword
+                              ? Icons.visibility
+                              : Icons.visibility_off),
                           onPressed: () {
                             setState(() {
                               _showPassword = !_showPassword;
@@ -169,12 +180,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           onPressed: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
+                              MaterialPageRoute(
+                                  builder: (context) => ForgotPasswordScreen()),
                             );
                           },
                           child: const Text(
                             'Forgot Password?',
-                            style: TextStyle(color: AppColors.primaryColor, fontWeight: FontWeight.w500),
+                            style: TextStyle(
+                                color: AppColors.primaryColor,
+                                fontWeight: FontWeight.w500),
                           ),
                         ),
                       ],
@@ -183,7 +197,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       const SizedBox(height: 8),
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
                           color: Colors.red.shade50,
                           borderRadius: BorderRadius.circular(8),
@@ -191,7 +206,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.error_outline, color: Colors.red.shade600, size: 20),
+                            Icon(Icons.error_outline,
+                                color: Colors.red.shade600, size: 20),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -208,10 +224,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ],
                     const Expanded(child: SizedBox()),
                     CustomButton(
-                      text: ref.watch(loginScreenProvider).isLoading ? 'Signing in...' : 'Continue',
-                      onPressed: ref.read(loginScreenProvider.notifier).canContinue ? _onContinue : null,
+                      text: ref.watch(loginScreenProvider).isLoading
+                          ? 'Signing in...'
+                          : 'Continue',
+                      onPressed:
+                          ref.read(loginScreenProvider.notifier).canContinue
+                              ? _onContinue
+                              : null,
                       isFilled: true,
-                      fillColor: ref.read(loginScreenProvider.notifier).canContinue ? AppColors.primaryColor : AppColors.textColor,
+                      fillColor:
+                          ref.read(loginScreenProvider.notifier).canContinue
+                              ? AppColors.primaryColor
+                              : AppColors.textColor,
                     ),
                     const SizedBox(height: 20),
                     const Row(
@@ -219,7 +243,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         Expanded(child: Divider()),
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 8.0),
-                          child: Text('Or', style: TextStyle(color: Colors.grey)),
+                          child:
+                              Text('Or', style: TextStyle(color: Colors.grey)),
                         ),
                         Expanded(child: Divider()),
                       ],
@@ -228,26 +253,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
-                        icon: ref.watch(loginScreenProvider).isLoading 
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : SvgPicture.asset('assets/google.svg', height: 24),
+                        icon: ref.watch(loginScreenProvider).isLoading
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : SvgPicture.asset('assets/google.svg', height: 24),
                         label: Text(
-                          ref.watch(loginScreenProvider).isLoading ? 'Signing in...' : 'Sign in with Google', 
-                          style: TextStyle(
-                            fontSize: 16, 
-                            color: ref.watch(loginScreenProvider).isLoading ? Colors.grey : Colors.black
-                          )
-                        ),
-                        onPressed: ref.watch(loginScreenProvider).isLoading ? null : _signInWithGoogle,
+                            ref.watch(loginScreenProvider).isLoading
+                                ? 'Signing in...'
+                                : 'Sign in with Google',
+                            style: TextStyle(
+                                fontSize: 16,
+                                color: ref.watch(loginScreenProvider).isLoading
+                                    ? Colors.grey
+                                    : Colors.black)),
+                        onPressed: ref.watch(loginScreenProvider).isLoading
+                            ? null
+                            : _signInWithGoogle,
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           side: BorderSide(
-                            color: ref.watch(loginScreenProvider).isLoading ? Colors.grey.shade300 : const Color(0xFFE0E0E0)
-                          ),
+                              color: ref.watch(loginScreenProvider).isLoading
+                                  ? Colors.grey.shade300
+                                  : const Color(0xFFE0E0E0)),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -261,16 +292,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         child: Text.rich(
                           TextSpan(
                             text: 'By clicking continue, you agree with our ',
-                            style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey[700]),
                             children: const [
                               TextSpan(
                                 text: 'Terms and Conditions',
-                                style: TextStyle(decoration: TextDecoration.underline, color: Colors.black),
+                                style: TextStyle(
+                                    decoration: TextDecoration.underline,
+                                    color: Colors.black),
                               ),
                               TextSpan(text: ' and '),
                               TextSpan(
                                 text: 'Privacy Policy',
-                                style: TextStyle(decoration: TextDecoration.underline, color: Colors.black),
+                                style: TextStyle(
+                                    decoration: TextDecoration.underline,
+                                    color: Colors.black),
                               ),
                             ],
                           ),
@@ -289,37 +325,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _handlePostAuthenticationNavigation() {
-    // Check if there's a recommended course to navigate to
-    final recommendedCourse = ref.read(recommendedCourseProvider);
-    
-    if (recommendedCourse != null) {
-      // Navigate to the recommended course and clear the context
-      ref.read(recommendedCourseProvider.notifier).clearRecommendedCourse();
-      context.go('/course/${recommendedCourse.id}');
-    } else {
-      // No recommended course, go to home screen
-      context.go('/');
-    }
+    // Login should always land users on home.
+    // Also clear any stale onboarding recommendation to avoid future misroutes.
+    ref.read(recommendedCourseProvider.notifier).clearRecommendedCourse();
+    context.go('/');
   }
 
   Future<void> _onContinue() async {
-    final response = await ref.read(loginScreenProvider.notifier).signInWithEmailAndPassword(
-      _emailController.text,
-      _passwordController.text,
-      ref,
-    );
+    final response =
+        await ref.read(loginScreenProvider.notifier).signInWithEmailAndPassword(
+              _emailController.text,
+              _passwordController.text,
+              ref,
+            );
 
     if (response?.user != null && mounted) {
-
       final isNewlyVerified = response!.user!.emailConfirmedAt != null;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-              isNewlyVerified
-                  ? 'Welcome back! Your email is verified and you\'re all set.'
-                  : 'Successfully signed in!'
-          ),
+          content: Text(isNewlyVerified
+              ? 'Welcome back! Your email is verified and you\'re all set.'
+              : 'Successfully signed in!'),
           backgroundColor: Colors.green,
         ),
       );
@@ -329,7 +356,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _signInWithGoogle() async {
-    final success = await ref.read(loginScreenProvider.notifier).signInWithGoogle(ref);
+    final success =
+        await ref.read(loginScreenProvider.notifier).signInWithGoogle(ref);
 
     if (success && mounted) {
       // DON'T invalidate profile here - let auth listener handle it
@@ -344,4 +372,4 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _handlePostAuthenticationNavigation();
     }
   }
-} 
+}

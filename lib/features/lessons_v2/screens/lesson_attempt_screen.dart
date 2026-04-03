@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milpress/features/lessons_v2/services/lesson_audio_controller.dart';
+import 'package:milpress/features/course/providers/course_provider.dart';
+import 'package:milpress/features/course/providers/module_provider.dart';
+import 'package:milpress/features/reviews/providers/bookmark_provider.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../models/lesson_models.dart';
 import '../models/lesson_attempt_request.dart';
@@ -244,10 +247,8 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
             onPressed: () => context.pop(),
           ),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.help_outline, color: Colors.black),
-              onPressed: () {},
-            ),
+            if (widget.lessonId != null && widget.lessonId!.isNotEmpty)
+              _buildBookmarkButton(lessonId: widget.lessonId!),
           ],
           centerTitle: true,
           title: const Text(
@@ -307,10 +308,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
           onPressed: () => context.pop(),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.help_outline, color: Colors.black),
-            onPressed: () {},
-          ),
+          _buildBookmarkButton(lessonId: _lessonDefinition.id),
         ],
         centerTitle: true,
         title: Text(
@@ -398,5 +396,105 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
       return Icons.refresh;
     }
     return null;
+  }
+
+  Future<Map<String, String>?> _resolveBookmarkContext(
+      LessonDefinition lesson) async {
+    final moduleId = lesson.moduleId;
+    if (moduleId.isEmpty) return null;
+
+    final module = await ref.read(moduleFromSupabaseProvider(moduleId).future);
+    if (module == null) return null;
+
+    final courseId = module.module.courseId;
+    if (courseId.isEmpty) return null;
+
+    final course = await ref.read(courseByIdProvider(courseId).future);
+
+    return {
+      'courseId': courseId,
+      'courseTitle': course.title,
+      'moduleId': moduleId,
+      'moduleTitle': module.module.description,
+    };
+  }
+
+  Widget _buildBookmarkButton({required String lessonId}) {
+    return Consumer(
+      builder: (context, ref, _) {
+        final isBookmarkedAsync =
+            ref.watch(isLessonBookmarkedProvider(lessonId));
+        return isBookmarkedAsync.when(
+          data: (isBookmarked) => IconButton(
+            icon: Icon(
+              isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+              color: isBookmarked ? AppColors.correctAnswerColor : Colors.black,
+            ),
+            onPressed: () async {
+              try {
+                if (isBookmarked) {
+                  await ref.read(removeBookmarkProvider(lessonId).future);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Removed from bookmarks'),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                  }
+                } else {
+                  final ctx = await _resolveBookmarkContext(_lessonDefinition);
+                  if (ctx != null) {
+                    await ref.read(addBookmarkProvider({
+                      'lessonId': lessonId,
+                      'courseId': ctx['courseId']!,
+                      'moduleId': ctx['moduleId']!,
+                      'lessonTitle': _lessonDefinition.title,
+                      'courseTitle': ctx['courseTitle']!,
+                      'moduleTitle': ctx['moduleTitle']!,
+                    }).future);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Added to bookmarks'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  } else {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                              'Unable to bookmark: Missing course info'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+          loading: () => const IconButton(
+            icon: Icon(Icons.bookmark_border, color: Colors.grey),
+            onPressed: null,
+          ),
+          error: (_, __) => const IconButton(
+            icon: Icon(Icons.bookmark_border, color: Colors.grey),
+            onPressed: null,
+          ),
+        );
+      },
+    );
   }
 }
