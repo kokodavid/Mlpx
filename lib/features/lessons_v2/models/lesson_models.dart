@@ -11,6 +11,17 @@ enum LessonStepType {
   demonstration,
   practice,
   assessment,
+  blending,
+  soundDiscrimination,
+  soundItemMatching,
+  guidedReading,
+  practiceGame,
+  soundPresenceCheck,
+  missingLetters,
+  matchingWords,
+  wordReading,
+  sentenceReading,
+  miniStoryCard,
 }
 
 class LessonStepDefinition {
@@ -192,6 +203,28 @@ LessonStepType _lessonStepTypeFromString(String? value) {
       return LessonStepType.practice;
     case 'assessment':
       return LessonStepType.assessment;
+    case 'blending':
+      return LessonStepType.blending;
+    case 'sound_discrimination':
+      return LessonStepType.soundDiscrimination;
+    case 'sound_item_matching':
+      return LessonStepType.soundItemMatching;
+    case 'guided_reading':
+      return LessonStepType.guidedReading;
+    case 'practice_game':
+      return LessonStepType.practiceGame;
+    case 'sound_presence_check':
+      return LessonStepType.soundPresenceCheck;
+    case 'missing_letters':
+      return LessonStepType.missingLetters;
+    case 'matching_words':
+      return LessonStepType.matchingWords;
+    case 'word_reading':
+      return LessonStepType.wordReading;
+    case 'sentence_reading':
+      return LessonStepType.sentenceReading;
+    case 'mini_story_card':
+      return LessonStepType.miniStoryCard;
     case 'introduction':
     default:
       return LessonStepType.introduction;
