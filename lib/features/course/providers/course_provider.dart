@@ -5,6 +5,7 @@ import '../course_models/complete_course_model.dart';
 import '../services/course_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:milpress/features/user_progress/providers/course_progress_providers.dart';
+import 'package:milpress/utils/dev_flags.dart';
 import 'package:milpress/utils/supabase_config.dart';
 import 'package:milpress/features/user_progress/models/course_progress_model.dart';
 import 'package:milpress/features/user_progress/providers/user_progress_providers.dart';
@@ -173,6 +174,44 @@ final upcomingCoursesWithDetailsProvider =
   }
   upcomingCourses.sort((a, b) => a.course.level.compareTo(b.course.level));
   return upcomingCourses;
+});
+
+class CourseAccessState {
+  final bool canAccess;
+  final bool debugOverrideEnabled;
+  final bool isActiveCourse;
+  final bool isCompletedCourse;
+
+  const CourseAccessState({
+    required this.canAccess,
+    required this.debugOverrideEnabled,
+    required this.isActiveCourse,
+    required this.isCompletedCourse,
+  });
+}
+
+final courseAccessProvider =
+    FutureProvider.family<CourseAccessState, String>((ref, courseId) async {
+  if (DevFlags.allowLockedCourseAccess) {
+    return const CourseAccessState(
+      canAccess: true,
+      debugOverrideEnabled: true,
+      isActiveCourse: false,
+      isCompletedCourse: false,
+    );
+  }
+
+  final activeCourse = await ref.watch(activeCourseWithDetailsProvider.future);
+  final isCompleted =
+      await ref.watch(courseCompletionProvider(courseId).future);
+  final isActive = activeCourse?.course.id == courseId;
+
+  return CourseAccessState(
+    canAccess: isActive || isCompleted,
+    debugOverrideEnabled: false,
+    isActiveCourse: isActive,
+    isCompletedCourse: isCompleted,
+  );
 });
 
 final courseByIdProvider =

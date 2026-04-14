@@ -351,7 +351,7 @@ class ModuleQuizProgressNotifier extends StateNotifier<ModuleQuizProgress?> {
       final response = await Supabase.instance.client
           .from('lesson_progress')
           .select(
-              'lesson_id, lesson_title, quiz_score, quiz_total_questions, status, completed_at')
+              'lesson_id, quiz_score, quiz_total_questions, status, completed_at')
           .eq('module_id', moduleId)
           .eq('user_id', user.id)
           .eq('status', 'completed');
@@ -369,7 +369,6 @@ class ModuleQuizProgressNotifier extends StateNotifier<ModuleQuizProgress?> {
           if (lessonId == null || lessonId.isEmpty) {
             continue;
           }
-          final lessonTitle = data['lesson_title'] as String? ?? '';
           final score = (data['quiz_score'] as num?)?.toInt() ?? 0;
           final totalQuestions =
               (data['quiz_total_questions'] as num?)?.toInt() ?? 0;
@@ -380,14 +379,13 @@ class ModuleQuizProgressNotifier extends StateNotifier<ModuleQuizProgress?> {
           final isCompleted = status == 'completed' || completedAt != null;
 
           print('  Loading lesson: $lessonId');
-          print('    Title: $lessonTitle');
           print('    Score: $score');
           print('    Total Questions: $totalQuestions');
           print('    Is Completed: $isCompleted');
 
           lessonScores[lessonId] = LessonQuizScore(
             lessonId: lessonId,
-            lessonTitle: lessonTitle,
+            lessonTitle: '',
             score: score,
             totalQuestions: totalQuestions,
             isCompleted: isCompleted,

@@ -9,6 +9,7 @@ class HomeHeader extends ConsumerWidget {
   final String userName;
   final String? profileImageUrl;
   final bool isGuestUser;
+  final bool showDebugOverrideBadge;
   final DateTime? currentDateTime;
 
   const HomeHeader({
@@ -16,12 +17,14 @@ class HomeHeader extends ConsumerWidget {
     required this.userName,
     required this.isGuestUser,
     this.profileImageUrl,
+    this.showDebugOverrideBadge = false,
     this.currentDateTime,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final helpVideoUrl = ref.watch(appContentProvider).valueOrNull?.helpVideoUrl;
+    final helpVideoUrl =
+        ref.watch(appContentProvider).valueOrNull?.helpVideoUrl;
     final now = currentDateTime ?? DateTime.now();
     final dateText = _formatHeaderDate(now);
     final greeting = _greetingForHour(now.hour);
@@ -153,7 +156,8 @@ class HomeHeader extends ConsumerWidget {
                 builder: (_) => HelpVideoDialog(videoUrl: helpVideoUrl),
               ),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
                 decoration: BoxDecoration(
                   color: AppColors.lightGrey2,
                   borderRadius: BorderRadius.circular(20),
@@ -170,14 +174,50 @@ class HomeHeader extends ConsumerWidget {
                       size: 22,
                     ),
                     SizedBox(width: 8),
-                    Text('Need help',style: TextStyle(color: AppColors.greyText,fontSize: 14),),
-                    
-                    
+                    Text(
+                      'Need help',
+                      style: TextStyle(color: AppColors.greyText, fontSize: 14),
+                    ),
                   ],
                 ),
               ),
             ),
           ),
+          if (showDebugOverrideBadge) ...[
+            const SizedBox(height: 12),
+            Center(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF4D6),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: const Color(0xFFE0B04A),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.bug_report_outlined,
+                      color: Color(0xFF7A4E00),
+                      size: 16,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'Locked course override ON',
+                      style: TextStyle(
+                        color: Color(0xFF7A4E00),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

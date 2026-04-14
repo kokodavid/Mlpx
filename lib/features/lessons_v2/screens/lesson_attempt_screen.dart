@@ -43,7 +43,7 @@ class LessonAttemptScreen extends ConsumerStatefulWidget {
 }
 
 class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
-  late int _currentStepIndex;
+  int _currentStepIndex = 0;
   LessonStepUiState _stepUiState = const LessonStepUiState();
   LessonDefinition? _loadedLesson;
   ProviderSubscription<AsyncValue<LessonDefinition?>>? _lessonSubscription;

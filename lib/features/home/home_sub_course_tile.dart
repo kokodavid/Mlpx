@@ -6,6 +6,7 @@ class HomeSubCourseTile extends StatelessWidget {
   final int modulesCount;
   final int lessonsCount;
   final bool isEligible;
+  final bool allowLockedAccessOverride;
   final String eligibilityText;
   final String buttonText;
   final bool isCompleted;
@@ -19,6 +20,7 @@ class HomeSubCourseTile extends StatelessWidget {
     required this.modulesCount,
     required this.lessonsCount,
     this.isEligible = true,
+    this.allowLockedAccessOverride = false,
     this.eligibilityText = 'You are eligible to start this level',
     this.buttonText = 'Start Course',
     this.isCompleted = false,
@@ -30,7 +32,8 @@ class HomeSubCourseTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool hasNoLessons = !isCompleted && lessonsCount == 0;
+    final bool hasNoLessons =
+        !allowLockedAccessOverride && !isCompleted && lessonsCount == 0;
     final eligibilityColor =
         isEligible ? const Color(0xFF6AA84F) : AppColors.textColor;
     final iconBackground =
@@ -150,6 +153,23 @@ class HomeSubCourseTile extends StatelessWidget {
                   ),
                 ],
               )
+            else if (allowLockedAccessOverride && lessonsCount == 0)
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.bug_report_outlined,
+                      color: AppColors.primaryColor, size: 16),
+                  SizedBox(width: 6),
+                  Text(
+                    'Debug override enabled',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.primaryColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              )
             else
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -184,10 +204,11 @@ class HomeSubCourseTile extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: CustomButton(
-                text: hasNoLessons ? 'Locked' : buttonText,
-                onPressed: (isEligible && !hasNoLessons && onStartCourse != null)
-                    ? onStartCourse!
-                    : () {},
+                text: buttonText,
+                onPressed:
+                    (isEligible && !hasNoLessons && onStartCourse != null)
+                        ? onStartCourse!
+                        : () {},
                 isFullWidth: true,
                 isPrimary: true,
                 height: 48,

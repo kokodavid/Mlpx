@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:milpress/utils/dev_flags.dart';
 import '../../../utils/app_colors.dart';
 import '../course_widgets/course_card.dart';
 import '../course_widgets/tab_button.dart';
@@ -56,6 +57,8 @@ class _CourseScreenState extends ConsumerState<CourseScreen>
 
   @override
   Widget build(BuildContext context) {
+    const debugOverrideEnabled = DevFlags.allowLockedCourseAccess;
+
     // Watch auth state for reactivity
     final authState = ref.watch(authStateProvider);
     final user = authState.user;
@@ -113,10 +116,16 @@ class _CourseScreenState extends ConsumerState<CourseScreen>
                   try {
                     final courseProgressId = await ref.read(
                         getOrCreateCourseProgressProvider(course.id).future);
+                    if (!context.mounted) {
+                      return;
+                    }
                     context.push('/course/${course.id}', extra: {
                       'courseProgressId': courseProgressId,
                     });
                   } catch (e) {
+                    if (!context.mounted) {
+                      return;
+                    }
                     context.push('/course/${course.id}');
                   }
                 },
@@ -172,14 +181,35 @@ class _CourseScreenState extends ConsumerState<CourseScreen>
                               durationMinutes: course.durationInMinutes,
                               totalModules: courseWithDetails.totalModules,
                               totalLessons: courseWithDetails.totalLessons,
-                              eligible: false,
-                              locked: true,
+                              eligible: debugOverrideEnabled,
+                              locked: !debugOverrideEnabled,
                               isCompleted: false,
                               completedLessons: 0,
                               lessonProgressValue: 0.0,
-                              lockMessage:
-                                  'Complete Level ${course.level - 1} to unlock',
-                              onStart: null,
+                              lockMessage: debugOverrideEnabled
+                                  ? 'Debug override enabled'
+                                  : 'Complete Level ${course.level - 1} to unlock',
+                              onStart: debugOverrideEnabled
+                                  ? () async {
+                                      try {
+                                        final courseProgressId = await ref.read(
+                                            getOrCreateCourseProgressProvider(
+                                                    course.id)
+                                                .future);
+                                        if (context.mounted) {
+                                          context.push('/course/${course.id}',
+                                              extra: {
+                                                'courseProgressId':
+                                                    courseProgressId,
+                                              });
+                                        }
+                                      } catch (e) {
+                                        if (context.mounted) {
+                                          context.push('/course/${course.id}');
+                                        }
+                                      }
+                                    }
+                                  : null,
                             ),
                           ),
                         );

@@ -1,0 +1,28 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter",
+      "request": "launch",
+      "type": "dart"
+    },
+    {
+      "name": "Flutter Debug Override",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "debug",
+      "toolArgs": [
+        "--dart-define=ALLOW_LOCKED_COURSE_ACCESS=true"
+      ]
+    },
+    {
+      "name": "Flutter Run Override",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release",
+      "toolArgs": [
+        "--dart-define=ALLOW_LOCKED_COURSE_ACCESS=true"
+      ]
+    }
+  ]
+}

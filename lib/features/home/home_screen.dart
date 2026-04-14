@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
+import 'package:milpress/utils/dev_flags.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import '../../providers/auth_provider.dart';
 import '../course/providers/course_provider.dart';
@@ -73,6 +74,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    const debugOverrideEnabled = DevFlags.allowLockedCourseAccess;
     final authState = ref.watch(authStateProvider);
     final profileAsync = ref.watch(profileProvider);
     final authAsync = ref.watch(authProvider);
@@ -149,6 +151,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       loading: () => null,
                       error: (_, __) => null,
                     ),
+              showDebugOverrideBadge: debugOverrideEnabled,
             ),
             Expanded(
               child: coursesAsync.when(
@@ -219,9 +222,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     orElse: () => null,
                   );
                   final isEligible = _isEligibleCourse(
-                    selectedLevel: selectedCourse.course.level,
-                    activeLevel: activeLevel,
-                  );
+                        selectedLevel: selectedCourse.course.level,
+                        activeLevel: activeLevel,
+                      ) ||
+                      debugOverrideEnabled;
 
                   final isCourseCompleted = ref
                           .watch(
@@ -229,11 +233,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           )
                           .valueOrNull ??
                       false;
-                  final courseButtonText = !isEligible
-                      ? 'Locked'
-                      : (hasAttemptedAnyCourse
-                          ? 'Continue course'
-                          : 'Start Course');
+                  final courseButtonText = debugOverrideEnabled
+                      ? 'Open Course'
+                      : (!isEligible
+                          ? 'Locked'
+                          : (hasAttemptedAnyCourse
+                              ? 'Continue course'
+                              : 'Start Course'));
 
                   return Column(
                     children: [
@@ -250,112 +256,96 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   SizedBox(
                                     height: pageViewHeight,
                                     child: PageView.builder(
-                                            controller: _pageController,
-                                            itemCount:
-                                                sortedCourses.length + 1,
-                                            onPageChanged: (index) {
-                                              setState(() {
-                                                _selectedIndex = index;
-                                              });
-                                            },
-                                            itemBuilder: (context, index) {
-                                              if (index == 0) {
-                                                return const HomeIntroTile();
-                                              }
-                                              final courseWithDetails =
-                                                  sortedCourses[index - 1];
-                                              final course =
-                                                  courseWithDetails.course;
+                                      controller: _pageController,
+                                      itemCount: sortedCourses.length + 1,
+                                      onPageChanged: (index) {
+                                        setState(() {
+                                          _selectedIndex = index;
+                                        });
+                                      },
+                                      itemBuilder: (context, index) {
+                                        if (index == 0) {
+                                          return const HomeIntroTile();
+                                        }
+                                        final courseWithDetails =
+                                            sortedCourses[index - 1];
+                                        final course = courseWithDetails.course;
 
-                                              final completeCourse = ref
-                                                  .watch(completeCourseProvider(
-                                                    course.id,
-                                                  ))
-                                                  .valueOrNull;
-                                              final completedMap = ref
-                                                  .watch(
-                                                      completedModulesProvider(
-                                                    course.id,
-                                                  ))
-                                                  .valueOrNull;
+                                        final completeCourse = ref
+                                            .watch(completeCourseProvider(
+                                              course.id,
+                                            ))
+                                            .valueOrNull;
+                                        final completedMap = ref
+                                            .watch(completedModulesProvider(
+                                              course.id,
+                                            ))
+                                            .valueOrNull;
 
-                                              bool allLessonsComplete = false;
-                                              bool allAssessmentsComplete =
-                                                  false;
-                                              if (completeCourse != null &&
-                                                  completedMap != null) {
-                                                final lessonModules =
-                                                    completeCourse
-                                                        .modules
-                                                        .where((m) => !(m.module
-                                                                .isAssessment ||
-                                                            (m.module
-                                                                    .assessmentId
-                                                                    ?.trim()
-                                                                    .isNotEmpty ??
-                                                                false)))
-                                                        .toList();
-                                                allLessonsComplete =
-                                                    lessonModules.isNotEmpty &&
-                                                        lessonModules.every(
-                                                          (m) =>
-                                                              completedMap[m
-                                                                  .module.id] ==
-                                                              true,
-                                                        );
-
-                                                final assessmentModules =
-                                                    completeCourse.modules
-                                                        .where((m) =>
-                                                            m.module
-                                                                .isAssessment ||
-                                                            (m.module
-                                                                    .assessmentId
-                                                                    ?.trim()
-                                                                    .isNotEmpty ??
-                                                                false))
-                                                        .toList();
-                                                allAssessmentsComplete =
-                                                    assessmentModules
-                                                            .isNotEmpty &&
-                                                        assessmentModules.every(
-                                                          (m) =>
-                                                              completedMap[m
-                                                                  .module.id] ==
-                                                              true,
-                                                        );
-                                              }
-
-                                              return HomeCourseTile(
-                                                margin:
-                                                    const EdgeInsets.symmetric(
-                                                  horizontal: 6,
-                                                  vertical: 10,
-                                                ),
-                                                title: course.title,
-                                                courseLabel:
-                                                    'Course $index',
-                                                levelLabel:
-                                                    _levelLabel(course.level),
-                                                allLessonsComplete:
-                                                    allLessonsComplete,
-                                                allAssessmentsComplete:
-                                                    allAssessmentsComplete,
-                                                onTap: () =>
-                                                    _openCourse(course.id),
-                                                previewUrl:
-                                                    course.soundUrlPreview ??
-                                                        '',
-                                                previewSourceId:
-                                                    'course-preview-${course.id}',
+                                        bool allLessonsComplete = false;
+                                        bool allAssessmentsComplete = false;
+                                        if (completeCourse != null &&
+                                            completedMap != null) {
+                                          final lessonModules = completeCourse
+                                              .modules
+                                              .where((m) =>
+                                                  !(m.module.isAssessment ||
+                                                      (m.module.assessmentId
+                                                              ?.trim()
+                                                              .isNotEmpty ??
+                                                          false)))
+                                              .toList();
+                                          allLessonsComplete = lessonModules
+                                                  .isNotEmpty &&
+                                              lessonModules.every(
+                                                (m) =>
+                                                    completedMap[m.module.id] ==
+                                                    true,
                                               );
-                                            },
+
+                                          final assessmentModules =
+                                              completeCourse.modules
+                                                  .where((m) =>
+                                                      m.module.isAssessment ||
+                                                      (m.module.assessmentId
+                                                              ?.trim()
+                                                              .isNotEmpty ??
+                                                          false))
+                                                  .toList();
+                                          allAssessmentsComplete =
+                                              assessmentModules.isNotEmpty &&
+                                                  assessmentModules.every(
+                                                    (m) =>
+                                                        completedMap[
+                                                            m.module.id] ==
+                                                        true,
+                                                  );
+                                        }
+
+                                        return HomeCourseTile(
+                                          margin: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 10,
                                           ),
-                                        ),
+                                          title: course.title,
+                                          courseLabel: 'Course $index',
+                                          levelLabel: _levelLabel(course.level),
+                                          allLessonsComplete:
+                                              allLessonsComplete,
+                                          allAssessmentsComplete:
+                                              allAssessmentsComplete,
+                                          onTap: () => _openCourse(course.id),
+                                          previewUrl:
+                                              course.soundUrlPreview ?? '',
+                                          previewSourceId:
+                                              'course-preview-${course.id}',
+                                        );
+                                      },
+                                    ),
+                                  ),
                                   const SizedBox(height: 12),
                                   Padding(
-                                    padding:
-                                        const EdgeInsets.only(bottom: 14),
+                                    padding: const EdgeInsets.only(bottom: 14),
                                     child: _CoursePageIndicator(
                                       count: sortedCourses.length + 1,
                                       currentIndex: _selectedIndex,
@@ -368,30 +358,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                       ),
                       if (!isOnIntroSlide)
-                      SafeArea(
-                        top: false,
-                        minimum: const EdgeInsets.only(bottom: 8),
-                        child: HomeSubCourseTile(
-                          margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                          modulesCount: selectedCourse.totalModules,
-                          lessonsCount: selectedCourse.totalLessons,
-                          isCompleted: isCourseCompleted,
-                          isEligible: isEligible,
-                          eligibilityText: isEligible
-                              ? 'You are eligible to start this level'
-                              : 'Complete previous levels to unlock this level',
-                          buttonText: courseButtonText,
-                          onStartCourse: isEligible
-                              ? () => _openCourse(selectedCourse.course.id)
-                              : null,
-                          onReviewCourse: () => context.push(
-                            '/course/${selectedCourse.course.id}',
-                            extra: {'isCompletedCourse': true},
+                        SafeArea(
+                          top: false,
+                          minimum: const EdgeInsets.only(bottom: 8),
+                          child: HomeSubCourseTile(
+                            margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                            modulesCount: selectedCourse.totalModules,
+                            lessonsCount: selectedCourse.totalLessons,
+                            isCompleted: isCourseCompleted,
+                            isEligible: isEligible,
+                            allowLockedAccessOverride: debugOverrideEnabled,
+                            eligibilityText: debugOverrideEnabled
+                                ? 'Debug override enabled for locked courses'
+                                : (isEligible
+                                    ? 'You are eligible to start this level'
+                                    : 'Complete previous levels to unlock this level'),
+                            buttonText: courseButtonText,
+                            onStartCourse: isEligible
+                                ? () => _openCourse(selectedCourse.course.id)
+                                : null,
+                            onReviewCourse: () => context.push(
+                              '/course/${selectedCourse.course.id}',
+                              extra: {'isCompletedCourse': true},
+                            ),
+                            onRestartCourse: () =>
+                                _openCourse(selectedCourse.course.id),
                           ),
-                          onRestartCourse: () =>
-                              _openCourse(selectedCourse.course.id),
                         ),
-                      ),
                     ],
                   );
                 },
