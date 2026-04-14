@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milpress/features/lessons_v2/services/lesson_audio_controller.dart';
@@ -43,7 +44,7 @@ class LessonAttemptScreen extends ConsumerStatefulWidget {
 }
 
 class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
-  late int _currentStepIndex;
+  int _currentStepIndex = 0;
   LessonStepUiState _stepUiState = const LessonStepUiState();
   LessonDefinition? _loadedLesson;
   ProviderSubscription<AsyncValue<LessonDefinition?>>? _lessonSubscription;
@@ -55,6 +56,24 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
 
   LessonStepDefinition get _currentStep =>
       _lessonDefinition.steps[_currentStepIndex];
+
+  LessonDefinition _withDebugPreviewSteps(LessonDefinition lesson) {
+    if (!kDebugMode || lesson.steps.isNotEmpty) {
+      return lesson;
+    }
+    return LessonDefinition.debugCourse2Lesson1Preview(
+      id: lesson.id,
+      moduleId: lesson.moduleId,
+      title: lesson.title.isEmpty ? 'Lesson Preview' : lesson.title,
+    );
+  }
+
+  int _resolvedInitialStepIndex(LessonDefinition lesson) {
+    if (lesson.steps.isEmpty) {
+      return 0;
+    }
+    return widget.initialStepIndex.clamp(0, lesson.steps.length - 1);
+  }
 
   @override
   void initState() {
@@ -75,15 +94,13 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
             if (!mounted || lesson == null) {
               return;
             }
+            final resolvedLesson = _withDebugPreviewSteps(lesson);
             if (_loadedLesson?.id == lesson.id) {
               return;
             }
             setState(() {
-              _loadedLesson = lesson;
-              _currentStepIndex = widget.initialStepIndex.clamp(
-                0,
-                lesson.steps.length - 1,
-              );
+              _loadedLesson = resolvedLesson;
+              _currentStepIndex = _resolvedInitialStepIndex(resolvedLesson);
             });
           });
         },
@@ -265,22 +282,46 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
             if (lesson == null) {
               return const Center(child: Text('Lesson not found'));
             }
+            final resolvedLesson = _withDebugPreviewSteps(lesson);
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!mounted || _loadedLesson?.id == lesson.id) {
                 return;
               }
               setState(() {
-                _loadedLesson = lesson;
-                _currentStepIndex = widget.initialStepIndex.clamp(
-                  0,
-                  lesson.steps.length - 1,
-                );
+                _loadedLesson = resolvedLesson;
+                _currentStepIndex = _resolvedInitialStepIndex(resolvedLesson);
               });
             });
             return const Center(child: CircularProgressIndicator());
           },
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (_, __) => const Center(child: Text('Error loading lesson')),
+        ),
+      );
+    }
+
+    if (_lessonDefinition.steps.isEmpty) {
+      return Scaffold(
+        backgroundColor: AppColors.backgroundColor,
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: AppColors.backgroundColor,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () => context.pop(),
+          ),
+          centerTitle: true,
+          title: Text(
+            _lessonDefinition.title.isEmpty ? 'Lesson' : _lessonDefinition.title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
+          ),
+        ),
+        body: const Center(
+          child: Text('This lesson has no steps yet'),
         ),
       );
     }

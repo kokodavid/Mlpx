@@ -11,6 +11,21 @@ enum LessonStepType {
   demonstration,
   practice,
   assessment,
+  blending,
+  intro,
+  soundPronunciation,
+  exampleWords,
+  soundExplanation,
+  soundDiscrimination,
+  soundItemMatching,
+  soundLetterMatch,
+  guidedReading,
+  guidedWordReading,
+  quickPick,
+  soundCheck,
+  soundPresenceCheck,
+  practiceGame,
+  quickCheck,
 }
 
 class LessonStepDefinition {
@@ -39,7 +54,7 @@ class LessonStepDefinition {
     return {
       'lesson_id': lessonId,
       'step_key': key,
-      'step_type': type.name,
+      'step_type': _lessonStepTypeToString(type),
       'position': position,
       'required': required,
       'config': config,
@@ -154,6 +169,161 @@ class LessonDefinition {
       ],
     );
   }
+
+  factory LessonDefinition.debugCourse2Lesson1Preview({
+    String id = 'debug-course-2-lesson-1',
+    String moduleId = '',
+    String title = 'Course 2 Lesson 1 Preview',
+  }) {
+    return LessonDefinition(
+      id: id,
+      moduleId: moduleId,
+      lessonType: LessonType.word,
+      title: title,
+      progressLabel: 'Word Progress',
+      steps: const [
+        LessonStepDefinition(
+          key: 'sound-pronunciation',
+          type: LessonStepType.soundPronunciation,
+          config: {
+            'display_text': 'Aa',
+            'phoneme_display': 'a',
+            'phoneme_label': '/a/ as in "apple"',
+            'how_to_title': 'How to make this sound',
+            'practice_tip': {
+              'text':
+                  'Focus on the short a sound. Open your mouth and say it clearly.',
+              'audio_url': '',
+            },
+            'audio': {
+              'base_url': '',
+              'speed_variants': {
+                '0.5x': '',
+                '1x': '',
+                '1.5x': '',
+              },
+            },
+          },
+        ),
+        LessonStepDefinition(
+          key: 'example-words',
+          type: LessonStepType.exampleWords,
+          config: {
+            'phoneme': '/a/',
+            'practice_tip': {
+              'text':
+                  'Say each word and notice where you hear the short a sound.',
+              'audio_url': '',
+            },
+            'prompt_text': 'Your turn: say /a/',
+            'helper_text': 'Tap to start recording.\nSay /a/ out loud.',
+            'words': [
+              {'label': 'apple', 'image_url': '', 'audio_url': ''},
+              {'label': 'cat', 'image_url': '', 'audio_url': ''},
+              {'label': 'map', 'image_url': '', 'audio_url': ''},
+              {'label': 'bag', 'image_url': '', 'audio_url': ''},
+            ],
+          },
+        ),
+        LessonStepDefinition(
+          key: 'sound-discrimination',
+          type: LessonStepType.soundDiscrimination,
+          config: {
+            'target_sound': 'a',
+            'reference_word': 'apple',
+            'tip_text': 'Listen carefully for the /a/ sound.',
+            'items': [
+              {
+                'word': 'cat',
+                'title_audio_url': '',
+                'image_url': '',
+                'contains_target_sound': true,
+              },
+            ],
+          },
+        ),
+        LessonStepDefinition(
+          key: 'sound-match',
+          type: LessonStepType.soundItemMatching,
+          config: {
+            'activities': [
+              {
+                'tip_text': 'Tap the word that matches the sound you hear.',
+                'content_audio_url': '',
+                'options': [
+                  {'label': 'cat', 'is_correct': true},
+                  {'label': 'pen', 'is_correct': false},
+                  {'label': 'bus', 'is_correct': false},
+                ],
+              },
+            ],
+          },
+        ),
+        LessonStepDefinition(
+          key: 'guided-reading',
+          type: LessonStepType.guidedReading,
+          config: {
+            'instruction_text': 'Listen to each sound, then read the word.',
+            'activities': [
+              {
+                'word_text': 'cat',
+                'word_audio_url': '',
+                'segments': [
+                  {
+                    'phoneme_label': '/k/',
+                    'grapheme': 'c',
+                    'audio_url': '',
+                    'is_focus': false,
+                  },
+                  {
+                    'phoneme_label': '/a/',
+                    'grapheme': 'a',
+                    'audio_url': '',
+                    'is_focus': true,
+                  },
+                  {
+                    'phoneme_label': '/t/',
+                    'grapheme': 't',
+                    'audio_url': '',
+                    'is_focus': false,
+                  },
+                ],
+              },
+            ],
+            'target_sound': 'a',
+          },
+        ),
+        LessonStepDefinition(
+          key: 'quick-pick',
+          type: LessonStepType.quickPick,
+          config: {
+            'title': 'Quick Pick: /a/ Words',
+            'instruction_text': 'Tap all the words that have the /a/ sound.',
+            'duration_seconds': 30,
+            'options': [
+              {'title': 'apple', 'image_url': '', 'audio_url': '', 'is_correct': true},
+              {'title': 'cat', 'image_url': '', 'audio_url': '', 'is_correct': true},
+              {'title': 'bus', 'image_url': '', 'audio_url': '', 'is_correct': false},
+              {'title': 'pen', 'image_url': '', 'audio_url': '', 'is_correct': false},
+            ],
+          },
+        ),
+        LessonStepDefinition(
+          key: 'sound-check',
+          type: LessonStepType.soundPresenceCheck,
+          config: {
+            'questions': [
+              {
+                'prompt': 'Does "apple" have the /a/ sound?',
+                'word_audio_url': '',
+                'correct_answer': true,
+              },
+            ],
+          },
+        ),
+      ],
+    );
+  }
 }
 
 class LessonStepUiState {
@@ -186,6 +356,38 @@ LessonType _lessonTypeFromString(String? value) {
 
 LessonStepType _lessonStepTypeFromString(String? value) {
   switch (value) {
+    case 'intro':
+      return LessonStepType.intro;
+    case 'sound_pronunciation':
+      return LessonStepType.soundPronunciation;
+    case 'example_words':
+      return LessonStepType.exampleWords;
+    case 'sound_explanation':
+      return LessonStepType.soundExplanation;
+    case 'blending':
+      return LessonStepType.blending;
+    case 'sound_discrimination':
+      return LessonStepType.soundDiscrimination;
+    case 'sound_item_matching':
+      return LessonStepType.soundItemMatching;
+    case 'sound_letter_match':
+      return LessonStepType.soundLetterMatch;
+    case 'guided_reading':
+      return LessonStepType.guidedReading;
+    case 'guided reading':
+      return LessonStepType.guidedReading;
+    case 'guided_word_reading':
+      return LessonStepType.guidedWordReading;
+    case 'quick_pick':
+      return LessonStepType.quickPick;
+    case 'sound_check':
+      return LessonStepType.soundCheck;
+    case 'sound_presence_check':
+      return LessonStepType.soundPresenceCheck;
+    case 'practice_game':
+      return LessonStepType.practiceGame;
+    case 'quick_check':
+      return LessonStepType.quickCheck;
     case 'demonstration':
       return LessonStepType.demonstration;
     case 'practice':
@@ -195,5 +397,48 @@ LessonStepType _lessonStepTypeFromString(String? value) {
     case 'introduction':
     default:
       return LessonStepType.introduction;
+  }
+}
+
+String _lessonStepTypeToString(LessonStepType value) {
+  switch (value) {
+    case LessonStepType.intro:
+      return 'intro';
+    case LessonStepType.soundPronunciation:
+      return 'sound_pronunciation';
+    case LessonStepType.exampleWords:
+      return 'example_words';
+    case LessonStepType.soundExplanation:
+      return 'sound_explanation';
+    case LessonStepType.blending:
+      return 'blending';
+    case LessonStepType.soundDiscrimination:
+      return 'sound_discrimination';
+    case LessonStepType.soundItemMatching:
+      return 'sound_item_matching';
+    case LessonStepType.soundLetterMatch:
+      return 'sound_letter_match';
+    case LessonStepType.guidedReading:
+      return 'guided_reading';
+    case LessonStepType.guidedWordReading:
+      return 'guided_word_reading';
+    case LessonStepType.quickPick:
+      return 'quick_pick';
+    case LessonStepType.soundCheck:
+      return 'sound_check';
+    case LessonStepType.soundPresenceCheck:
+      return 'sound_presence_check';
+    case LessonStepType.practiceGame:
+      return 'practice_game';
+    case LessonStepType.quickCheck:
+      return 'quick_check';
+    case LessonStepType.demonstration:
+      return 'demonstration';
+    case LessonStepType.practice:
+      return 'practice';
+    case LessonStepType.assessment:
+      return 'assessment';
+    case LessonStepType.introduction:
+      return 'introduction';
   }
 }
