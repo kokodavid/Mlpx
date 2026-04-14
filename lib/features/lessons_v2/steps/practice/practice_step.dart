@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_audio_buttons.dart';
 import 'package:milpress/utils/app_colors.dart';
-import '../models/lesson_models.dart';
-import '../widgets/lesson_audio_tip_banner.dart';
+import '../../models/lesson_models.dart';
+import '../../widgets/lesson_audio_tip_banner.dart';
 
 class PracticeStep extends StatefulWidget {
   final LessonStepDefinition step;
@@ -116,18 +116,18 @@ class _ExampleCard extends StatelessWidget {
               child: Container(
                 child: imageUrl.isEmpty
                     ? const Center(
-                  child: Icon(
-                    Icons.image_outlined,
-                    size: 32,
-                    color: AppColors.textColor,
-                  ),
-                )
+                        child: Icon(
+                          Icons.image_outlined,
+                          size: 32,
+                          color: AppColors.textColor,
+                        ),
+                      )
                     : Image.network(
-                  imageUrl,
-                  width: 120,
-                  height: 80,
-                  fit: BoxFit.cover,
-                ),
+                        imageUrl,
+                        width: 120,
+                        height: 80,
+                        fit: BoxFit.cover,
+                      ),
               ),
             ),
           ),

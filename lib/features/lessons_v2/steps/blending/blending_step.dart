@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/lesson_models.dart';
+import '../../models/lesson_models.dart';
 
 class BlendingStep extends StatefulWidget {
   final LessonStepDefinition step;

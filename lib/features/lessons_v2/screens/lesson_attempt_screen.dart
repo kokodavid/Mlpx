@@ -28,12 +28,12 @@ class LessonAttemptScreen extends ConsumerStatefulWidget {
     this.initialStepIndex = 0,
     this.onFinish,
     this.isReattempt = false,
-  }) : assert(
+  })  : assert(
           lessonDefinition != null || lessonId != null,
           'Provide either lessonDefinition or lessonId.',
         ),
         assert(
-          lessonDefinition == null || lessonDefinition.steps.length > 0,
+          lessonDefinition == null || lessonDefinition.steps.isNotEmpty,
           'LessonDefinition must include at least one step.',
         );
 
@@ -340,6 +340,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
     final primaryLabel =
         _stepUiState.primaryLabel ?? _defaultPrimaryLabel(_currentStep);
     final showBack = _stepUiState.showBack ?? true;
+    final showBottomActionBar = _stepUiState.showBottomActionBar ?? true;
     final primaryIcon = _resolvePrimaryIcon(primaryLabel);
     final primaryColor =
         primaryLabel == 'Finish' ? AppColors.correctAnswerColor : null;
@@ -373,6 +374,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
         primaryIcon: primaryIcon,
         primaryColor: primaryColor,
         showBack: showBack,
+        showBottomActionBar: showBottomActionBar,
       ),
     );
   }
@@ -384,6 +386,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
     required IconData? primaryIcon,
     required Color? primaryColor,
     required bool showBack,
+    required bool showBottomActionBar,
   }) {
     return SafeArea(
       child: Column(
@@ -395,7 +398,6 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
               percent: _progressPercent,
             ),
           ),
-
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 250),
@@ -408,30 +410,36 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
                   lessonId: _lessonDefinition.id,
                   onStepStateChanged: _onStepStateChanged,
                   isLastStep: _isLastStep,
+                  onAdvanceRequested: _handleAdvanceRequested,
                 ),
               ),
             ),
           ),
-          LessonBottomActionBar(
-            canGoBack: showBack && _currentStepIndex > 0,
-            isPrimaryEnabled: isPrimaryEnabled,
-            primaryLabel: primaryLabel,
-            primaryIcon: primaryIcon,
-            primaryColor: primaryColor,
-            onPrimaryPressed: () async {
-              if (_stepUiState.onPrimaryPressed != null) {
-                _stepUiState.onPrimaryPressed!.call();
-                return;
-              }
-              if (canAdvance) {
-                await _goForward();
-              }
-            },
-            onBackPressed: _goBack,
-          ),
+          if (showBottomActionBar)
+            LessonBottomActionBar(
+              canGoBack: showBack && _currentStepIndex > 0,
+              isPrimaryEnabled: isPrimaryEnabled,
+              primaryLabel: primaryLabel,
+              primaryIcon: primaryIcon,
+              primaryColor: primaryColor,
+              onPrimaryPressed: () async {
+                if (_stepUiState.onPrimaryPressed != null) {
+                  _stepUiState.onPrimaryPressed!.call();
+                  return;
+                }
+                if (canAdvance) {
+                  await _goForward();
+                }
+              },
+              onBackPressed: _goBack,
+            ),
         ],
       ),
     );
+  }
+
+  void _handleAdvanceRequested() {
+    _goForward();
   }
 
   IconData? _resolvePrimaryIcon(String label) {
@@ -511,8 +519,8 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text(
-                              'Unable to bookmark: Missing course info'),
+                          content:
+                              Text('Unable to bookmark: Missing course info'),
                           backgroundColor: Colors.red,
                         ),
                       );

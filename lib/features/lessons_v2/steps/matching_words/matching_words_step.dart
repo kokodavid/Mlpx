@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
-import '../models/lesson_models.dart';
+import '../../models/lesson_models.dart';
 
-class SoundItemMatchingStep extends StatefulWidget {
+class MatchingWordsStep extends StatefulWidget {
   final LessonStepDefinition step;
   final ValueChanged<LessonStepUiState> onStepStateChanged;
 
-  const SoundItemMatchingStep({
+  const MatchingWordsStep({
     super.key,
     required this.step,
     required this.onStepStateChanged,
   });
 
   @override
-  State<SoundItemMatchingStep> createState() => _SoundItemMatchingStepState();
+  State<MatchingWordsStep> createState() => _MatchingWordsStepState();
 }
 
-class _SoundItemMatchingStepState extends State<SoundItemMatchingStep> {
+class _MatchingWordsStepState extends State<MatchingWordsStep> {
   @override
   void initState() {
     super.initState();
@@ -26,15 +26,14 @@ class _SoundItemMatchingStepState extends State<SoundItemMatchingStep> {
 
   @override
   Widget build(BuildContext context) {
-    final title =
-        widget.step.config['title'] as String? ?? 'Sound Item Matching';
+    final title = widget.step.config['title'] as String? ?? 'Matching Words';
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(title, style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 16),
-          const Text('Sound item matching activity — coming soon'),
+          const Text('Matching words activity — coming soon'),
         ],
       ),
     );

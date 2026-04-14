@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
-import '../models/lesson_models.dart';
+import '../../models/lesson_models.dart';
 
-class SentenceReadingStep extends StatefulWidget {
+class MiniStoryCardStep extends StatefulWidget {
   final LessonStepDefinition step;
   final ValueChanged<LessonStepUiState> onStepStateChanged;
 
-  const SentenceReadingStep({
+  const MiniStoryCardStep({
     super.key,
     required this.step,
     required this.onStepStateChanged,
   });
 
   @override
-  State<SentenceReadingStep> createState() => _SentenceReadingStepState();
+  State<MiniStoryCardStep> createState() => _MiniStoryCardStepState();
 }
 
-class _SentenceReadingStepState extends State<SentenceReadingStep> {
+class _MiniStoryCardStepState extends State<MiniStoryCardStep> {
   @override
   void initState() {
     super.initState();
@@ -26,15 +26,14 @@ class _SentenceReadingStepState extends State<SentenceReadingStep> {
 
   @override
   Widget build(BuildContext context) {
-    final title =
-        widget.step.config['title'] as String? ?? 'Sentence Reading';
+    final title = widget.step.config['title'] as String? ?? 'Mini Story Card';
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(title, style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 16),
-          const Text('Sentence reading activity — coming soon'),
+          const Text('Mini story card activity — coming soon'),
         ],
       ),
     );

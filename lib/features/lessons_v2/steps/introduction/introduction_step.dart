@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_audio_buttons.dart';
 import 'package:milpress/utils/app_colors.dart';
-import '../models/lesson_models.dart';
-import '../widgets/lesson_audio_tip_banner.dart';
+import '../../models/lesson_models.dart';
+import '../../widgets/lesson_audio_tip_banner.dart';
 
 class IntroductionStep extends StatefulWidget {
   final LessonStepDefinition step;
@@ -46,8 +46,7 @@ class _IntroductionStepState extends State<IntroductionStep> {
     final practiceTipText = practiceTipMap['text'] as String? ??
         'Practice: Say the sound out loud.';
     final practiceTipAudioUrl = practiceTipMap['audio_url'] as String? ?? '';
-    final howToSvgUrl =
-        widget.step.config['how_to_svg_url'] as String? ?? '';
+    final howToSvgUrl = widget.step.config['how_to_svg_url'] as String? ?? '';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
@@ -117,7 +116,6 @@ class _IntroductionStepState extends State<IntroductionStep> {
                     ),
                   ),
                 ),
-
               ],
             ),
           ),
@@ -127,7 +125,6 @@ class _IntroductionStepState extends State<IntroductionStep> {
             url: practiceTipAudioUrl,
             label: practiceTipText,
           ),
-
         ],
       ),
     );

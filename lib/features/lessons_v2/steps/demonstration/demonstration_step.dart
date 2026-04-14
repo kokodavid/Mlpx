@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:milpress/utils/app_colors.dart';
-import '../models/lesson_models.dart';
-import '../widgets/tracing_canvas.dart';
+import '../../models/lesson_models.dart';
+import '../../widgets/tracing_canvas.dart';
 
 class DemonstrationStep extends StatefulWidget {
   final LessonStepDefinition step;
@@ -20,8 +20,7 @@ class DemonstrationStep extends StatefulWidget {
 
 class _DemonstrationStepState extends State<DemonstrationStep> {
   int _selectedIndex = 0;
-  final TracingCanvasController _tracingController =
-      TracingCanvasController();
+  final TracingCanvasController _tracingController = TracingCanvasController();
 
   @override
   void initState() {
@@ -38,10 +37,9 @@ class _DemonstrationStepState extends State<DemonstrationStep> {
         widget.step.config['feedbackTitle'] as String? ?? 'Nice work!';
     final feedbackBody = widget.step.config['feedbackBody'] as String? ??
         'You are forming the letter well.';
-    final imageUrls =
-        (widget.step.config['image_urls'] as List<dynamic>? ?? [])
-            .map((url) => url.toString())
-            .toList();
+    final imageUrls = (widget.step.config['image_urls'] as List<dynamic>? ?? [])
+        .map((url) => url.toString())
+        .toList();
 
     return SingleChildScrollView(
       child: Padding(
@@ -64,8 +62,7 @@ class _DemonstrationStepState extends State<DemonstrationStep> {
                       url: imageUrls[i],
                     ),
                   ),
-                  if (i != imageUrls.length - 1)
-                    const SizedBox(width: 15),
+                  if (i != imageUrls.length - 1) const SizedBox(width: 15),
                 ],
               ],
             ),
@@ -107,8 +104,8 @@ class _DemonstrationStepState extends State<DemonstrationStep> {
                         'assets/eraser.svg',
                         width: 20,
                         height: 20,
-                        colorFilter:
-                            const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                        colorFilter: const ColorFilter.mode(
+                            Colors.white, BlendMode.srcIn),
                       ),
                     ),
                   ),
@@ -190,8 +187,7 @@ class _SvgTab extends StatelessWidget {
       ),
       alignment: Alignment.center,
       child: url.isEmpty
-          ? const Icon(Icons.image_not_supported,
-              color: AppColors.textColor)
+          ? const Icon(Icons.image_not_supported, color: AppColors.textColor)
           : ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: isSvg
@@ -218,7 +214,10 @@ class _SvgTab extends StatelessWidget {
                         return const SizedBox(
                           width: 24,
                           height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2,color: AppColors.copBlue,),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.copBlue,
+                          ),
                         );
                       },
                     ),
@@ -226,4 +225,3 @@ class _SvgTab extends StatelessWidget {
     );
   }
 }
-

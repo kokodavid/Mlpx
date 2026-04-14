@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milpress/utils/app_colors.dart';
-import '../models/lesson_models.dart';
-import '../widgets/lesson_audio_buttons.dart';
+import '../../models/lesson_models.dart';
+import '../../widgets/lesson_audio_buttons.dart';
 
 class AssessmentStep extends ConsumerStatefulWidget {
   final LessonStepDefinition step;
@@ -351,7 +351,6 @@ class _AssessmentOption extends StatelessWidget {
             Expanded(
               child: Container(
                 width: 90,
-               
                 alignment: Alignment.center,
                 child: imageUrl.isEmpty
                     ? const Icon(

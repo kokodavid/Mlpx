@@ -116,7 +116,8 @@ class LessonDefinition {
             'title': 'Sound Pronunciation',
             'display_text': 'Aa',
             'practice_tip': {
-              'text': 'Practice: Watch your mouth in a mirror while making this sound. Try saying "apple" slowly – notice how your mouth opens wide for the "a" sound.',
+              'text':
+                  'Practice: Watch your mouth in a mirror while making this sound. Try saying "apple" slowly – notice how your mouth opens wide for the "a" sound.',
               'audio_url': '',
             },
           },
@@ -173,6 +174,7 @@ class LessonStepUiState {
   final String? primaryLabel;
   final VoidCallback? onPrimaryPressed;
   final bool? showBack;
+  final bool? showBottomActionBar;
 
   const LessonStepUiState({
     this.canAdvance,
@@ -180,6 +182,7 @@ class LessonStepUiState {
     this.primaryLabel,
     this.onPrimaryPressed,
     this.showBack,
+    this.showBottomActionBar,
   });
 }
 
