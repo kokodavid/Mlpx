@@ -285,6 +285,52 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
       );
     }
 
+    if (_lessonDefinition.steps.isEmpty) {
+      return Scaffold(
+        backgroundColor: AppColors.backgroundColor,
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: AppColors.backgroundColor,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () => context.pop(),
+          ),
+          centerTitle: true,
+          title: Text(
+            _lessonDefinition.title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
+          ),
+        ),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.hourglass_empty, size: 64, color: Colors.grey),
+              SizedBox(height: 16),
+              Text(
+                'No steps yet',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'This lesson has no content yet.\nCheck back soon!',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 15, color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final canAdvance =
         _stepUiState.canAdvance ?? _defaultCanAdvance(_currentStep);
     final isPrimaryEnabled = _isFinishing
