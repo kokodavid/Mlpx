@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:milpress/features/lessons_v2/widgets/lesson_step_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../../models/lesson_models.dart';
 import '../../widgets/lesson_audio_buttons.dart';
 import 'model.dart';
-
-
 
 class _RuntimeSlot {
   final AnswerSlotDefinition definition;
@@ -15,8 +14,6 @@ class _RuntimeSlot {
 
   bool get isFilled => filledValue != null;
 }
-
-
 
 class MissingLettersStep extends StatefulWidget {
   final LessonStepDefinition step;
@@ -41,8 +38,6 @@ class _MissingLettersStepState extends State<MissingLettersStep> {
   final Set<int> _usedOptionIndices = {};
   _CheckResult _result = _CheckResult.none;
 
-  
-
   MissingLettersActivity get _activity => _config
       .activities[_activityIndex.clamp(0, _config.activities.length - 1)];
 
@@ -59,8 +54,6 @@ class _MissingLettersStepState extends State<MissingLettersStep> {
 
   bool get _isAnswerCorrect =>
       _slots.every((s) => s.filledValue == s.definition.value);
-
-  
 
   @override
   void initState() {
@@ -87,7 +80,6 @@ class _MissingLettersStepState extends State<MissingLettersStep> {
     _options = List<String>.from(_activity.options);
   }
 
-  // ── Interaction handlers ──────────────────────────────────────────────────
 
   void _handleOptionTap(int optionIndex) {
     if (_result != _CheckResult.none) return;
@@ -145,9 +137,12 @@ class _MissingLettersStepState extends State<MissingLettersStep> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _Header(
+                LessonStepProgressHeader(
                   current: _activityIndex + 1,
                   total: _config.activities.length,
+                  itemLabel: 'Word',
+                  barHeight: 6,
+                  barBackgroundColor: const Color(0xFFFFF0E9),
                 ),
                 const SizedBox(height: 16),
                 _InstructionSection(
@@ -159,13 +154,7 @@ class _MissingLettersStepState extends State<MissingLettersStep> {
                 const SizedBox(height: 16),
                 _SlotRow(slots: _slots, result: _result),
                 const SizedBox(height: 12),
-                const Center(
-                  child: Icon(
-                    Icons.keyboard_double_arrow_down_rounded,
-                    color: AppColors.textColor,
-                    size: 22,
-                  ),
-                ),
+                const LessonStepChevronDown(),
                 const SizedBox(height: 10),
                 const Center(
                   child: Text(
@@ -217,7 +206,7 @@ class _MissingLettersStepState extends State<MissingLettersStep> {
         );
 
       case _CheckResult.incorrect:
-        return _FeedbackBar(
+        return LessonFeedbackBar(
           isCorrect: false,
           message: 'That\'s not quite right. Try again!',
           actionLabel: 'Try Again',
@@ -225,52 +214,13 @@ class _MissingLettersStepState extends State<MissingLettersStep> {
         );
 
       case _CheckResult.correct:
-        return _FeedbackBar(
+        return LessonFeedbackBar(
           isCorrect: true,
           message: '"${_activity.targetWord}" — Well done!',
           actionLabel: _isLastActivity ? 'Finish' : 'Continue',
           onActionPressed: _handleContinue,
         );
     }
-  }
-}
-
-class _Header extends StatelessWidget {
-  final int current;
-  final int total;
-
-  const _Header({required this.current, required this.total});
-
-  @override
-  Widget build(BuildContext context) {
-    final safeTotal = total <= 0 ? 1 : total;
-    final safeCurrent = current.clamp(1, safeTotal);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Word $safeCurrent of $safeTotal',
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppColors.textColor,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: LinearProgressIndicator(
-            value: safeCurrent / safeTotal,
-            minHeight: 6,
-            backgroundColor: const Color(0xFFFFF0E9),
-            valueColor: const AlwaysStoppedAnimation<Color>(
-              AppColors.primaryColor,
-            ),
-          ),
-        ),
-      ],
-    );
   }
 }
 
@@ -331,8 +281,6 @@ class _InstructionSection extends StatelessWidget {
   }
 }
 
-
-
 class _SlotRow extends StatelessWidget {
   final List<_RuntimeSlot> slots;
   final _CheckResult result;
@@ -363,7 +311,6 @@ class _SlotTile extends StatelessWidget {
   Widget build(BuildContext context) {
     const double size = 52;
 
-    // Given letter — always solid orange.
     if (slot.definition.isGiven) {
       return Container(
         width: size,
@@ -384,7 +331,6 @@ class _SlotTile extends StatelessWidget {
       );
     }
 
-    // Missing slot — colours driven by fill + result state.
     final filled = slot.isFilled;
 
     final Color borderColor;
@@ -434,7 +380,6 @@ class _SlotTile extends StatelessWidget {
     );
   }
 }
-
 
 
 class _OptionGrid extends StatelessWidget {
@@ -521,70 +466,5 @@ class _OptionButton extends StatelessWidget {
     );
   }
 }
-
-
-class _FeedbackBar extends StatelessWidget {
-  final bool isCorrect;
-  final String message;
-  final String actionLabel;
-  final VoidCallback onActionPressed;
-
-  const _FeedbackBar({
-    required this.isCorrect,
-    required this.message,
-    required this.actionLabel,
-    required this.onActionPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final borderColor =
-        isCorrect ? AppColors.successColor : AppColors.errorColor;
-    final backgroundColor =
-        isCorrect ? const Color(0xFFF2F8EE) : const Color(0xFFFFF1F0);
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            isCorrect ? Icons.check_rounded : Icons.close_rounded,
-            color: borderColor,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              message,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: borderColor,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          ElevatedButton(
-            onPressed: onActionPressed,
-            style: ElevatedButton.styleFrom(
-              elevation: 0,
-              backgroundColor: borderColor,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            child: Text(actionLabel),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 
 enum _CheckResult { none, correct, incorrect }

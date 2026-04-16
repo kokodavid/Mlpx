@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:milpress/features/lessons_v2/widgets/lesson_step_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../../models/lesson_models.dart';
-import '../../widgets/lesson_audio_buttons.dart';
 import 'model.dart';
-
-
 
 class SentenceReadingStep extends StatefulWidget {
   final LessonStepDefinition step;
@@ -26,14 +24,10 @@ class _SentenceReadingStepState extends State<SentenceReadingStep> {
   int _itemIndex = 0;
   bool _selfReadEnabled = false;
 
-  
-
   SentenceReadingItem get _item =>
       _config.items[_itemIndex.clamp(0, _config.items.length - 1)];
 
   bool get _isLastItem => _itemIndex >= _config.items.length - 1;
-
- 
 
   @override
   void initState() {
@@ -52,8 +46,6 @@ class _SentenceReadingStepState extends State<SentenceReadingStep> {
     );
   }
 
- 
-
   void _handleSelfReadToggle(bool value) {
     setState(() => _selfReadEnabled = value);
   }
@@ -70,8 +62,6 @@ class _SentenceReadingStepState extends State<SentenceReadingStep> {
     _publishUiState();
   }
 
- 
-
   @override
   Widget build(BuildContext context) {
     if (_config.items.isEmpty) {
@@ -85,61 +75,52 @@ class _SentenceReadingStepState extends State<SentenceReadingStep> {
         return Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-            child: Container(
-              constraints: BoxConstraints(
-                maxWidth: 400,
-                minHeight: constraints.maxHeight - 48,
-              ),
+            child: LessonStepCard(
+              elevation: 0,
+              borderRadius: 24,
               padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 20,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _Header(
-                    current: _itemIndex + 1,
-                    total: _config.items.length,
-                  ),
-                  const SizedBox(height: 24),
-                  _InstructionSection(
-                    stepKey: widget.step.key,
-                    title: _config.title,
-                    instructionAudioUrl: _config.instructionAudioUrl,
-                  ),
-                  const SizedBox(height: 24),
-                  _TokenRow(tokens: item.displayTokens),
-                  const SizedBox(height: 20),
-                  _SentenceAudioSection(
-                    stepKey: widget.step.key,
-                    itemIndex: _itemIndex,
-                    item: item,
-                    selfReadEnabled: _selfReadEnabled,
-                    onSelfReadToggle: _handleSelfReadToggle,
-                  ),
-                  const SizedBox(height: 16),
-                  const Center(
-                    child: Icon(
-                      Icons.keyboard_double_arrow_down_rounded,
-                      color: AppColors.textColor,
-                      size: 26,
+              border: Border.all(color: Colors.transparent),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: 400,
+                  minHeight: constraints.maxHeight - 48,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    LessonStepProgressHeader(
+                      current: _itemIndex + 1,
+                      total: _config.items.length,
+                      itemLabel: 'Sentence',
+                      barColor: AppColors.copBlue,
+                      barBackgroundColor: const Color(0xFFF3E8DD),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  _NextWordButton(
-                    label: _isLastItem ? 'Finish' : 'Next Word',
-                    onPressed: _handleNextWord,
-                  ),
-                ],
+                    const SizedBox(height: 24),
+                    LessonStepInstructionSection(
+                      stepKey: widget.step.key,
+                      title: _config.title,
+                      audioUrl: _config.instructionAudioUrl,
+                    ),
+                    const SizedBox(height: 24),
+                    _TokenRow(tokens: item.displayTokens),
+                    const SizedBox(height: 20),
+                    _SentenceAudioSection(
+                      stepKey: widget.step.key,
+                      itemIndex: _itemIndex,
+                      item: item,
+                      selfReadEnabled: _selfReadEnabled,
+                      onSelfReadToggle: _handleSelfReadToggle,
+                    ),
+                    const SizedBox(height: 16),
+                    const LessonStepChevronDown(),
+                    const SizedBox(height: 16),
+                    LessonStepNextButton(
+                      label: _isLastItem ? 'Finish' : 'Next Word',
+                      onPressed: _handleNextWord,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -148,98 +129,6 @@ class _SentenceReadingStepState extends State<SentenceReadingStep> {
     );
   }
 }
-
-
-
-class _Header extends StatelessWidget {
-  final int current;
-  final int total;
-
-  const _Header({required this.current, required this.total});
-
-  @override
-  Widget build(BuildContext context) {
-    final safeTotal = total <= 0 ? 1 : total;
-    final safeCurrent = current.clamp(1, safeTotal);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Sentence $safeCurrent of $safeTotal',
-          style: const TextStyle(
-            fontSize: 14,
-            color: AppColors.textColor,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 10),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: LinearProgressIndicator(
-            value: safeCurrent / safeTotal,
-            minHeight: 8,
-            backgroundColor: const Color(0xFFF3E8DD),
-            valueColor:
-                const AlwaysStoppedAnimation<Color>(AppColors.copBlue),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-
-
-class _InstructionSection extends StatelessWidget {
-  final String stepKey;
-  final String title;
-  final String instructionAudioUrl;
-
-  const _InstructionSection({
-    required this.stepKey,
-    required this.title,
-    required this.instructionAudioUrl,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        if (instructionAudioUrl.isNotEmpty)
-          LessonAudioInlineButton(
-            sourceId: '$stepKey-instruction',
-            url: instructionAudioUrl,
-            backgroundColor: AppColors.primaryColor,
-          )
-        else
-          Container(
-            width: 48,
-            height: 48,
-            decoration: const BoxDecoration(
-              color: AppColors.primaryColor,
-              shape: BoxShape.circle,
-            ),
-            child:
-                const Icon(Icons.play_arrow, color: Colors.white, size: 28),
-          ),
-        if (title.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF171B22),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
 
 
 class _TokenRow extends StatelessWidget {
@@ -318,7 +207,6 @@ class _SentenceAudioSection extends StatelessWidget {
 
     return Column(
       children: [
-        // Quoted sentence text
         if (item.sentenceText.isNotEmpty)
           Text(
             '"${item.sentenceText}"',
@@ -331,8 +219,6 @@ class _SentenceAudioSection extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 16),
-
-        // Waveform audio player — hidden when self-read is toggled on
         AnimatedCrossFade(
           firstChild: _WaveformPlayer(
             stepKey: stepKey,
@@ -346,10 +232,7 @@ class _SentenceAudioSection extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           sizeCurve: Curves.easeInOut,
         ),
-
         if (!selfReadEnabled) const SizedBox(height: 14),
-
-        // "Read by myself" toggle
         _SelfReadToggle(
           label: selfReadLabel,
           value: selfReadEnabled,
@@ -420,7 +303,6 @@ class _WaveformPlayerState extends State<_WaveformPlayer>
         ),
         child: Row(
           children: [
-            // Play/pause button
             Container(
               width: 36,
               height: 36,
@@ -435,7 +317,6 @@ class _WaveformPlayerState extends State<_WaveformPlayer>
               ),
             ),
             const SizedBox(width: 12),
-            // Waveform bars
             Expanded(
               child: _WaveformBars(
                 controller: _animController,
@@ -453,17 +334,13 @@ class _WaveformBars extends StatelessWidget {
   final AnimationController controller;
   final bool playing;
 
-  // Fixed height ratios for visual variety (mimic a realistic waveform).
   static const List<double> _heightRatios = [
     0.30, 0.55, 0.75, 0.90, 0.65, 1.00, 0.80, 0.55, 0.95, 0.70,
     0.45, 0.85, 0.60, 1.00, 0.75, 0.50, 0.90, 0.65, 0.40, 0.80,
     0.55, 0.70, 0.95, 0.60, 0.35, 0.75, 0.50, 0.88, 0.65, 0.40,
   ];
 
-  const _WaveformBars({
-    required this.controller,
-    required this.playing,
-  });
+  const _WaveformBars({required this.controller, required this.playing});
 
   @override
   Widget build(BuildContext context) {
@@ -474,7 +351,6 @@ class _WaveformBars extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: List.generate(_heightRatios.length, (i) {
-            // Each bar gets a slight phase offset when playing.
             double scale = playing
                 ? (0.4 +
                     0.6 *
@@ -529,16 +405,13 @@ class _SelfReadToggle extends StatelessWidget {
               : const Color(0xFFFAFAFA),
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: value
-                ? AppColors.primaryColor
-                : const Color(0xFFE8E8E8),
+            color: value ? AppColors.primaryColor : const Color(0xFFE8E8E8),
             width: 1,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Custom pill toggle indicator
             AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               width: 36,
@@ -551,9 +424,8 @@ class _SelfReadToggle extends StatelessWidget {
               ),
               child: AnimatedAlign(
                 duration: const Duration(milliseconds: 200),
-                alignment: value
-                    ? Alignment.centerRight
-                    : Alignment.centerLeft,
+                alignment:
+                    value ? Alignment.centerRight : Alignment.centerLeft,
                 child: Container(
                   width: 16,
                   height: 16,
@@ -571,46 +443,11 @@ class _SelfReadToggle extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: value
-                    ? AppColors.primaryColor
-                    : AppColors.textColor,
+                color: value ? AppColors.primaryColor : AppColors.textColor,
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-
-
-class _NextWordButton extends StatelessWidget {
-  final String label;
-  final VoidCallback onPressed;
-
-  const _NextWordButton({required this.label, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 54,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primaryColor,
-          backgroundColor: Colors.white,
-          side: const BorderSide(color: AppColors.primaryColor, width: 2),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        child: Text(label),
       ),
     );
   }

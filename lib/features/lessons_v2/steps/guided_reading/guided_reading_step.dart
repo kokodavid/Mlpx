@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_audio_buttons.dart';
+import 'package:milpress/features/lessons_v2/widgets/lesson_step_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../../models/lesson_models.dart';
 import '../../providers/lesson_audio_providers.dart';
 import '../../services/lesson_audio_controller.dart';
 import 'model.dart';
 
-
-
 class GuidedReadingStep extends StatefulWidget {
   final LessonStepDefinition step;
   final ValueChanged<LessonStepUiState> onStepStateChanged;
   final VoidCallback onAdvanceRequested;
-// 
+
   const GuidedReadingStep({
     super.key,
     required this.step,
@@ -39,9 +38,7 @@ class _GuidedReadingStepState extends State<GuidedReadingStep> {
   void initState() {
     super.initState();
     _config = GuidedReadingConfig.fromMap(widget.step.config);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _publishUiState();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _publishUiState());
   }
 
   void _publishUiState() {
@@ -60,9 +57,7 @@ class _GuidedReadingStepState extends State<GuidedReadingStep> {
       widget.onAdvanceRequested();
       return;
     }
-    setState(() {
-      _currentActivityIndex += 1;
-    });
+    setState(() => _currentActivityIndex += 1);
     _publishUiState();
   }
 
@@ -75,11 +70,8 @@ class _GuidedReadingStepState extends State<GuidedReadingStep> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-         
           _Header(title: _config.title),
           const SizedBox(height: 14),
-
-          
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(18, 22, 18, 22),
@@ -91,15 +83,12 @@ class _GuidedReadingStepState extends State<GuidedReadingStep> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                
                 _InstructionPlayButton(
                   sourceId:
                       '${widget.step.key}-instruction-$_currentActivityIndex',
                   url: activity.instructionAudioUrl,
                 ),
                 const SizedBox(height: 16),
-
-            
                 Text(
                   activity.instructionText,
                   textAlign: TextAlign.center,
@@ -111,28 +100,22 @@ class _GuidedReadingStepState extends State<GuidedReadingStep> {
                   ),
                 ),
                 const SizedBox(height: 18),
-
                 _SegmentRow(
                   stepKey: widget.step.key,
                   activityIndex: _currentActivityIndex,
                   segments: activity.segments,
                 ),
                 const SizedBox(height: 18),
-
-               
                 _WordText(
                   word: activity.wordText,
                   segments: activity.segments,
                 ),
                 const SizedBox(height: 10),
-
-                const Icon(
-                  Icons.keyboard_double_arrow_down_rounded,
-                  color: AppColors.primaryColor, // orange
+                const LessonStepChevronDown(
+                  color: AppColors.primaryColor,
                   size: 28,
                 ),
                 const SizedBox(height: 14),
-
                 _WordAudioCard(
                   sourceId: '${widget.step.key}-word-$_currentActivityIndex',
                   audioUrl: activity.wordAudioUrl,
@@ -141,6 +124,24 @@ class _GuidedReadingStepState extends State<GuidedReadingStep> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+
+class _Header extends StatelessWidget {
+  final String title;
+  const _Header({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        color: Color(0xFFC08BF8),
       ),
     );
   }
@@ -175,7 +176,7 @@ class _InstructionPlayButton extends ConsumerWidget {
             width: 52,
             height: 52,
             decoration: BoxDecoration(
-              color: AppColors.primaryColor, // orange
+              color: AppColors.primaryColor,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
@@ -186,34 +187,13 @@ class _InstructionPlayButton extends ConsumerWidget {
               ],
             ),
             child: Icon(
-              isPlaying
-                  ? Icons.pause_rounded
-                  : Icons.play_arrow_rounded,
+              isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
               color: Colors.white,
               size: 28,
             ),
           ),
         );
       },
-    );
-  }
-}
-
-
-
-class _Header extends StatelessWidget {
-  final String title;
-  const _Header({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.w700,
-        color: Color(0xFFC08BF8),
-      ),
     );
   }
 }
@@ -233,7 +213,7 @@ class _SegmentRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasExplicitFocus = segments.any((segment) => segment.isFocus);
+    final hasExplicitFocus = segments.any((s) => s.isFocus);
     final fallbackIndex = segments.length ~/ 2;
 
     return Container(
@@ -263,7 +243,6 @@ class _SegmentRow extends StatelessWidget {
     );
   }
 }
-
 
 class _SegmentChip extends ConsumerWidget {
   final String stepKey;
@@ -297,15 +276,13 @@ class _SegmentChip extends ConsumerWidget {
                 ? AppColors.primaryColor.withValues(alpha: 0.07)
                 : const Color(0xFFF8F8F8);
 
-        final labelColor = isFocused
-            ? AppColors.primaryColor
-            : AppColors.copBlue;
+        final labelColor =
+            isFocused ? AppColors.primaryColor : AppColors.copBlue;
 
         return GestureDetector(
           onTap: segment.audioUrl.isEmpty
               ? null
-              : () =>
-                  controller.playUrl(segment.audioUrl, sourceId: sourceId),
+              : () => controller.playUrl(segment.audioUrl, sourceId: sourceId),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
             width: 58,
@@ -313,13 +290,9 @@ class _SegmentChip extends ConsumerWidget {
             decoration: BoxDecoration(
               color: bg,
               borderRadius: BorderRadius.circular(16),
-              // Solid border for non-focus; dashed handled by CustomPaint below
               border: isFocused
                   ? null
-                  : Border.all(
-                      color: const Color(0xFFF2ECE4),
-                      width: 1,
-                    ),
+                  : Border.all(color: const Color(0xFFF2ECE4), width: 1),
             ),
             child: isFocused
                 ? CustomPaint(
@@ -354,6 +327,7 @@ class _SegmentChip extends ConsumerWidget {
 }
 
 
+
 class _DashedRoundedBorderPainter extends CustomPainter {
   final Color color;
   final double radius;
@@ -379,8 +353,8 @@ class _DashedRoundedBorderPainter extends CustomPainter {
 
     final half = strokeWidth / 2;
     final rrect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(half, half, size.width - strokeWidth,
-          size.height - strokeWidth),
+      Rect.fromLTWH(
+          half, half, size.width - strokeWidth, size.height - strokeWidth),
       Radius.circular(radius),
     );
 
@@ -416,17 +390,15 @@ class _WordText extends StatelessWidget {
   final String word;
   final List<GuidedReadingSegment> segments;
 
-  const _WordText({
-    required this.word,
-    required this.segments,
-  });
+  const _WordText({required this.word, required this.segments});
 
   @override
   Widget build(BuildContext context) {
-    final explicitFocusSegment = segments.cast<GuidedReadingSegment?>().firstWhere(
-          (s) => s?.isFocus == true,
-          orElse: () => null,
-        );
+    final explicitFocusSegment =
+        segments.cast<GuidedReadingSegment?>().firstWhere(
+              (s) => s?.isFocus == true,
+              orElse: () => null,
+            );
     final focusSegment = explicitFocusSegment ??
         (segments.isNotEmpty ? segments[segments.length ~/ 2] : null);
 
@@ -473,10 +445,7 @@ class _WordAudioCard extends ConsumerWidget {
   final String sourceId;
   final String audioUrl;
 
-  const _WordAudioCard({
-    required this.sourceId,
-    required this.audioUrl,
-  });
+  const _WordAudioCard({required this.sourceId, required this.audioUrl});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -486,10 +455,8 @@ class _WordAudioCard extends ConsumerWidget {
       valueListenable: controller.state,
       builder: (context, state, _) {
         final isActive = state.sourceId == sourceId;
-        final isLoading =
-            isActive && state.status == LessonAudioStatus.loading;
-        final isPlaying =
-            isActive && state.status == LessonAudioStatus.playing;
+        final isLoading = isActive && state.status == LessonAudioStatus.loading;
+        final isPlaying = isActive && state.status == LessonAudioStatus.playing;
 
         return Container(
           width: double.infinity,
@@ -546,7 +513,6 @@ class _WordAudioCard extends ConsumerWidget {
 class _WaveformPlaceholder extends StatelessWidget {
   const _WaveformPlaceholder();
 
-  // Heights tuned to match the dense waveform visible in the image
   static const List<double> _heights = [
     6, 10, 16, 8, 20, 12, 24, 14, 22, 10, 18, 13, 21,
     9, 17, 11, 23, 14, 19, 8, 15, 10, 22, 12, 20,

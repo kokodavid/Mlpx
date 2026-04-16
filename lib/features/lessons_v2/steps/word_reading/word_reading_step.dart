@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:milpress/features/lessons_v2/widgets/lesson_step_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../../models/lesson_models.dart';
 import '../../widgets/lesson_audio_buttons.dart';
 import 'model.dart';
 
-// ---------------------------------------------------------------------------
-// Step widget
-// ---------------------------------------------------------------------------
+
 
 class WordReadingStep extends StatefulWidget {
   final LessonStepDefinition step;
@@ -87,62 +86,53 @@ class _WordReadingStepState extends State<WordReadingStep> {
         return Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 312),
+            child: LessonStepCard(
+              elevation: 0,
+              borderRadius: 22,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _Header(
-                    current: _itemIndex + 1,
-                    total: _config.items.length,
-                  ),
-                  const SizedBox(height: 18),
-                  _InstructionSection(
-                    stepKey: widget.step.key,
-                    title: _config.title,
-                    instructionAudioUrl: _config.instructionAudioUrl,
-                  ),
-                  const SizedBox(height: 18),
-                  _WordCard(
-                    stepKey: widget.step.key,
-                    itemIndex: _itemIndex,
-                    item: item,
-                  ),
-                  const SizedBox(height: 14),
-                  const Center(
-                    child: Icon(
-                      Icons.keyboard_double_arrow_down_rounded,
-                      color: AppColors.textColor,
-                      size: 24,
+              border: Border.all(color: Colors.transparent),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 312),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    LessonStepProgressHeader(
+                      current: _itemIndex + 1,
+                      total: _config.items.length,
+                      itemLabel: 'Word',
+                      barColor: AppColors.copBlue,
+                      barBackgroundColor: const Color(0xFFF3E8DD),
                     ),
-                  ),
-                  const SizedBox(height: 14),
-                  _ModelReadingAccordion(
-                    stepKey: widget.step.key,
-                    itemIndex: _itemIndex,
-                    item: item,
-                    expanded: _segmentsExpanded,
-                    onToggle: _toggleSegments,
-                  ),
-                  const SizedBox(height: 18),
-                  _NextWordButton(
-                    label: _isLastItem ? 'Finish' : 'Next Word',
-                    onPressed: _handleNextWord,
-                  ),
-                ],
+                    const SizedBox(height: 18),
+                    LessonStepInstructionSection(
+                      stepKey: widget.step.key,
+                      title: _config.title,
+                      audioUrl: _config.instructionAudioUrl,
+                    ),
+                    const SizedBox(height: 18),
+                    _WordCard(
+                      stepKey: widget.step.key,
+                      itemIndex: _itemIndex,
+                      item: item,
+                    ),
+                    const SizedBox(height: 14),
+                    const LessonStepChevronDown(),
+                    const SizedBox(height: 14),
+                    _ModelReadingAccordion(
+                      stepKey: widget.step.key,
+                      itemIndex: _itemIndex,
+                      item: item,
+                      expanded: _segmentsExpanded,
+                      onToggle: _toggleSegments,
+                    ),
+                    const SizedBox(height: 18),
+                    LessonStepNextButton(
+                      label: _isLastItem ? 'Finish' : 'Next Word',
+                      onPressed: _handleNextWord,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -152,104 +142,6 @@ class _WordReadingStepState extends State<WordReadingStep> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// _Header
-// ---------------------------------------------------------------------------
-
-class _Header extends StatelessWidget {
-  final int current;
-  final int total;
-
-  const _Header({required this.current, required this.total});
-
-  @override
-  Widget build(BuildContext context) {
-    final safeTotal = total <= 0 ? 1 : total;
-    final safeCurrent = current.clamp(1, safeTotal);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Word $safeCurrent of $safeTotal',
-          style: const TextStyle(
-            fontSize: 14,
-            color: AppColors.textColor,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 10),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: LinearProgressIndicator(
-            value: safeCurrent / safeTotal,
-            minHeight: 8,
-            backgroundColor: const Color(0xFFF3E8DD),
-            valueColor:
-                const AlwaysStoppedAnimation<Color>(AppColors.copBlue),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// _InstructionSection
-// ---------------------------------------------------------------------------
-
-class _InstructionSection extends StatelessWidget {
-  final String stepKey;
-  final String title;
-  final String instructionAudioUrl;
-
-  const _InstructionSection({
-    required this.stepKey,
-    required this.title,
-    required this.instructionAudioUrl,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        if (instructionAudioUrl.isNotEmpty)
-          LessonAudioInlineButton(
-            sourceId: '$stepKey-instruction',
-            url: instructionAudioUrl,
-            backgroundColor: AppColors.primaryColor,
-          )
-        else
-          Container(
-            width: 48,
-            height: 48,
-            decoration: const BoxDecoration(
-              color: AppColors.primaryColor,
-              shape: BoxShape.circle,
-            ),
-            child:
-                const Icon(Icons.play_arrow, color: Colors.white, size: 28),
-          ),
-        if (title.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF171B22),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// _WordCard  — image + word label + word audio button
-// ---------------------------------------------------------------------------
 
 class _WordCard extends StatelessWidget {
   final String stepKey;
@@ -276,7 +168,6 @@ class _WordCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            // Image area
             Container(
               height: 120,
               width: double.infinity,
@@ -308,7 +199,6 @@ class _WordCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            // Word label
             Text(
               item.word,
               style: const TextStyle(
@@ -318,7 +208,6 @@ class _WordCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            // Word audio button
             if (item.wordAudioUrl.isNotEmpty)
               LessonAudioInlineButton(
                 sourceId: '$stepKey-item-$itemIndex-word',
@@ -332,9 +221,6 @@ class _WordCard extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// _ModelReadingAccordion  — collapsible row showing phoneme segments
-// ---------------------------------------------------------------------------
 
 class _ModelReadingAccordion extends StatelessWidget {
   final String stepKey;
@@ -386,9 +272,7 @@ class _ModelReadingAccordion extends StatelessWidget {
                             text: 'Tap here ',
                             style: TextStyle(fontWeight: FontWeight.w600),
                           ),
-                          TextSpan(
-                            text: 'word for $label',
-                          ),
+                          TextSpan(text: 'word for $label'),
                         ],
                       ),
                     ),
@@ -427,9 +311,7 @@ class _ModelReadingAccordion extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// _SegmentRow  — tappable phoneme tiles, mirrors BlendingStep style
-// ---------------------------------------------------------------------------
+
 
 class _SegmentRow extends StatelessWidget {
   final String stepKey;
@@ -486,11 +368,8 @@ class _SegmentTileState extends State<_SegmentTile> {
         ? AppColors.primaryColor.withOpacity(0.07)
         : (_tapped ? AppColors.primaryColor.withOpacity(0.05) : Colors.white);
 
-    final textColor = (highlighted || _tapped)
-        ? AppColors.primaryColor
-        : AppColors.textColor;
-
-    final borderWidth = highlighted ? 2.0 : 1.0;
+    final textColor =
+        (highlighted || _tapped) ? AppColors.primaryColor : AppColors.textColor;
 
     return GestureDetector(
       onTap: () => setState(() => _tapped = true),
@@ -503,8 +382,7 @@ class _SegmentTileState extends State<_SegmentTile> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: borderColor,
-            width: borderWidth,
-            style: highlighted && !_tapped ? BorderStyle.solid : BorderStyle.solid,
+            width: highlighted ? 2.0 : 1.0,
           ),
         ),
         alignment: Alignment.center,
@@ -519,40 +397,4 @@ class _SegmentTileState extends State<_SegmentTile> {
       ),
     );
   }
-}
-
-// ---------------------------------------------------------------------------
-// _NextWordButton
-// ---------------------------------------------------------------------------
-
-class _NextWordButton extends StatelessWidget {
-  final String label;
-  final VoidCallback onPressed;
-
-  const _NextWordButton({required this.label, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 54,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primaryColor,
-          backgroundColor: Colors.white,
-          side: const BorderSide(color: AppColors.primaryColor, width: 2),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        child: Text(label),
-      ),
-    );
-  }
-  
 }

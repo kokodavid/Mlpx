@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:milpress/features/lessons_v2/widgets/lesson_step_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../../models/lesson_models.dart';
 import '../../widgets/lesson_audio_buttons.dart';
 import 'model.dart';
-
-
 
 class MatchingWordsStep extends StatefulWidget {
   final LessonStepDefinition step;
@@ -27,8 +26,6 @@ class _MatchingWordsStepState extends State<MatchingWordsStep> {
   String? _selectedOptionId;
   bool _answered = false;
 
-  
-
   MatchingActivity get _activity =>
       _config.activities[
           _activityIndex.clamp(0, _config.activities.length - 1)];
@@ -38,7 +35,6 @@ class _MatchingWordsStepState extends State<MatchingWordsStep> {
   bool get _isCorrect =>
       _selectedOptionId != null &&
       _selectedOptionId == _activity.correctOptionId;
-
 
   @override
   void initState() {
@@ -57,8 +53,6 @@ class _MatchingWordsStepState extends State<MatchingWordsStep> {
     );
   }
 
-  
-
   void _handleOptionTap(String optionId) {
     if (_answered) return;
     setState(() {
@@ -70,7 +64,6 @@ class _MatchingWordsStepState extends State<MatchingWordsStep> {
 
   void _handleContinue() {
     if (!_isCorrect) {
-      // Wrong: clear selection, let them try again.
       setState(() {
         _selectedOptionId = null;
         _answered = false;
@@ -78,12 +71,10 @@ class _MatchingWordsStepState extends State<MatchingWordsStep> {
       _publishUiState();
       return;
     }
-
     if (_isLastActivity) {
       widget.onStepStateChanged(const LessonStepUiState(canAdvance: true));
       return;
     }
-
     setState(() {
       _activityIndex += 1;
       _selectedOptionId = null;
@@ -91,7 +82,6 @@ class _MatchingWordsStepState extends State<MatchingWordsStep> {
     });
     _publishUiState();
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -107,109 +97,61 @@ class _MatchingWordsStepState extends State<MatchingWordsStep> {
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Center(
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 600),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
+              child: LessonStepCard(
+                elevation: 0,
+                borderRadius: 24,
                 padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _Header(
-                      current: _activityIndex + 1,
-                      total: _config.activities.length,
-                    ),
-                    const SizedBox(height: 28),
-                    _PromptSection(
-                      stepKey: widget.step.key,
-                      activityIndex: _activityIndex,
-                      activity: activity,
-                      instructionAudioUrl: _config.instructionAudioUrl,
-                    ),
-                    const SizedBox(height: 16),
-                    const Center(
-                      child: Icon(
-                        Icons.keyboard_double_arrow_down_rounded,
-                        color: AppColors.textColor,
-                        size: 26,
+                border: Border.all(color: Colors.transparent),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      LessonStepProgressHeader(
+                        current: _activityIndex + 1,
+                        total: _config.activities.length,
+                        itemLabel: 'Word',
+                        barHeight: 10,
+                        barBackgroundColor: const Color(0xFFF3E8DD),
+                        barColor: AppColors.copBlue,
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    _OptionsSection(
-                      activity: activity,
-                      selectedOptionId: _selectedOptionId,
-                      answered: _answered,
-                      onOptionTap: _handleOptionTap,
-                    ),
-                    const SizedBox(height: 20),
-                    if (_answered)
-                      _FeedbackBar(
-                        isCorrect: _isCorrect,
-                        message: _isCorrect
-                            ? '"${_activity.options.firstWhere((o) => o.id == _selectedOptionId, orElse: () => const MatchingOption(id: '', label: '', imageUrl: '')).label}" — Well done!'
-                            : 'Not quite. Try again!',
-                        actionLabel: _isCorrect
-                            ? (_isLastActivity ? 'Finish' : 'Continue')
-                            : 'Try Again',
-                        onActionPressed: _handleContinue,
+                      const SizedBox(height: 28),
+                      _PromptSection(
+                        stepKey: widget.step.key,
+                        activityIndex: _activityIndex,
+                        activity: activity,
+                        instructionAudioUrl: _config.instructionAudioUrl,
                       ),
-                  ],
+                      const SizedBox(height: 16),
+                      const LessonStepChevronDown(),
+                      const SizedBox(height: 16),
+                      _OptionsSection(
+                        activity: activity,
+                        selectedOptionId: _selectedOptionId,
+                        answered: _answered,
+                        onOptionTap: _handleOptionTap,
+                      ),
+                      const SizedBox(height: 20),
+                      if (_answered)
+                        LessonFeedbackBar(
+                          isCorrect: _isCorrect,
+                          message: _isCorrect
+                              ? '"${_activity.options.firstWhere((o) => o.id == _selectedOptionId, orElse: () => const MatchingOption(id: '', label: '', imageUrl: '')).label}" — Well done!'
+                              : 'Not quite. Try again!',
+                          actionLabel: _isCorrect
+                              ? (_isLastActivity ? 'Finish' : 'Continue')
+                              : 'Try Again',
+                          onActionPressed: _handleContinue,
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
         );
       },
-    );
-  }
-}
-
-
-
-class _Header extends StatelessWidget {
-  final int current;
-  final int total;
-
-  const _Header({required this.current, required this.total});
-
-  @override
-  Widget build(BuildContext context) {
-    final safeTotal = total <= 0 ? 1 : total;
-    final safeCurrent = current.clamp(1, safeTotal);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Word $safeCurrent of $safeTotal',
-          style: const TextStyle(
-            fontSize: 14,
-            color: AppColors.textColor,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 10),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: LinearProgressIndicator(
-            value: safeCurrent / safeTotal,
-            minHeight: 10,
-            backgroundColor: const Color(0xFFF3E8DD),
-            valueColor:
-                const AlwaysStoppedAnimation<Color>(AppColors.copBlue),
-          ),
-        ),
-      ],
     );
   }
 }
@@ -231,7 +173,6 @@ class _PromptSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Audio button: prefer activity-level audio, fall back to instruction audio.
     final audioUrl = activity.promptAudioUrl.isNotEmpty
         ? activity.promptAudioUrl
         : instructionAudioUrl;
@@ -265,7 +206,6 @@ class _PromptSection extends StatelessWidget {
             color: Color(0xFF171B22),
           ),
         ),
-        // image_to_word: show prompt image below title.
         if (activity.mode == MatchingMode.imageToWord &&
             activity.promptImageUrl.isNotEmpty) ...[
           const SizedBox(height: 16),
@@ -311,7 +251,9 @@ class _PromptImage extends StatelessWidget {
   }
 }
 
-
+// ---------------------------------------------------------------------------
+// _OptionsSection
+// ---------------------------------------------------------------------------
 
 class _OptionsSection extends StatelessWidget {
   final MatchingActivity activity;
@@ -347,8 +289,6 @@ class _OptionsSection extends StatelessWidget {
   }
 }
 
-
-
 class _ImageOptionRow extends StatelessWidget {
   final List<MatchingOption> options;
   final String? selectedOptionId;
@@ -378,7 +318,8 @@ class _ImageOptionRow extends StatelessWidget {
         double borderWidth = 1.5;
 
         if (isSelected && answered) {
-          borderColor = isCorrect ? AppColors.successColor : AppColors.errorColor;
+          borderColor =
+              isCorrect ? AppColors.successColor : AppColors.errorColor;
           borderWidth = 2.5;
         } else if (isSelected) {
           borderColor = AppColors.primaryColor;
@@ -446,8 +387,6 @@ class _ImageOptionRow extends StatelessWidget {
     );
   }
 }
-
-
 
 class _WordOptionRow extends StatelessWidget {
   final List<MatchingOption> options;
@@ -520,84 +459,6 @@ class _WordOptionRow extends StatelessWidget {
           ),
         );
       }).toList(),
-    );
-  }
-}
-
-
-
-class _FeedbackBar extends StatelessWidget {
-  final bool isCorrect;
-  final String message;
-  final String actionLabel;
-  final VoidCallback onActionPressed;
-
-  const _FeedbackBar({
-    required this.isCorrect,
-    required this.message,
-    required this.actionLabel,
-    required this.onActionPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final borderColor =
-        isCorrect ? AppColors.successColor : AppColors.errorColor;
-    final backgroundColor =
-        isCorrect ? const Color(0xFFF2F8EE) : const Color(0xFFFFF1F0);
-
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            isCorrect ? Icons.check_rounded : Icons.close_rounded,
-            color: borderColor,
-            size: 24,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              message,
-              style: TextStyle(
-                fontSize: 14,
-                height: 1.35,
-                color: borderColor,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          SizedBox(
-            height: 48,
-            child: ElevatedButton(
-              onPressed: onActionPressed,
-              style: ElevatedButton.styleFrom(
-                elevation: 0,
-                backgroundColor: borderColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-              ),
-              child: Text(
-                actionLabel,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

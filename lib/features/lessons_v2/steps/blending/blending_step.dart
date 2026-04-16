@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:milpress/features/lessons_v2/widgets/lesson_step_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../../models/lesson_models.dart';
-import '../../widgets/lesson_audio_buttons.dart';
 import 'model.dart';
-
-
 
 class BlendingStep extends StatefulWidget {
   final LessonStepDefinition step;
@@ -81,15 +79,16 @@ class _BlendingStepState extends State<BlendingStep> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _Header(
+                LessonStepProgressHeader(
                   current: _exampleIndex + 1,
                   total: _config.examples.length,
+                  itemLabel: 'Letter',
                 ),
                 const SizedBox(height: 20),
-                _InstructionSection(
+                LessonStepInstructionSection(
                   stepKey: widget.step.key,
-                  instruction: _config.instruction,
-                  instructionAudioUrl: _config.instructionAudioUrl,
+                  title: _config.instruction,
+                  audioUrl: _config.instructionAudioUrl,
                 ),
                 const SizedBox(height: 20),
                 _PhonemeRow(
@@ -98,13 +97,7 @@ class _BlendingStepState extends State<BlendingStep> {
                   phonemes: example.phonemes,
                 ),
                 const SizedBox(height: 14),
-                const Center(
-                  child: Icon(
-                    Icons.keyboard_double_arrow_down_rounded,
-                    color: AppColors.textColor,
-                    size: 22,
-                  ),
-                ),
+                const LessonStepChevronDown(),
                 const SizedBox(height: 14),
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 250),
@@ -142,7 +135,7 @@ class _BlendingStepState extends State<BlendingStep> {
 
   Widget _buildBottomAction(BlendingExample example) {
     if (_blended) {
-      return _NextButton(
+      return LessonStepNextButton(
         label: _isLastExample ? 'Finish' : 'Next Question',
         onPressed: _handleNext,
       );
@@ -157,98 +150,6 @@ class _BlendingStepState extends State<BlendingStep> {
   }
 }
 
-
-
-class _Header extends StatelessWidget {
-  final int current;
-  final int total;
-
-  const _Header({required this.current, required this.total});
-
-  @override
-  Widget build(BuildContext context) {
-    final safeTotal = total <= 0 ? 1 : total;
-    final safeCurrent = current.clamp(1, safeTotal);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Letter $safeCurrent of $safeTotal',
-          style: const TextStyle(
-            fontSize: 14,
-            color: AppColors.textColor,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: LinearProgressIndicator(
-            value: safeCurrent / safeTotal,
-            minHeight: 8,
-            backgroundColor: const Color(0xFFF3E8DD),
-            valueColor:
-                const AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-
-
-class _InstructionSection extends StatelessWidget {
-  final String stepKey;
-  final String instruction;
-  final String instructionAudioUrl;
-
-  const _InstructionSection({
-    required this.stepKey,
-    required this.instruction,
-    required this.instructionAudioUrl,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      // Centre everything in the instruction block.
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        if (instructionAudioUrl.isNotEmpty)
-          LessonAudioInlineButton(
-            sourceId: '$stepKey-instruction',
-            url: instructionAudioUrl,
-            backgroundColor: AppColors.primaryColor,
-          )
-        else
-          Container(
-            width: 40,
-            height: 40,
-            decoration: const BoxDecoration(
-              color: AppColors.primaryColor,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.play_arrow, color: Colors.white, size: 22),
-          ),
-        if (instruction.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Text(
-            instruction,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF171B22),
-              height: 1.35,
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
 
 
 class _PhonemeRow extends StatelessWidget {
@@ -320,7 +221,6 @@ class _PhonemeButtonState extends State<_PhonemeButton> {
       onTap: () => setState(() => _tapped = true),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        // Smaller fixed size so three buttons fit comfortably in the card.
         width: 68,
         height: 44,
         decoration: BoxDecoration(
@@ -329,9 +229,6 @@ class _PhonemeButtonState extends State<_PhonemeButton> {
           border: Border.all(
             color: borderColor,
             width: highlighted ? 1.5 : 1.0,
-            // Dashed border for highlighted (non-tapped) slots via a workaround:
-            // Flutter's Border doesn't support dashed natively, so we use a
-            // slightly thicker solid border with lower opacity to approximate.
           ),
         ),
         alignment: Alignment.center,
@@ -389,7 +286,6 @@ class _BlendButton extends StatelessWidget {
     );
   }
 }
-
 
 
 class _BlendedWordDisplay extends StatelessWidget {
@@ -471,39 +367,6 @@ class _HighlightedBlendedWord extends StatelessWidget {
         children: spans,
       ),
       textAlign: TextAlign.center,
-    );
-  }
-}
-
-
-
-class _NextButton extends StatelessWidget {
-  final String label;
-  final VoidCallback onPressed;
-
-  const _NextButton({required this.label, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 48,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primaryColor,
-          backgroundColor: AppColors.primaryColor.withOpacity(0.06),
-          side: const BorderSide(color: AppColors.primaryColor),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-          textStyle: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        child: Text(label),
-      ),
     );
   }
 }
