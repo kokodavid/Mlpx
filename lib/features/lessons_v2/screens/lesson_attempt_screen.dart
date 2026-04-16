@@ -20,6 +20,7 @@ class LessonAttemptScreen extends ConsumerStatefulWidget {
   final int initialStepIndex;
   final VoidCallback? onFinish;
   final bool isReattempt;
+  final bool embedInParent;
 
   LessonAttemptScreen({
     super.key,
@@ -28,6 +29,7 @@ class LessonAttemptScreen extends ConsumerStatefulWidget {
     this.initialStepIndex = 0,
     this.onFinish,
     this.isReattempt = false,
+    this.embedInParent = false,
   })  : assert(
           lessonDefinition != null || lessonId != null,
           'Provide either lessonDefinition or lessonId.',
@@ -345,6 +347,20 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
     final primaryColor =
         primaryLabel == 'Finish' ? AppColors.correctAnswerColor : null;
 
+    final content = _buildContent(
+      canAdvance: canAdvance,
+      isPrimaryEnabled: isPrimaryEnabled,
+      primaryLabel: primaryLabel,
+      primaryIcon: primaryIcon,
+      primaryColor: primaryColor,
+      showBack: showBack,
+      showBottomActionBar: showBottomActionBar,
+    );
+
+    if (widget.embedInParent) {
+      return content;
+    }
+
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
@@ -367,15 +383,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
           ),
         ),
       ),
-      body: _buildContent(
-        canAdvance: canAdvance,
-        isPrimaryEnabled: isPrimaryEnabled,
-        primaryLabel: primaryLabel,
-        primaryIcon: primaryIcon,
-        primaryColor: primaryColor,
-        showBack: showBack,
-        showBottomActionBar: showBottomActionBar,
-      ),
+      body: content,
     );
   }
 

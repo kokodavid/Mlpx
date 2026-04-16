@@ -103,53 +103,69 @@ class _MatchingWordsStepState extends State<MatchingWordsStep> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-          child: ConstrainedBox(
-            constraints:
-                BoxConstraints(minHeight: constraints.maxHeight - 28),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _Header(
-                  current: _activityIndex + 1,
-                  total: _config.activities.length,
+        return Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Center(
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 600),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 28),
-                _PromptSection(
-                  stepKey: widget.step.key,
-                  activityIndex: _activityIndex,
-                  activity: activity,
-                  instructionAudioUrl: _config.instructionAudioUrl,
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _Header(
+                      current: _activityIndex + 1,
+                      total: _config.activities.length,
+                    ),
+                    const SizedBox(height: 28),
+                    _PromptSection(
+                      stepKey: widget.step.key,
+                      activityIndex: _activityIndex,
+                      activity: activity,
+                      instructionAudioUrl: _config.instructionAudioUrl,
+                    ),
+                    const SizedBox(height: 16),
+                    const Center(
+                      child: Icon(
+                        Icons.keyboard_double_arrow_down_rounded,
+                        color: AppColors.textColor,
+                        size: 26,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _OptionsSection(
+                      activity: activity,
+                      selectedOptionId: _selectedOptionId,
+                      answered: _answered,
+                      onOptionTap: _handleOptionTap,
+                    ),
+                    const SizedBox(height: 20),
+                    if (_answered)
+                      _FeedbackBar(
+                        isCorrect: _isCorrect,
+                        message: _isCorrect
+                            ? '"${_activity.options.firstWhere((o) => o.id == _selectedOptionId, orElse: () => const MatchingOption(id: '', label: '', imageUrl: '')).label}" — Well done!'
+                            : 'Not quite. Try again!',
+                        actionLabel: _isCorrect
+                            ? (_isLastActivity ? 'Finish' : 'Continue')
+                            : 'Try Again',
+                        onActionPressed: _handleContinue,
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                const Center(
-                  child: Icon(
-                    Icons.keyboard_double_arrow_down_rounded,
-                    color: AppColors.textColor,
-                    size: 26,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _OptionsSection(
-                  activity: activity,
-                  selectedOptionId: _selectedOptionId,
-                  answered: _answered,
-                  onOptionTap: _handleOptionTap,
-                ),
-                const SizedBox(height: 20),
-                if (_answered)
-                  _FeedbackBar(
-                    isCorrect: _isCorrect,
-                    message: _isCorrect
-                        ? '"${_activity.options.firstWhere((o) => o.id == _selectedOptionId, orElse: () => const MatchingOption(id: '', label: '', imageUrl: '')).label}" — Well done!'
-                        : 'Not quite. Try again!',
-                    actionLabel: _isCorrect
-                        ? (_isLastActivity ? 'Finish' : 'Continue')
-                        : 'Try Again',
-                    onActionPressed: _handleContinue,
-                  ),
-              ],
+              ),
             ),
           ),
         );
@@ -350,8 +366,10 @@ class _ImageOptionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 10,
+      runSpacing: 10,
       children: options.map((opt) {
         final isSelected = selectedOptionId == opt.id;
         final isCorrect = opt.id == correctOptionId;
@@ -368,7 +386,7 @@ class _ImageOptionRow extends StatelessWidget {
         }
 
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6),
+          padding: const EdgeInsets.symmetric(vertical: 4),
           child: GestureDetector(
             onTap: answered ? null : () => onOptionTap(opt.id),
             child: AnimatedContainer(
@@ -475,27 +493,27 @@ class _WordOptionRow extends StatelessWidget {
           borderWidth = 2;
         }
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 5),
-          child: GestureDetector(
-            onTap: answered ? null : () => onOptionTap(opt.id),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              height: 48,
-              constraints: const BoxConstraints(minWidth: 88),
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              decoration: BoxDecoration(
-                color: bgColor,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: borderColor, width: borderWidth),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                opt.label,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: textColor,
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: GestureDetector(
+              onTap: answered ? null : () => onOptionTap(opt.id),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                height: 48,
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: borderColor, width: borderWidth),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  opt.label,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: textColor,
+                  ),
                 ),
               ),
             ),

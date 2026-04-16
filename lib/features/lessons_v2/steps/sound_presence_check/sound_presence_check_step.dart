@@ -91,91 +91,100 @@ class _SoundPresenceCheckStepState extends State<SoundPresenceCheckStep> {
   Widget build(BuildContext context) {
     final question = _question;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight - 28),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _Header(
-                  current: _currentQuestionIndex + 1,
-                  total: _config.questions.length,
-                  score: _score,
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      child: Card(
+        elevation: 3,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        color: const Color(0xFFF5F3F0),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header: question counter + score + progress bar
+              _Header(
+                current: _currentQuestionIndex + 1,
+                total: _config.questions.length,
+                score: _score,
+              ),
+              const SizedBox(height: 24),
+
+              // Prompt text centered
+              Text(
+                question.prompt,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF171B22),
+                  height: 1.3,
                 ),
-                const SizedBox(height: 20),
-                Text(
-                  question.prompt,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF171B22),
-                    height: 1.25,
-                  ),
+              ),
+              const SizedBox(height: 28),
+
+              // Audio button centered
+              Center(
+                child: LessonAudioInlineButton(
+                  sourceId:
+                      '${widget.step.key}-question-$_currentQuestionIndex',
+                  url: question.promptAudioUrl,
+                  backgroundColor: AppColors.copBlue,
                 ),
-                const SizedBox(height: 18),
-                Center(
-                  child: LessonAudioInlineButton(
-                    sourceId:
-                        '${widget.step.key}-question-$_currentQuestionIndex',
-                    url: question.promptAudioUrl,
-                    backgroundColor: AppColors.copBlue,
-                  ),
+              ),
+              const SizedBox(height: 16),
+
+              // Double chevron down
+              const Center(
+                child: Icon(
+                  Icons.keyboard_double_arrow_down_rounded,
+                  color: Color(0xFF8A8A8A),
+                  size: 26,
                 ),
-                const SizedBox(height: 12),
-                const Center(
-                  child: Icon(
-                    Icons.keyboard_double_arrow_down_rounded,
-                    color: AppColors.copBlue,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                _WordCard(
-                  stepKey: widget.step.key,
-                  questionIndex: _currentQuestionIndex,
-                  wordText: question.wordText,
-                  wordAudioUrl: question.wordAudioUrl,
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _AnswerButton(
-                        label: question.yesLabel,
-                        state: _buttonState(true),
-                        onPressed: () => _handleAnswer(true),
-                      ),
+              ),
+              const SizedBox(height: 16),
+
+              // Yes / No buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: _AnswerButton(
+                      label: question.yesLabel,
+                      state: _buttonState(true),
+                      onPressed: () => _handleAnswer(true),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _AnswerButton(
-                        label: question.noLabel,
-                        state: _buttonState(false),
-                        onPressed: () => _handleAnswer(false),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                if (_selectedAnswer != null)
-                  _FeedbackBar(
-                    isCorrect: _isCorrect,
-                    message: _isCorrect
-                        ? '"${question.wordText}" matches ${question.displayTargetSound}.'
-                        : '"${question.wordText}" does ${question.correctAnswer ? '' : 'not '}have ${question.displayTargetSound}.',
-                    actionLabel: _isCorrect ? 'Continue' : 'Review',
-                    onActionPressed:
-                        _isCorrect ? _handleContinue : _handleReview,
                   ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _AnswerButton(
+                      label: question.noLabel,
+                      state: _buttonState(false),
+                      onPressed: () => _handleAnswer(false),
+                    ),
+                  ),
+                ],
+              ),
+
+              // Feedback bar
+              if (_selectedAnswer != null) ...[
+                const SizedBox(height: 14),
+                _FeedbackBar(
+                  isCorrect: _isCorrect,
+                  message: _isCorrect
+                      ? '"${question.wordText}" matches ${question.displayTargetSound}.'
+                      : '"${question.wordText}" does ${question.correctAnswer ? '' : 'not '}have ${question.displayTargetSound}.',
+                  actionLabel: _isCorrect ? 'Continue' : 'Review',
+                  onActionPressed:
+                      _isCorrect ? _handleContinue : _handleReview,
+                ),
               ],
-            ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -232,13 +241,13 @@ class _Header extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         ClipRRect(
           borderRadius: BorderRadius.circular(999),
           child: LinearProgressIndicator(
             value: safeCurrent / safeTotal,
-            minHeight: 10,
-            backgroundColor: const Color(0xFFF3E8DD),
+            minHeight: 8,
+            backgroundColor: const Color(0xFFDDD8D1),
             valueColor: const AlwaysStoppedAnimation<Color>(AppColors.copBlue),
           ),
         ),
@@ -310,18 +319,32 @@ class _AnswerButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Idle: outlined pill — Yes=green tint, No=red tint (as shown in screenshot)
+    // The idle appearance differs per button, so we derive from the label convention.
+    // After answer: filled correct=green, incorrect=red.
+    final isYesButton = state == _PresenceButtonState.idle
+        ? null // determined by caller context; use border color hint below
+        : null;
+
     final borderColor = switch (state) {
-      _PresenceButtonState.idle => const Color(0xFFE7DDD0),
+      _PresenceButtonState.idle => label.toLowerCase() == 'yes'
+          ? AppColors.successColor
+          : AppColors.errorColor,
       _PresenceButtonState.correct => AppColors.successColor,
       _PresenceButtonState.incorrect => AppColors.errorColor,
     };
     final backgroundColor = switch (state) {
-      _PresenceButtonState.idle => Colors.white,
+      _PresenceButtonState.idle => label.toLowerCase() == 'yes'
+          ? const Color(0xFFF2F8EE)
+          : const Color(0xFFFFF1F0),
       _PresenceButtonState.correct => AppColors.successColor,
       _PresenceButtonState.incorrect => AppColors.errorColor,
     };
-    final textColor =
-        state == _PresenceButtonState.idle ? AppColors.textColor : Colors.white;
+    final textColor = switch (state) {
+      _PresenceButtonState.idle => borderColor,
+      _PresenceButtonState.correct => Colors.white,
+      _PresenceButtonState.incorrect => Colors.white,
+    };
 
     return SizedBox(
       height: 54,
@@ -331,16 +354,16 @@ class _AnswerButton extends StatelessWidget {
           backgroundColor: backgroundColor,
           disabledBackgroundColor: backgroundColor,
           foregroundColor: textColor,
-          side: BorderSide(color: borderColor),
+          side: BorderSide(color: borderColor, width: 1.5),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(999),
           ),
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
         ),
-        child: Text(label),
+        child: Text(label, style: TextStyle(color: textColor)),
       ),
     );
   }

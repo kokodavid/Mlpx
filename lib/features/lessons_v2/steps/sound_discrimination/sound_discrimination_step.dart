@@ -99,77 +99,98 @@ class _SoundDiscriminationStepState extends State<SoundDiscriminationStep> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _ActivityHeader(
-                  current: _currentItemIndex + 1,
-                  total: _config.items.length,
-                ),
-                const SizedBox(height: 20),
                 _StepTitle(
                   stepKey: widget.step.key,
                   title: _config.title,
                   titleAudioUrl: _config.titleAudioUrl,
                 ),
-                const SizedBox(height: 18),
-                _PromptCard(
-                  stepKey: widget.step.key,
-                  itemIndex: _currentItemIndex,
-                  title: item.title,
-                  highlightedText: item.highlightedText,
-                  imageUrl: item.imageUrl,
-                  audioUrl: item.titleAudioUrl,
-                ),
-                const SizedBox(height: 12),
-                const Center(
-                  child: Icon(
-                    Icons.keyboard_double_arrow_down_rounded,
-                    color: AppColors.copBlue,
-                    size: 28,
+                const SizedBox(height: 16),
+                Card(
+                  elevation: 2,
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
                   ),
-                ),
-                const SizedBox(height: 12),
-                _TipCard(
-                  tipText: _config.tipText,
-                  referenceWord: _config.referenceWord,
-                  displayTargetSound: _config.displayTargetSound,
-                ),
-                const SizedBox(height: 12),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 180),
-                  child: _selectedAnswer == null
-                      ? Row(
-                          key: ValueKey<String>('choices-$_currentItemIndex'),
-                          children: [
-                            Expanded(
-                              child: _AnswerButton(
-                                label: 'Yes, ${_config.displayTargetSound}',
-                                borderColor: AppColors.successColor,
-                                foregroundColor: AppColors.successColor,
-                                onPressed: () => _handleAnswer(true),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _AnswerButton(
-                                label: 'No, Not ${_config.displayTargetSound}',
-                                borderColor: AppColors.errorColor,
-                                foregroundColor: AppColors.errorColor,
-                                onPressed: () => _handleAnswer(false),
-                              ),
-                            ),
-                          ],
-                        )
-                      : _FeedbackBar(
-                          key: ValueKey<String>(
-                            'feedback-$_currentItemIndex-$_isCorrect',
-                          ),
-                          isCorrect: _isCorrect,
-                          message: _isCorrect
-                              ? '"${item.title}" has the ${_config.displayTargetSound} sound.'
-                              : 'Listen again for ${_config.displayTargetSound} like in "${_config.referenceWord}".',
-                          actionLabel: _isCorrect ? 'Continue' : 'Review',
-                          onActionPressed:
-                              _isCorrect ? _handleContinue : _handleReview,
+                  color: Colors.white,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _ActivityHeader(
+                          current: _currentItemIndex + 1,
+                          total: _config.items.length,
                         ),
+                        const SizedBox(height: 20),
+                        _PromptCard(
+                          stepKey: widget.step.key,
+                          itemIndex: _currentItemIndex,
+                          title: item.title,
+                          highlightedText: item.highlightedText,
+                          imageUrl: item.imageUrl,
+                          audioUrl: item.titleAudioUrl,
+                        ),
+                        const SizedBox(height: 12),
+                        const Center(
+                          child: Icon(
+                            Icons.keyboard_double_arrow_down_rounded,
+                            color: AppColors.copBlue,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _TipCard(
+                          tipText: _config.tipText,
+                          referenceWord: _config.referenceWord,
+                          displayTargetSound: _config.displayTargetSound,
+                        ),
+                        const SizedBox(height: 16),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 180),
+                          child: _selectedAnswer == null
+                              ? Row(
+                                  key: ValueKey<String>(
+                                      'choices-$_currentItemIndex'),
+                                  children: [
+                                    Expanded(
+                                      child: _AnswerButton(
+                                        label:
+                                            'Yes, ${_config.displayTargetSound}',
+                                        borderColor: AppColors.successColor,
+                                        foregroundColor: AppColors.successColor,
+                                        onPressed: () => _handleAnswer(true),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: _AnswerButton(
+                                        label:
+                                            'No, Not ${_config.displayTargetSound}',
+                                        borderColor: AppColors.errorColor,
+                                        foregroundColor: AppColors.errorColor,
+                                        onPressed: () => _handleAnswer(false),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : _FeedbackBar(
+                                  key: ValueKey<String>(
+                                    'feedback-$_currentItemIndex-$_isCorrect',
+                                  ),
+                                  isCorrect: _isCorrect,
+                                  message: _isCorrect
+                                      ? '"${item.title}" has the ${_config.displayTargetSound} sound.'
+                                      : 'Listen again for ${_config.displayTargetSound} like in "${_config.referenceWord}".',
+                                  actionLabel:
+                                      _isCorrect ? 'Continue' : 'Review',
+                                  onActionPressed: _isCorrect
+                                      ? _handleContinue
+                                      : _handleReview,
+                                ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -234,10 +255,11 @@ class _StepTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          textAlign: TextAlign.center,
+          textAlign: TextAlign.left,
           style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w700,

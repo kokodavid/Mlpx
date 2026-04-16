@@ -102,79 +102,114 @@ class _SoundItemMatchingStepState extends State<SoundItemMatchingStep> {
   Widget build(BuildContext context) {
     final activity = _currentActivity;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight - 28),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _MatchingHeader(
-                  current: _currentActivityIndex + 1,
-                  total: _config.activities.length,
-                  score: _score,
-                ),
-                const SizedBox(height: 22),
-                _PromptBlock(
-                  prompt: activity.prompt,
-                  targetSound: activity.targetSound,
-                  promptAudioUrl: activity.promptAudioUrl,
-                  sourceId: '${widget.step.key}-prompt-$_currentActivityIndex',
-                ),
-                const SizedBox(height: 24),
-                Center(
-                  child: _SoundButton(
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_config.title.isNotEmpty) ...[
+            Text(
+              _config.title,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF171B22),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          Card(
+            elevation: 3,
+            margin: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            color: const Color(0xFFF5F3F0),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Header: Activity counter + score + progress bar
+                  _MatchingHeader(
+                    current: _currentActivityIndex + 1,
+                    total: _config.activities.length,
+                    score: _score,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Prompt text centered
+                  _PromptBlock(
+                    prompt: activity.prompt,
+                    targetSound: activity.targetSound,
+                    promptAudioUrl: activity.promptAudioUrl,
                     sourceId:
-                        '${widget.step.key}-content-$_currentActivityIndex',
-                    audioUrl: activity.contentAudioUrl,
+                        '${widget.step.key}-prompt-$_currentActivityIndex',
                   ),
-                ),
-                const SizedBox(height: 12),
-                const Center(
-                  child: Icon(
-                    Icons.keyboard_double_arrow_down_rounded,
-                    color: AppColors.copBlue,
-                    size: 28,
+                  const SizedBox(height: 28),
+
+                  // Audio play button centered
+                  Center(
+                    child: _SoundButton(
+                      sourceId:
+                          '${widget.step.key}-content-$_currentActivityIndex',
+                      audioUrl: activity.contentAudioUrl,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                _TipBanner(text: activity.tipText),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    for (var index = 0;
-                        index < activity.options.length;
-                        index++) ...[
-                      Expanded(
-                        child: _OptionButton(
-                          label: activity.options[index].label,
-                          state: _optionState(index),
-                          onPressed: () => _handleOptionTap(index),
+                  const SizedBox(height: 16),
+
+                  // Double chevron down arrow
+                  const Center(
+                    child: Icon(
+                      Icons.keyboard_double_arrow_down_rounded,
+                      color: Color(0xFF8A8A8A),
+                      size: 26,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Tip banner
+                  _TipBanner(text: activity.tipText),
+                  const SizedBox(height: 16),
+
+                  // Option buttons row
+                  Row(
+                    children: [
+                      for (var index = 0;
+                          index < activity.options.length;
+                          index++) ...[
+                        Expanded(
+                          child: _OptionButton(
+                            label: activity.options[index].label,
+                            state: _optionState(index),
+                            onPressed: () => _handleOptionTap(index),
+                          ),
                         ),
-                      ),
-                      if (index < activity.options.length - 1)
-                        const SizedBox(width: 10),
+                        if (index < activity.options.length - 1)
+                          const SizedBox(width: 10),
+                      ],
                     ],
-                  ],
-                ),
-                const SizedBox(height: 14),
-                if (_hasAnswered)
-                  _FeedbackBar(
-                    isCorrect: _isCorrect,
-                    message: _isCorrect
-                        ? '"${_selectedOption.label}" matches the ${activity.displayTargetSound} sound.'
-                        : 'Try again and listen for the ${activity.displayTargetSound} sound.',
-                    actionLabel: _isCorrect ? 'Continue' : 'Review',
-                    onActionPressed:
-                        _isCorrect ? _handleContinue : _handleReview,
                   ),
-              ],
+
+                  // Feedback bar (shown after answering)
+                  if (_hasAnswered) ...[
+                    const SizedBox(height: 14),
+                    _FeedbackBar(
+                      isCorrect: _isCorrect,
+                      message: _isCorrect
+                          ? '"${_selectedOption.label}" matches the ${activity.displayTargetSound} sound.'
+                          : 'Try again and listen for the ${activity.displayTargetSound} sound.',
+                      actionLabel: _isCorrect ? 'Continue' : 'Review',
+                      onActionPressed:
+                          _isCorrect ? _handleContinue : _handleReview,
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -231,13 +266,13 @@ class _MatchingHeader extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         ClipRRect(
           borderRadius: BorderRadius.circular(999),
           child: LinearProgressIndicator(
             value: safeCurrent / safeTotal,
-            minHeight: 10,
-            backgroundColor: const Color(0xFFF3E8DD),
+            minHeight: 8,
+            backgroundColor: const Color(0xFFDDD8D1),
             valueColor: const AlwaysStoppedAnimation<Color>(AppColors.copBlue),
           ),
         ),
@@ -338,8 +373,8 @@ class _TipBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFCFCFC),
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFD9D0C7)),
       ),
       child: Text(
@@ -376,7 +411,7 @@ class _OptionButton extends StatelessWidget {
       _OptionVisualState.incorrect => AppColors.errorColor,
     };
     final borderColor = switch (state) {
-      _OptionVisualState.idle => const Color(0xFFEAE6E0),
+      _OptionVisualState.idle => const Color(0xFFD9D5CF),
       _OptionVisualState.correct => AppColors.successColor,
       _OptionVisualState.incorrect => AppColors.errorColor,
     };
