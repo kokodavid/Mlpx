@@ -411,6 +411,15 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
               duration: const Duration(milliseconds: 250),
               switchInCurve: Curves.easeOut,
               switchOutCurve: Curves.easeIn,
+              layoutBuilder: (currentChild, previousChildren) {
+                return Stack(
+                  alignment: Alignment.topCenter,
+                  children: [
+                    ...previousChildren,
+                    if (currentChild != null) currentChild,
+                  ],
+                );
+              },
               child: KeyedSubtree(
                 key: ValueKey(_currentStep.key),
                 child: LessonStepRenderer(

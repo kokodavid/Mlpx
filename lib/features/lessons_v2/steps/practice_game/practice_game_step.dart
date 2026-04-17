@@ -25,13 +25,13 @@ class PracticeGameStep extends StatefulWidget {
 
 class _PracticeGameStepState extends State<PracticeGameStep> {
   late final PracticeGameConfig _config;
-  final Set<int> _selectedCorrect = <int>{};
-  final Set<int> _selectedIncorrect = <int>{};
+  final Set<int> _selected = <int>{};
   Timer? _timer;
   late int _secondsRemaining;
   bool _isFinished = false;
 
-  int get _score => _selectedCorrect.length;
+  int get _score =>
+      _selected.where((i) => _config.options[i].isCorrect).length;
 
   bool get _passed => _score >= _config.passingScore;
 
@@ -94,8 +94,7 @@ class _PracticeGameStepState extends State<PracticeGameStep> {
   void _resetGame() {
     _timer?.cancel();
     setState(() {
-      _selectedCorrect.clear();
-      _selectedIncorrect.clear();
+      _selected.clear();
       _secondsRemaining = _config.durationSeconds;
       _isFinished = false;
     });
@@ -105,18 +104,14 @@ class _PracticeGameStepState extends State<PracticeGameStep> {
 
   void _handleOptionTap(int index) {
     if (_isFinished) return;
-    final option = _config.options[index];
-    if (_selectedCorrect.contains(index) || _selectedIncorrect.contains(index)) {
-      return;
-    }
     setState(() {
-      if (option.isCorrect) {
-        _selectedCorrect.add(index);
+      if (_selected.contains(index)) {
+        _selected.remove(index);
       } else {
-        _selectedIncorrect.add(index);
+        _selected.add(index);
       }
     });
-    if (_selectedCorrect.length >= _correctOptionCount) {
+    if (_score >= _correctOptionCount) {
       _finishGame();
     }
   }
@@ -222,9 +217,10 @@ class _PracticeGameStepState extends State<PracticeGameStep> {
   }
 
   _GameCardState _cardState(int index) {
-    if (_selectedCorrect.contains(index)) return _GameCardState.correct;
-    if (_selectedIncorrect.contains(index)) return _GameCardState.incorrect;
-    return _GameCardState.idle;
+    if (!_selected.contains(index)) return _GameCardState.idle;
+    return _config.options[index].isCorrect
+        ? _GameCardState.correct
+        : _GameCardState.incorrect;
   }
 }
 

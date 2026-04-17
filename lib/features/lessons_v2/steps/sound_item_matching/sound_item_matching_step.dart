@@ -301,6 +301,14 @@ class _PromptBlock extends StatelessWidget {
 
     return Column(
       children: [
+        if (promptAudioUrl.isNotEmpty) ...[
+          LessonAudioInlineButton(
+            sourceId: sourceId,
+            url: promptAudioUrl,
+            backgroundColor: const Color(0xFFF8F8F8),
+          ),
+          const SizedBox(height: 10),
+        ],
         if (targetIndex >= 0)
           Text.rich(
             TextSpan(
@@ -325,15 +333,6 @@ class _PromptBlock extends StatelessWidget {
             textAlign: TextAlign.center,
             style: defaultStyle,
           ),
-        if (promptAudioUrl.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          LessonAudioInlineButton(
-            sourceId: sourceId,
-            url: promptAudioUrl,
-            backgroundColor: const Color.fromARGB(255, 22, 6, 92),
-            iconColor: Colors.white,
-          ),
-        ],
       ],
     );
   }
