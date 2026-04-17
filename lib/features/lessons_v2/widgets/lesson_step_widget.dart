@@ -89,6 +89,7 @@ class LessonStepProgressHeader extends StatelessWidget {
 }
 
 
+
 class LessonStepCard extends StatelessWidget {
   final Widget child;
 
@@ -246,6 +247,7 @@ class LessonFeedbackBar extends StatelessWidget {
 }
 
 
+
 class LessonStepInstructionSection extends StatelessWidget {
   final String stepKey;
 
@@ -258,6 +260,12 @@ class LessonStepInstructionSection extends StatelessWidget {
   /// Background colour of the audio button. Defaults to [AppColors.primaryColor].
   final Color audioBackgroundColor;
 
+  /// Whether the audio button should render as a circular icon.
+  final bool audioButtonIsCircular;
+
+  /// Optional default icon for the audio button when not playing.
+  final IconData? audioButtonDefaultIcon;
+
   /// Icon button size. Defaults to 44.
   final double buttonSize;
 
@@ -267,6 +275,8 @@ class LessonStepInstructionSection extends StatelessWidget {
     required this.title,
     required this.audioUrl,
     this.audioBackgroundColor = AppColors.primaryColor,
+    this.audioButtonIsCircular = false,
+    this.audioButtonDefaultIcon,
     this.buttonSize = 44,
   });
 
@@ -280,6 +290,9 @@ class LessonStepInstructionSection extends StatelessWidget {
             sourceId: '$stepKey-instruction',
             url: audioUrl,
             backgroundColor: audioBackgroundColor,
+            iconColor: Colors.white,
+            isCircular: audioButtonIsCircular,
+            defaultIcon: audioButtonDefaultIcon,
           )
         else
           Container(
@@ -311,6 +324,7 @@ class LessonStepInstructionSection extends StatelessWidget {
     );
   }
 }
+
 
 
 class LessonStepNextButton extends StatelessWidget {
@@ -355,6 +369,7 @@ class LessonStepNextButton extends StatelessWidget {
     );
   }
 }
+
 
 
 class LessonStepTipBanner extends StatelessWidget {

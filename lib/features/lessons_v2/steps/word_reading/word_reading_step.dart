@@ -81,66 +81,76 @@ class _WordReadingStepState extends State<WordReadingStep> {
 
     final item = _item;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            child: LessonStepCard(
-              elevation: 0,
-              borderRadius: 22,
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
-              border: Border.all(color: Colors.transparent),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 312),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    LessonStepProgressHeader(
-                      current: _itemIndex + 1,
-                      total: _config.items.length,
-                      itemLabel: 'Word',
-                      barColor: AppColors.copBlue,
-                      barBackgroundColor: const Color(0xFFF3E8DD),
-                    ),
-                    const SizedBox(height: 18),
-                    LessonStepInstructionSection(
-                      stepKey: widget.step.key,
-                      title: _config.title,
-                      audioUrl: _config.instructionAudioUrl,
-                    ),
-                    const SizedBox(height: 18),
-                    _WordCard(
-                      stepKey: widget.step.key,
-                      itemIndex: _itemIndex,
-                      item: item,
-                    ),
-                    const SizedBox(height: 14),
-                    const LessonStepChevronDown(),
-                    const SizedBox(height: 14),
-                    _ModelReadingAccordion(
-                      stepKey: widget.step.key,
-                      itemIndex: _itemIndex,
-                      item: item,
-                      expanded: _segmentsExpanded,
-                      onToggle: _toggleSegments,
-                    ),
-                    const SizedBox(height: 18),
-                    LessonStepNextButton(
-                      label: _isLastItem ? 'Finish' : 'Next Word',
-                      onPressed: _handleNextWord,
-                    ),
-                  ],
-                ),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_config.title.isNotEmpty) ...[
+            Text(
+              _config.title,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF171B22),
               ),
             ),
+            const SizedBox(height: 18),
+          ],
+          LessonStepCard(
+            color: const Color(0xFFF5F3F0),
+            elevation: 3,
+            borderRadius: 24,
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                LessonStepProgressHeader(
+                  current: _itemIndex + 1,
+                  total: _config.items.length,
+                  itemLabel: 'Word',
+                  barColor: AppColors.copBlue,
+                  barBackgroundColor: const Color(0xFFDDD8D1),
+                ),
+                const SizedBox(height: 18),
+                LessonStepInstructionSection(
+                  stepKey: widget.step.key,
+                  title: '',
+                  audioUrl: _config.instructionAudioUrl,
+                  audioButtonIsCircular: true,
+                  audioButtonDefaultIcon: Icons.play_arrow,
+                ),
+                const SizedBox(height: 18),
+                _WordCard(
+                  stepKey: widget.step.key,
+                  itemIndex: _itemIndex,
+                  item: item,
+                ),
+                const SizedBox(height: 14),
+                const LessonStepChevronDown(),
+                const SizedBox(height: 14),
+                _ModelReadingAccordion(
+                  stepKey: widget.step.key,
+                  itemIndex: _itemIndex,
+                  item: item,
+                  expanded: _segmentsExpanded,
+                  onToggle: _toggleSegments,
+                ),
+                const SizedBox(height: 18),
+                LessonStepNextButton(
+                  label: _isLastItem ? 'Finish' : 'Next Word',
+                  onPressed: _handleNextWord,
+                ),
+              ],
+            ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }
+
 
 
 class _WordCard extends StatelessWidget {
@@ -220,6 +230,7 @@ class _WordCard extends StatelessWidget {
     );
   }
 }
+
 
 
 class _ModelReadingAccordion extends StatelessWidget {
@@ -387,7 +398,7 @@ class _SegmentTileState extends State<_SegmentTile> {
         ),
         alignment: Alignment.center,
         child: Text(
-          '/${widget.segment.label}/',
+          widget.segment.label,
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,

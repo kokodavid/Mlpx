@@ -90,68 +90,68 @@ class _MatchingWordsStepState extends State<MatchingWordsStep> {
     }
 
     final activity = _activity;
+    final title = widget.step.config['title'] as String? ?? 'Matching Words';
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Center(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+          child: Text(
+            title,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+          ),
+        ),
+        const SizedBox(height: 18),
+        Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Center(
-              child: LessonStepCard(
-                elevation: 0,
-                borderRadius: 24,
-                padding: const EdgeInsets.all(24),
-                border: Border.all(color: Colors.transparent),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 600),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      LessonStepProgressHeader(
-                        current: _activityIndex + 1,
-                        total: _config.activities.length,
-                        itemLabel: 'Word',
-                        barHeight: 10,
-                        barBackgroundColor: const Color(0xFFF3E8DD),
-                        barColor: AppColors.copBlue,
-                      ),
-                      const SizedBox(height: 28),
-                      _PromptSection(
-                        stepKey: widget.step.key,
-                        activityIndex: _activityIndex,
-                        activity: activity,
-                        instructionAudioUrl: _config.instructionAudioUrl,
-                      ),
-                      const SizedBox(height: 16),
-                      const LessonStepChevronDown(),
-                      const SizedBox(height: 16),
-                      _OptionsSection(
-                        activity: activity,
-                        selectedOptionId: _selectedOptionId,
-                        answered: _answered,
-                        onOptionTap: _handleOptionTap,
-                      ),
-                      const SizedBox(height: 20),
-                      if (_answered)
-                        LessonFeedbackBar(
-                          isCorrect: _isCorrect,
-                          message: _isCorrect
-                              ? '"${_activity.options.firstWhere((o) => o.id == _selectedOptionId, orElse: () => const MatchingOption(id: '', label: '', imageUrl: '')).label}" — Well done!'
-                              : 'Not quite. Try again!',
-                          actionLabel: _isCorrect
-                              ? (_isLastActivity ? 'Finish' : 'Continue')
-                              : 'Try Again',
-                          onActionPressed: _handleContinue,
-                        ),
-                    ],
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            child: LessonStepCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  LessonStepProgressHeader(
+                    current: _activityIndex + 1,
+                    total: _config.activities.length,
+                    itemLabel: 'Word',
+                    barHeight: 10,
+                    barBackgroundColor: const Color(0xFFF3E8DD),
+                    barColor: AppColors.copBlue,
                   ),
-                ),
+                  const SizedBox(height: 28),
+                  _PromptSection(
+                    stepKey: widget.step.key,
+                    activityIndex: _activityIndex,
+                    activity: activity,
+                    instructionAudioUrl: _config.instructionAudioUrl,
+                  ),
+                  const SizedBox(height: 16),
+                  const LessonStepChevronDown(),
+                  const SizedBox(height: 16),
+                  _OptionsSection(
+                    activity: activity,
+                    selectedOptionId: _selectedOptionId,
+                    answered: _answered,
+                    onOptionTap: _handleOptionTap,
+                  ),
+                  const SizedBox(height: 20),
+                  if (_answered)
+                    LessonFeedbackBar(
+                      isCorrect: _isCorrect,
+                      message: _isCorrect
+                          ? '"${_activity.options.firstWhere((o) => o.id == _selectedOptionId, orElse: () => const MatchingOption(id: '', label: '', imageUrl: '')).label}" — Well done!'
+                          : 'Not quite. Try again!',
+                      actionLabel: _isCorrect
+                          ? (_isLastActivity ? 'Finish' : 'Continue')
+                          : 'Try Again',
+                      onActionPressed: _handleContinue,
+                    ),
+                ],
               ),
             ),
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 }

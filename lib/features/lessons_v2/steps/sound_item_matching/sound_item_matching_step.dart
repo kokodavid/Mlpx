@@ -8,6 +8,7 @@ class SoundItemMatchingStep extends StatefulWidget {
   final LessonStepDefinition step;
   final ValueChanged<LessonStepUiState> onStepStateChanged;
   final VoidCallback onAdvanceRequested;
+  
 
   const SoundItemMatchingStep({
     super.key,
@@ -113,7 +114,7 @@ class _SoundItemMatchingStepState extends State<SoundItemMatchingStep> {
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF171B22),
+                color: Color.fromARGB(255, 17, 16, 16),
               ),
             ),
             const SizedBox(height: 12),
@@ -148,15 +149,8 @@ class _SoundItemMatchingStepState extends State<SoundItemMatchingStep> {
                   ),
                   const SizedBox(height: 28),
 
-                  // Audio play button centered
-                  Center(
-                    child: _SoundButton(
-                      sourceId:
-                          '${widget.step.key}-content-$_currentActivityIndex',
-                      audioUrl: activity.contentAudioUrl,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                  
+            
 
                   // Double chevron down arrow
                   const Center(
@@ -336,7 +330,8 @@ class _PromptBlock extends StatelessWidget {
           LessonAudioInlineButton(
             sourceId: sourceId,
             url: promptAudioUrl,
-            backgroundColor: const Color(0xFFF8F8F8),
+            backgroundColor: const Color.fromARGB(255, 22, 6, 92),
+            iconColor: Colors.white,
           ),
         ],
       ],
@@ -344,24 +339,7 @@ class _PromptBlock extends StatelessWidget {
   }
 }
 
-class _SoundButton extends StatelessWidget {
-  final String sourceId;
-  final String audioUrl;
 
-  const _SoundButton({
-    required this.sourceId,
-    required this.audioUrl,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return LessonAudioInlineButton(
-      sourceId: sourceId,
-      url: audioUrl,
-      backgroundColor: AppColors.copBlue,
-    );
-  }
-}
 
 class _TipBanner extends StatelessWidget {
   final String text;

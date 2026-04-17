@@ -47,6 +47,7 @@ class _IntroductionStepState extends State<IntroductionStep> {
         'Practice: Say the sound out loud.';
     final practiceTipAudioUrl = practiceTipMap['audio_url'] as String? ?? '';
     final howToSvgUrl = widget.step.config['how_to_svg_url'] as String? ?? '';
+    final exampleWord = widget.step.config['example_word'] as String?;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
@@ -68,6 +69,58 @@ class _IntroductionStepState extends State<IntroductionStep> {
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          // Example word widget (shown for vowel sounds)
+          if (exampleWord != null)
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.borderColor),
+                ),
+                child: RichText(
+                  text: TextSpan(
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.black,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: displayText,
+                        style: const TextStyle(
+                          color: AppColors.primaryColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      TextSpan(
+                        text: ' as in "',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      TextSpan(
+                        text: exampleWord,
+                        style: const TextStyle(
+                          color: AppColors.primaryColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      TextSpan(
+                        text: '"',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           const SizedBox(height: 20),
           LessonAudioCardButton(
             sourceId: '${widget.step.key}-main',

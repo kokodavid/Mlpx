@@ -95,7 +95,7 @@ class _SoundDiscriminationStepState extends State<SoundDiscriminationStep> {
                 _StepTitle(
                   stepKey: widget.step.key,
                   title: _config.title,
-                  titleAudioUrl: _config.titleAudioUrl,
+                 
                 ),
                 const SizedBox(height: 16),
                 LessonStepCard(
@@ -187,17 +187,19 @@ class _SoundDiscriminationStepState extends State<SoundDiscriminationStep> {
   }
 }
 
-
+// ---------------------------------------------------------------------------
+// _StepTitle
+// ---------------------------------------------------------------------------
 
 class _StepTitle extends StatelessWidget {
   final String stepKey;
   final String title;
-  final String titleAudioUrl;
+ 
 
   const _StepTitle({
     required this.stepKey,
     required this.title,
-    required this.titleAudioUrl,
+   
   });
 
   @override
@@ -213,19 +215,15 @@ class _StepTitle extends StatelessWidget {
             color: Color(0xFF171B22),
           ),
         ),
-        if (titleAudioUrl.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          LessonAudioInlineButton(
-            sourceId: '$stepKey-title',
-            url: titleAudioUrl,
-            backgroundColor: const Color(0xFFF8F8F8),
-          ),
-        ],
+       
       ],
     );
   }
 }
 
+// ---------------------------------------------------------------------------
+// _PromptCard
+// ---------------------------------------------------------------------------
 
 class _PromptCard extends StatelessWidget {
   final String stepKey;
@@ -302,7 +300,9 @@ class _PromptCard extends StatelessWidget {
   }
 }
 
-
+// ---------------------------------------------------------------------------
+// _HighlightedWord
+// ---------------------------------------------------------------------------
 
 class _HighlightedWord extends StatelessWidget {
   final String word;
@@ -355,7 +355,9 @@ class _HighlightedWord extends StatelessWidget {
   }
 }
 
-
+// ---------------------------------------------------------------------------
+// _AnswerButton
+// ---------------------------------------------------------------------------
 
 class _AnswerButton extends StatelessWidget {
   final String label;

@@ -3,10 +3,7 @@ import 'package:milpress/features/lessons_v2/widgets/lesson_step_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../../models/lesson_models.dart';
 import '../../widgets/lesson_audio_buttons.dart';
-
 import 'model.dart';
-
-
 
 class MiniStoryCardStep extends StatefulWidget {
   final LessonStepDefinition step;
@@ -28,14 +25,10 @@ class _MiniStoryCardStepState extends State<MiniStoryCardStep> {
   int _itemIndex = 0;
   bool _accordionExpanded = false;
 
-  // ── Accessors ─────────────────────────────────────────────────────────────
-
   MiniStoryCardItem get _item =>
       _config.items[_itemIndex.clamp(0, _config.items.length - 1)];
 
   bool get _isLastItem => _itemIndex >= _config.items.length - 1;
-
-  // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   @override
   void initState() {
@@ -54,8 +47,6 @@ class _MiniStoryCardStepState extends State<MiniStoryCardStep> {
     );
   }
 
-  // ── Interaction ───────────────────────────────────────────────────────────
-
   void _handleNext() {
     if (_isLastItem) {
       widget.onStepStateChanged(const LessonStepUiState(canAdvance: true));
@@ -72,8 +63,6 @@ class _MiniStoryCardStepState extends State<MiniStoryCardStep> {
     setState(() => _accordionExpanded = !_accordionExpanded);
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     if (_config.items.isEmpty) {
@@ -82,61 +71,79 @@ class _MiniStoryCardStepState extends State<MiniStoryCardStep> {
 
     final item = _item;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight - 28),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                LessonStepProgressHeader(
-                  current: _itemIndex + 1,
-                  total: _config.items.length,
-                  itemLabel: 'Word',
-                  barBackgroundColor: AppColors.accentColor,
-                ),
-                const SizedBox(height: 20),
-                LessonStepInstructionSection(
-                  stepKey: widget.step.key,
-                  title: _config.title,
-                  audioUrl: _config.instructionAudioUrl ?? '',
-                ),
-                const SizedBox(height: 16),
-                _StoryCard(
-                  stepKey: widget.step.key,
-                  itemIndex: _itemIndex,
-                  item: item,
-                ),
-                const SizedBox(height: 14),
-                const LessonStepChevronDown(),
-                const SizedBox(height: 12),
-                _ModelReadingAccordion(
-                  stepKey: widget.step.key,
-                  itemIndex: _itemIndex,
-                  item: item,
-                  expanded: _accordionExpanded,
-                  onToggle: _toggleAccordion,
-                ),
-                const SizedBox(height: 16),
-                LessonStepNextButton(
-                  label: _isLastItem
-                      ? (item.ctaLabel ?? 'Finish')
-                      : (item.ctaLabel ?? 'Next Word'),
-                  onPressed: _handleNext,
-                  borderRadius: 28,
-                  height: 50,
-                ),
-              ],
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      child: LessonStepCard(
+        color: const Color(0xFFF5F3F0),
+        elevation: 3,
+        borderRadius: 24,
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            LessonStepProgressHeader(
+              current: _itemIndex + 1,
+              total: _config.items.length,
+              itemLabel: 'Word',
+              barColor: AppColors.copBlue,
+              barHeight: 8,
+              barBackgroundColor: const Color(0xFFDDD8D1),
             ),
-          ),
-        );
-      },
+            const SizedBox(height: 20),
+            Center(
+              child: LessonAudioInlineButton(
+                sourceId: '${widget.step.key}-top-story-${_itemIndex}',
+                url: item.storyAudioUrl,
+                isCircular: true,
+                backgroundColor: AppColors.primaryColor,
+                iconColor: Colors.white,
+                defaultIcon: Icons.play_arrow,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              item.heading,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF171B22),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _StoryCard(
+              stepKey: widget.step.key,
+              itemIndex: _itemIndex,
+              item: item,
+            ),
+            const SizedBox(height: 14),
+            _MiniStoryPlaybackPreview(
+              sourceId: '${widget.step.key}-story-preview-${_itemIndex}',
+              audioUrl: item.storyAudioUrl,
+            ),
+            const SizedBox(height: 12),
+            _ModelReadingAccordion(
+              stepKey: widget.step.key,
+              itemIndex: _itemIndex,
+              item: item,
+              expanded: _accordionExpanded,
+              onToggle: _toggleAccordion,
+            ),
+            const SizedBox(height: 16),
+            LessonStepNextButton(
+              label: _isLastItem
+                  ? (item.ctaLabel ?? 'Finish')
+                  : (item.ctaLabel ?? 'Next Word'),
+              onPressed: _handleNext,
+              borderRadius: 28,
+              height: 50,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
-
 
 class _StoryCard extends StatelessWidget {
   final String stepKey;
@@ -151,37 +158,23 @@ class _StoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bodyLines = item.bodyLines
+        .where((line) => line.trim() != item.heading.trim())
+        .toList();
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.borderColor),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE8E3DC)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          _StoryImageArea(stepKey: stepKey, itemIndex: itemIndex, item: item),
-          const SizedBox(height: 14),
-          Text(
-            item.heading,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF171B22),
-            ),
-          ),
-          const SizedBox(height: 10),
-          LessonAudioInlineButton(
-            sourceId: '$stepKey-story-$itemIndex',
-            url: item.storyAudioUrl,
-            backgroundColor: const Color(0xFFF5F4F0),
-          ),
-          if (item.bodyLines.isNotEmpty && item.bodyLines.first.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            ...item.bodyLines.map(
+          if (bodyLines.isNotEmpty) ...[
+            ...bodyLines.map(
               (line) => Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Text(
@@ -202,40 +195,76 @@ class _StoryCard extends StatelessWidget {
   }
 }
 
+class _MiniStoryPlaybackPreview extends StatelessWidget {
+  final String sourceId;
+  final String audioUrl;
 
-
-class _StoryImageArea extends StatelessWidget {
-  final String stepKey;
-  final int itemIndex;
-  final MiniStoryCardItem item;
-
-  const _StoryImageArea({
-    required this.stepKey,
-    required this.itemIndex,
-    required this.item,
+  const _MiniStoryPlaybackPreview({
+    required this.sourceId,
+    required this.audioUrl,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 180,
-      height: 160,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F4F0),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: const Center(
-        child: Icon(
-          Icons.image_outlined,
-          size: 48,
-          color: Color(0xFFCCC8C0),
+    return Center(
+      child: Container(
+        width: 300,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFE8E3DC)),
+        ),
+        child: Row(
+          children: [
+            LessonAudioInlineButton(
+              sourceId: sourceId,
+              url: audioUrl,
+              isCircular: true,
+              buttonSize: 40,
+              backgroundColor: AppColors.primaryColor,
+              iconColor: Colors.white,
+              defaultIcon: Icons.play_arrow,
+            ),
+            const SizedBox(width: 10),
+            const Expanded(child: _MiniStoryWaveformPlaceholder()),
+          ],
         ),
       ),
     );
   }
 }
 
+class _MiniStoryWaveformPlaceholder extends StatelessWidget {
+  const _MiniStoryWaveformPlaceholder();
 
+  static const List<double> _heights = [
+    6, 10, 16, 12, 18, 10, 20, 14, 22, 12, 16, 8, 18,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 28,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: _heights
+            .map(
+              (height) => Container(
+                width: 3.5,
+                height: height - 2,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryColor.withOpacity(0.75),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
+}
 
 class _ModelReadingAccordion extends StatelessWidget {
   final String stepKey;
@@ -254,12 +283,11 @@ class _ModelReadingAccordion extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
+    return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.borderColor),
+        border: Border.all(color: const Color(0xFFE8E3DC)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -320,8 +348,6 @@ class _ModelReadingAccordion extends StatelessWidget {
   }
 }
 
-
-
 class _PhonemeChips extends StatefulWidget {
   final String stepKey;
   final int itemIndex;
@@ -372,7 +398,7 @@ class _PhonemeChipsState extends State<_PhonemeChips> {
                   border: Border.all(
                     color: isHighlighted
                         ? AppColors.primaryColor
-                        : AppColors.borderColor,
+                        : const Color(0xFFD9D5CF),
                     width: isHighlighted ? 1.5 : 1,
                   ),
                 ),

@@ -72,14 +72,11 @@ class _GuidedReadingStepState extends State<GuidedReadingStep> {
         children: [
           _Header(title: _config.title),
           const SizedBox(height: 14),
-          Container(
-            width: double.infinity,
+          LessonStepCard(
+            color: const Color(0xFFF5F3F0),
+            elevation: 3,
+            borderRadius: 24,
             padding: const EdgeInsets.fromLTRB(18, 22, 18, 22),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: const Color(0xFFF2ECE4)),
-            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -129,6 +126,9 @@ class _GuidedReadingStepState extends State<GuidedReadingStep> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// _Header
+// ---------------------------------------------------------------------------
 
 class _Header extends StatelessWidget {
   final String title;
@@ -147,7 +147,9 @@ class _Header extends StatelessWidget {
   }
 }
 
-
+// ---------------------------------------------------------------------------
+// _InstructionPlayButton
+// ---------------------------------------------------------------------------
 
 class _InstructionPlayButton extends ConsumerWidget {
   final String sourceId;
@@ -198,7 +200,9 @@ class _InstructionPlayButton extends ConsumerWidget {
   }
 }
 
-
+// ---------------------------------------------------------------------------
+// _SegmentRow
+// ---------------------------------------------------------------------------
 
 class _SegmentRow extends StatelessWidget {
   final String stepKey;
@@ -326,7 +330,9 @@ class _SegmentChip extends ConsumerWidget {
   }
 }
 
-
+// ---------------------------------------------------------------------------
+// _DashedRoundedBorderPainter
+// ---------------------------------------------------------------------------
 
 class _DashedRoundedBorderPainter extends CustomPainter {
   final Color color;
@@ -384,7 +390,9 @@ class _DashedRoundedBorderPainter extends CustomPainter {
       old.dashGap != dashGap;
 }
 
-
+// ---------------------------------------------------------------------------
+// _WordText
+// ---------------------------------------------------------------------------
 
 class _WordText extends StatelessWidget {
   final String word;
@@ -439,7 +447,9 @@ class _WordText extends StatelessWidget {
   }
 }
 
-
+// ---------------------------------------------------------------------------
+// _WordAudioCard
+// ---------------------------------------------------------------------------
 
 class _WordAudioCard extends ConsumerWidget {
   final String sourceId;
@@ -508,7 +518,9 @@ class _WordAudioCard extends ConsumerWidget {
   }
 }
 
-
+// ---------------------------------------------------------------------------
+// _WaveformPlaceholder
+// ---------------------------------------------------------------------------
 
 class _WaveformPlaceholder extends StatelessWidget {
   const _WaveformPlaceholder();

@@ -70,66 +70,56 @@ class _SentenceReadingStepState extends State<SentenceReadingStep> {
 
     final item = _item;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-            child: LessonStepCard(
-              elevation: 0,
-              borderRadius: 24,
-              padding: const EdgeInsets.all(24),
-              border: Border.all(color: Colors.transparent),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: 400,
-                  minHeight: constraints.maxHeight - 48,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    LessonStepProgressHeader(
-                      current: _itemIndex + 1,
-                      total: _config.items.length,
-                      itemLabel: 'Sentence',
-                      barColor: AppColors.copBlue,
-                      barBackgroundColor: const Color(0xFFF3E8DD),
-                    ),
-                    const SizedBox(height: 24),
-                    LessonStepInstructionSection(
-                      stepKey: widget.step.key,
-                      title: _config.title,
-                      audioUrl: _config.instructionAudioUrl,
-                    ),
-                    const SizedBox(height: 24),
-                    _TokenRow(tokens: item.displayTokens),
-                    const SizedBox(height: 20),
-                    _SentenceAudioSection(
-                      stepKey: widget.step.key,
-                      itemIndex: _itemIndex,
-                      item: item,
-                      selfReadEnabled: _selfReadEnabled,
-                      onSelfReadToggle: _handleSelfReadToggle,
-                    ),
-                    const SizedBox(height: 16),
-                    const LessonStepChevronDown(),
-                    const SizedBox(height: 16),
-                    LessonStepNextButton(
-                      label: _isLastItem ? 'Finish' : 'Next Word',
-                      onPressed: _handleNextWord,
-                    ),
-                  ],
-                ),
-              ),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      child: LessonStepCard(
+        color: const Color(0xFFF5F3F0),
+        elevation: 3,
+        borderRadius: 24,
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            LessonStepProgressHeader(
+              current: _itemIndex + 1,
+              total: _config.items.length,
+              itemLabel: 'Sentence',
+              barColor: AppColors.copBlue,
+              barHeight: 8,
+              barBackgroundColor: const Color(0xFFDDD8D1),
             ),
-          ),
-        );
-      },
+            const SizedBox(height: 24),
+            LessonStepInstructionSection(
+              stepKey: widget.step.key,
+              title: _config.title,
+              audioUrl: _config.instructionAudioUrl,
+            ),
+            const SizedBox(height: 24),
+            _TokenRow(tokens: item.displayTokens),
+            const SizedBox(height: 20),
+            _SentenceAudioSection(
+              stepKey: widget.step.key,
+              itemIndex: _itemIndex,
+              item: item,
+              selfReadEnabled: _selfReadEnabled,
+              onSelfReadToggle: _handleSelfReadToggle,
+            ),
+            const SizedBox(height: 16),
+            const LessonStepChevronDown(
+              color: Color(0xFF8A8A8A),
+              size: 26,
+            ),
+            const SizedBox(height: 16),
+            LessonStepNextButton(
+              label: _isLastItem ? 'Finish' : 'Next Word',
+              onPressed: _handleNextWord,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
-
 
 class _TokenRow extends StatelessWidget {
   final List<String> tokens;
@@ -142,9 +132,9 @@ class _TokenRow extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFAFAFA),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE8E8E8), width: 1),
+        border: Border.all(color: const Color(0xFFE8E3DC), width: 1),
       ),
       child: Wrap(
         spacing: 8,
@@ -166,9 +156,9 @@ class _TokenPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFFF7F5F2),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFD9D0C7), width: 1),
+        border: Border.all(color: const Color(0xFFD9D5CF), width: 1),
       ),
       child: Text(
         token,
@@ -181,8 +171,6 @@ class _TokenPill extends StatelessWidget {
     );
   }
 }
-
-
 
 class _SentenceAudioSection extends StatelessWidget {
   final String stepKey;
@@ -243,8 +231,6 @@ class _SentenceAudioSection extends StatelessWidget {
   }
 }
 
-
-
 class _WaveformPlayer extends StatefulWidget {
   final String stepKey;
   final int itemIndex;
@@ -297,9 +283,9 @@ class _WaveformPlayerState extends State<_WaveformPlayer>
         height: 52,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFFFAFAFA),
+          color: Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE8E8E8), width: 1),
+          border: Border.all(color: const Color(0xFFE8E3DC), width: 1),
         ),
         child: Row(
           children: [
@@ -379,8 +365,6 @@ class _WaveformBars extends StatelessWidget {
   }
 }
 
-
-
 class _SelfReadToggle extends StatelessWidget {
   final String label;
   final bool value;
@@ -402,10 +386,10 @@ class _SelfReadToggle extends StatelessWidget {
         decoration: BoxDecoration(
           color: value
               ? AppColors.primaryColor.withOpacity(0.08)
-              : const Color(0xFFFAFAFA),
+              : Colors.white,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: value ? AppColors.primaryColor : const Color(0xFFE8E8E8),
+            color: value ? AppColors.primaryColor : const Color(0xFFD9D5CF),
             width: 1,
           ),
         ),

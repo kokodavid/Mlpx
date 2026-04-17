@@ -80,7 +80,6 @@ class _MissingLettersStepState extends State<MissingLettersStep> {
     _options = List<String>.from(_activity.options);
   }
 
-
   void _handleOptionTap(int optionIndex) {
     if (_result != _CheckResult.none) return;
     if (_usedOptionIndices.contains(optionIndex)) return;
@@ -128,58 +127,61 @@ class _MissingLettersStepState extends State<MissingLettersStep> {
       return const Center(child: Text('No activities configured.'));
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight - 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                LessonStepProgressHeader(
-                  current: _activityIndex + 1,
-                  total: _config.activities.length,
-                  itemLabel: 'Word',
-                  barHeight: 6,
-                  barBackgroundColor: const Color(0xFFFFF0E9),
-                ),
-                const SizedBox(height: 16),
-                _InstructionSection(
-                  stepKey: widget.step.key,
-                  title: _config.title,
-                  promptText: _activity.promptText,
-                  instructionAudioUrl: _config.instructionAudioUrl,
-                ),
-                const SizedBox(height: 16),
-                _SlotRow(slots: _slots, result: _result),
-                const SizedBox(height: 12),
-                const LessonStepChevronDown(),
-                const SizedBox(height: 10),
-                const Center(
-                  child: Text(
-                    'Selects missing letter',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF142C44),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                _OptionGrid(
-                  options: _options,
-                  usedIndices: _usedOptionIndices,
-                  locked: _result != _CheckResult.none,
-                  onTap: _handleOptionTap,
-                ),
-                const SizedBox(height: 14),
-                _buildBottomAction(),
-              ],
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      child: LessonStepCard(
+        color: const Color(0xFFFCFBF8),
+        elevation: 3,
+        borderRadius: 24,
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            LessonStepProgressHeader(
+              current: _activityIndex + 1,
+              total: _config.activities.length,
+              itemLabel: 'Word',
+              barColor: AppColors.copBlue,
+              barHeight: 8,
+              barBackgroundColor: const Color(0xFFDDD8D1),
             ),
-          ),
-        );
-      },
+            const SizedBox(height: 20),
+            _InstructionSection(
+              stepKey: widget.step.key,
+              title: _config.title,
+              promptText: _activity.promptText,
+              instructionAudioUrl: _config.instructionAudioUrl,
+            ),
+            const SizedBox(height: 20),
+            _SlotRow(slots: _slots, result: _result),
+            const SizedBox(height: 12),
+            const LessonStepChevronDown(
+              color: Color(0xFF8A8A8A),
+              size: 26,
+            ),
+            const SizedBox(height: 10),
+            const Center(
+              child: Text(
+                'Selects missing letter',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF142C44),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            _OptionGrid(
+              options: _options,
+              usedIndices: _usedOptionIndices,
+              locked: _result != _CheckResult.none,
+              onTap: _handleOptionTap,
+            ),
+            const SizedBox(height: 14),
+            _buildBottomAction(),
+          ],
+        ),
+      ),
     );
   }
 
@@ -224,8 +226,6 @@ class _MissingLettersStepState extends State<MissingLettersStep> {
   }
 }
 
-
-
 class _InstructionSection extends StatelessWidget {
   final String stepKey;
   final String title;
@@ -243,22 +243,15 @@ class _InstructionSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        if (instructionAudioUrl != null && instructionAudioUrl!.isNotEmpty)
-          LessonAudioInlineButton(
-            sourceId: '$stepKey-instruction',
-            url: instructionAudioUrl!,
-            backgroundColor: AppColors.primaryColor,
-          )
-        else
-          Container(
-            width: 38,
-            height: 38,
-            decoration: const BoxDecoration(
-              color: AppColors.primaryColor,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.play_arrow, color: Colors.white, size: 22),
-          ),
+        LessonAudioInlineButton(
+          sourceId: '$stepKey-instruction',
+          url: instructionAudioUrl ?? '',
+          isCircular: true,
+          buttonSize: 44,
+          backgroundColor: AppColors.primaryColor,
+          iconColor: Colors.white,
+          defaultIcon: Icons.play_arrow,
+        ),
         const SizedBox(height: 10),
         Text(
           title,
@@ -266,8 +259,7 @@ class _InstructionSection extends StatelessWidget {
             fontSize: 18,
             fontWeight: FontWeight.w800,
             color: Color(0xFF171B22),
-          ),
-        ),
+         ) ),
         const SizedBox(height: 4),
         Text(
           'Make "$promptText"',
@@ -380,7 +372,6 @@ class _SlotTile extends StatelessWidget {
     );
   }
 }
-
 
 class _OptionGrid extends StatelessWidget {
   final List<String> options;

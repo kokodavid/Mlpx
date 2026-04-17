@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_step_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../../models/lesson_models.dart';
+import '../../widgets/lesson_audio_buttons.dart';
 import 'model.dart';
 
 class BlendingStep extends StatefulWidget {
@@ -73,60 +74,87 @@ class _BlendingStepState extends State<BlendingStep> {
     return LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight - 28),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                LessonStepProgressHeader(
-                  current: _exampleIndex + 1,
-                  total: _config.examples.length,
-                  itemLabel: 'Letter',
-                ),
-                const SizedBox(height: 20),
-                LessonStepInstructionSection(
-                  stepKey: widget.step.key,
-                  title: _config.instruction,
-                  audioUrl: _config.instructionAudioUrl,
-                ),
-                const SizedBox(height: 20),
-                _PhonemeRow(
-                  stepKey: widget.step.key,
-                  exampleIndex: _exampleIndex,
-                  phonemes: example.phonemes,
-                ),
-                const SizedBox(height: 14),
-                const LessonStepChevronDown(),
-                const SizedBox(height: 14),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  switchInCurve: Curves.easeOut,
-                  switchOutCurve: Curves.easeIn,
-                  transitionBuilder: (child, animation) => FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, 0.12),
-                        end: Offset.zero,
-                      ).animate(animation),
-                      child: child,
-                    ),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_config.title.isNotEmpty) ...[
+                Text(
+                  _config.title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF171B22),
                   ),
-                  child: _blended
-                      ? _BlendedWordDisplay(
-                          key: ValueKey<String>(
-                              'blended-$_exampleIndex-${example.word}'),
-                          stepKey: widget.step.key,
-                          exampleIndex: _exampleIndex,
-                          example: example,
-                        )
-                      : const SizedBox.shrink(key: ValueKey<String>('blank')),
                 ),
-                const SizedBox(height: 16),
-                _buildBottomAction(example),
+                const SizedBox(height: 6),
               ],
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 540),
+                  child: LessonStepCard(
+                    color: const Color(0xFFF5F3F0),
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  LessonStepProgressHeader(
+                    current: _exampleIndex + 1,
+                    total: _config.examples.length,
+                    itemLabel: 'Letter',
+                    barColor: AppColors.copBlue,
+                    barBackgroundColor: const Color(0xFFDDD8D1),
+                  ),
+                  const SizedBox(height: 20),
+                  LessonStepInstructionSection(
+                    stepKey: widget.step.key,
+                    title: _config.instruction,
+                    audioUrl: _config.instructionAudioUrl,
+                    audioBackgroundColor: AppColors.primaryColor,
+                    audioButtonIsCircular: true,
+                    audioButtonDefaultIcon: Icons.play_arrow,
+                  ),
+                  const SizedBox(height: 20),
+                  _PhonemeRow(
+                    stepKey: widget.step.key,
+                    exampleIndex: _exampleIndex,
+                    phonemes: example.phonemes,
+                  ),
+                  const SizedBox(height: 14),
+                  const LessonStepChevronDown(),
+                  const SizedBox(height: 14),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    switchInCurve: Curves.easeOut,
+                    switchOutCurve: Curves.easeIn,
+                    transitionBuilder: (child, animation) => FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.12),
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: child,
+                      ),
+                    ),
+                    child: _blended
+                        ? _BlendedWordDisplay(
+                            key: ValueKey<String>(
+                                'blended-$_exampleIndex-${example.word}'),
+                            stepKey: widget.step.key,
+                            exampleIndex: _exampleIndex,
+                            example: example,
+                          )
+                        : const SizedBox.shrink(key: ValueKey<String>('blank')),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildBottomAction(example),
+                ],
+              ),
             ),
+          ),
+          ),
+          ],
           ),
         );
       },
@@ -150,7 +178,9 @@ class _BlendingStepState extends State<BlendingStep> {
   }
 }
 
-
+// ---------------------------------------------------------------------------
+// _PhonemeRow
+// ---------------------------------------------------------------------------
 
 class _PhonemeRow extends StatelessWidget {
   final String stepKey;
@@ -207,7 +237,7 @@ class _PhonemeButtonState extends State<_PhonemeButton> {
   @override
   Widget build(BuildContext context) {
     final highlighted = widget.phoneme.highlighted;
-    final label = '/${widget.phoneme.label}/';
+    final label = widget.phoneme.label;
 
     final borderColor = highlighted
         ? AppColors.primaryColor
@@ -247,7 +277,9 @@ class _PhonemeButtonState extends State<_PhonemeButton> {
   }
 }
 
-
+// ---------------------------------------------------------------------------
+// _BlendButton
+// ---------------------------------------------------------------------------
 
 class _BlendButton extends StatelessWidget {
   final String stepKey;
@@ -287,6 +319,9 @@ class _BlendButton extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// _BlendedWordDisplay
+// ---------------------------------------------------------------------------
 
 class _BlendedWordDisplay extends StatelessWidget {
   final String stepKey;
