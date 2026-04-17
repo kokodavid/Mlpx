@@ -126,9 +126,7 @@ class _GuidedReadingStepState extends State<GuidedReadingStep> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// _Header
-// ---------------------------------------------------------------------------
+
 
 class _Header extends StatelessWidget {
   final String title;
@@ -141,15 +139,12 @@ class _Header extends StatelessWidget {
       style: const TextStyle(
         fontSize: 18,
         fontWeight: FontWeight.w700,
-        color: Color(0xFFC08BF8),
+        color: Colors.black,
       ),
     );
   }
 }
 
-// ---------------------------------------------------------------------------
-// _InstructionPlayButton
-// ---------------------------------------------------------------------------
 
 class _InstructionPlayButton extends ConsumerWidget {
   final String sourceId;
@@ -200,9 +195,6 @@ class _InstructionPlayButton extends ConsumerWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// _SegmentRow
-// ---------------------------------------------------------------------------
 
 class _SegmentRow extends StatelessWidget {
   final String stepKey;
@@ -330,9 +322,7 @@ class _SegmentChip extends ConsumerWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// _DashedRoundedBorderPainter
-// ---------------------------------------------------------------------------
+
 
 class _DashedRoundedBorderPainter extends CustomPainter {
   final Color color;
@@ -390,9 +380,7 @@ class _DashedRoundedBorderPainter extends CustomPainter {
       old.dashGap != dashGap;
 }
 
-// ---------------------------------------------------------------------------
-// _WordText
-// ---------------------------------------------------------------------------
+
 
 class _WordText extends StatelessWidget {
   final String word;
@@ -447,9 +435,6 @@ class _WordText extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// _WordAudioCard
-// ---------------------------------------------------------------------------
 
 class _WordAudioCard extends ConsumerWidget {
   final String sourceId;
@@ -518,9 +503,7 @@ class _WordAudioCard extends ConsumerWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// _WaveformPlaceholder
-// ---------------------------------------------------------------------------
+
 
 class _WaveformPlaceholder extends StatelessWidget {
   const _WaveformPlaceholder();

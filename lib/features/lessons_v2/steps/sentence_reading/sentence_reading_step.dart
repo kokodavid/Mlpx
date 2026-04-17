@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:milpress/features/lessons_v2/services/lesson_audio_controller.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_step_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../../models/lesson_models.dart';
+import '../../providers/lesson_audio_providers.dart';
 import 'model.dart';
 
 class SentenceReadingStep extends StatefulWidget {
@@ -93,6 +96,8 @@ class _SentenceReadingStepState extends State<SentenceReadingStep> {
               stepKey: widget.step.key,
               title: _config.title,
               audioUrl: _config.instructionAudioUrl,
+              audioButtonIsCircular: true,
+              audioButtonDefaultIcon: Icons.play_arrow,
             ),
             const SizedBox(height: 24),
             _TokenRow(tokens: item.displayTokens),
@@ -248,8 +253,10 @@ class _WaveformPlayer extends StatefulWidget {
 
 class _WaveformPlayerState extends State<_WaveformPlayer>
     with SingleTickerProviderStateMixin {
-  bool _playing = false;
   late final AnimationController _animController;
+
+  String get _sourceId =>
+      '${widget.stepKey}-sentence-${widget.itemIndex}-audio';
 
   @override
   void initState() {
@@ -266,52 +273,81 @@ class _WaveformPlayerState extends State<_WaveformPlayer>
     super.dispose();
   }
 
-  void _handleTap() {
-    setState(() => _playing = !_playing);
-    if (_playing) {
-      _animController.repeat(reverse: true);
-    } else {
-      _animController.stop();
+  Future<void> _handleTap(LessonAudioController controller) async {
+    final state = controller.state.value;
+    if (state.sourceId == _sourceId && state.status == LessonAudioStatus.playing) {
+      await controller.stop();
+      return;
     }
+
+    await controller.playUrl(widget.audioUrl, sourceId: _sourceId);
   }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _handleTap,
-      child: Container(
-        height: 52,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE8E3DC), width: 1),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: const BoxDecoration(
-                color: AppColors.primaryColor,
-                shape: BoxShape.circle,
+    return Consumer(
+      builder: (context, ref, _) {
+        final controller = ref.watch(lessonAudioControllerProvider);
+
+        return ValueListenableBuilder<LessonAudioState>(
+          valueListenable: controller.state,
+          builder: (context, state, _) {
+            final isActive = state.sourceId == _sourceId;
+            final isPlaying = isActive && state.status == LessonAudioStatus.playing;
+            final isLoading = isActive && state.status == LessonAudioStatus.loading;
+
+            return GestureDetector(
+              onTap: () => _handleTap(controller),
+              child: Container(
+                height: 52,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE8E3DC), width: 1),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: const BoxDecoration(
+                        color: AppColors.primaryColor,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: isLoading
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : Icon(
+                                isPlaying ? Icons.pause_rounded : Icons.volume_up_rounded,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _WaveformBars(
+                        controller: _animController,
+                        playing: isPlaying || isLoading,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: Icon(
-                _playing ? Icons.pause_rounded : Icons.volume_up_rounded,
-                color: Colors.white,
-                size: 18,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _WaveformBars(
-                controller: _animController,
-                playing: _playing,
-              ),
-            ),
-          ],
-        ),
-      ),
+            );
+          },
+        );
+      },
     );
   }
 }

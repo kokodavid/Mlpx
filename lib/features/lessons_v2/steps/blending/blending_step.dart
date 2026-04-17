@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_step_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../../models/lesson_models.dart';
-import '../../widgets/lesson_audio_buttons.dart';
+import '../../providers/lesson_audio_providers.dart';
 import 'model.dart';
 
 class BlendingStep extends StatefulWidget {
@@ -24,6 +25,7 @@ class _BlendingStepState extends State<BlendingStep> {
 
   int _exampleIndex = 0;
   bool _blended = false;
+  final Set<String> _selectedPhonemeIds = {};
 
   BlendingExample get _example =>
       _config.examples[_exampleIndex.clamp(0, _config.examples.length - 1)];
@@ -59,8 +61,15 @@ class _BlendingStepState extends State<BlendingStep> {
     setState(() {
       _exampleIndex += 1;
       _blended = false;
+      _selectedPhonemeIds.clear();
     });
     _publishUiState();
+  }
+
+  void _handlePhonemeSelected(String sourceId) {
+    setState(() {
+      _selectedPhonemeIds.add(sourceId);
+    });
   }
 
   @override
@@ -97,64 +106,69 @@ class _BlendingStepState extends State<BlendingStep> {
                     padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  LessonStepProgressHeader(
-                    current: _exampleIndex + 1,
-                    total: _config.examples.length,
-                    itemLabel: 'Letter',
-                    barColor: AppColors.copBlue,
-                    barBackgroundColor: const Color(0xFFDDD8D1),
-                  ),
-                  const SizedBox(height: 20),
-                  LessonStepInstructionSection(
-                    stepKey: widget.step.key,
-                    title: _config.instruction,
-                    audioUrl: _config.instructionAudioUrl,
-                    audioBackgroundColor: AppColors.primaryColor,
-                    audioButtonIsCircular: true,
-                    audioButtonDefaultIcon: Icons.play_arrow,
-                  ),
-                  const SizedBox(height: 20),
-                  _PhonemeRow(
-                    stepKey: widget.step.key,
-                    exampleIndex: _exampleIndex,
-                    phonemes: example.phonemes,
-                  ),
-                  const SizedBox(height: 14),
-                  const LessonStepChevronDown(),
-                  const SizedBox(height: 14),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 250),
-                    switchInCurve: Curves.easeOut,
-                    switchOutCurve: Curves.easeIn,
-                    transitionBuilder: (child, animation) => FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(
-                        position: Tween<Offset>(
-                          begin: const Offset(0, 0.12),
-                          end: Offset.zero,
-                        ).animate(animation),
-                        child: child,
-                      ),
+                      children: [
+                        LessonStepProgressHeader(
+                          current: _exampleIndex + 1,
+                          total: _config.examples.length,
+                          itemLabel: 'Letter',
+                          barColor: AppColors.copBlue,
+                          barBackgroundColor: const Color(0xFFDDD8D1),
+                        ),
+                        const SizedBox(height: 20),
+                        LessonStepInstructionSection(
+                          stepKey: widget.step.key,
+                          title: _config.instruction,
+                          audioUrl: _config.instructionAudioUrl,
+                          audioBackgroundColor: AppColors.primaryColor,
+                          audioButtonIsCircular: true,
+                          audioButtonDefaultIcon: Icons.play_arrow,
+                        ),
+                        const SizedBox(height: 20),
+                        _PhonemeRow(
+                          stepKey: widget.step.key,
+                          exampleIndex: _exampleIndex,
+                          phonemes: example.phonemes,
+                          selectedSourceIds: _selectedPhonemeIds,
+                          onPhonemeSelected: _handlePhonemeSelected,
+                        ),
+                        const SizedBox(height: 14),
+                        const LessonStepChevronDown(),
+                        const SizedBox(height: 14),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 250),
+                          switchInCurve: Curves.easeOut,
+                          switchOutCurve: Curves.easeIn,
+                          transitionBuilder: (child, animation) =>
+                              FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position: Tween<Offset>(
+                                begin: const Offset(0, 0.12),
+                                end: Offset.zero,
+                              ).animate(animation),
+                              child: child,
+                            ),
+                          ),
+                          child: _blended
+                              ? _BlendedWordDisplay(
+                                  key: ValueKey<String>(
+                                      'blended-$_exampleIndex-${example.word}'),
+                                  stepKey: widget.step.key,
+                                  exampleIndex: _exampleIndex,
+                                  example: example,
+                                  selectedSourceIds: _selectedPhonemeIds,
+                                )
+                              : const SizedBox.shrink(
+                                  key: ValueKey<String>('blank')),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildBottomAction(example),
+                      ],
                     ),
-                    child: _blended
-                        ? _BlendedWordDisplay(
-                            key: ValueKey<String>(
-                                'blended-$_exampleIndex-${example.word}'),
-                            stepKey: widget.step.key,
-                            exampleIndex: _exampleIndex,
-                            example: example,
-                          )
-                        : const SizedBox.shrink(key: ValueKey<String>('blank')),
                   ),
-                  const SizedBox(height: 16),
-                  _buildBottomAction(example),
-                ],
+                ),
               ),
-            ),
-          ),
-          ),
-          ],
+            ],
           ),
         );
       },
@@ -186,11 +200,15 @@ class _PhonemeRow extends StatelessWidget {
   final String stepKey;
   final int exampleIndex;
   final List<BlendingPhoneme> phonemes;
+  final Set<String> selectedSourceIds;
+  final ValueChanged<String> onPhonemeSelected;
 
   const _PhonemeRow({
     required this.stepKey,
     required this.exampleIndex,
     required this.phonemes,
+    required this.selectedSourceIds,
+    required this.onPhonemeSelected,
   });
 
   @override
@@ -205,11 +223,14 @@ class _PhonemeRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: List.generate(phonemes.length, (i) {
+          final sourceId = '$stepKey-example-$exampleIndex-phoneme-$i';
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 5),
             child: _PhonemeButton(
-              sourceId: '$stepKey-example-$exampleIndex-phoneme-$i',
+              sourceId: sourceId,
               phoneme: phonemes[i],
+              isSelected: selectedSourceIds.contains(sourceId),
+              onSelected: () => onPhonemeSelected(sourceId),
             ),
           );
         }),
@@ -218,37 +239,67 @@ class _PhonemeRow extends StatelessWidget {
   }
 }
 
-class _PhonemeButton extends StatefulWidget {
+class _PhonemeButton extends ConsumerStatefulWidget {
   final String sourceId;
   final BlendingPhoneme phoneme;
+  final bool isSelected;
+  final VoidCallback onSelected;
 
   const _PhonemeButton({
     required this.sourceId,
     required this.phoneme,
+    required this.isSelected,
+    required this.onSelected,
   });
 
   @override
-  State<_PhonemeButton> createState() => _PhonemeButtonState();
+  ConsumerState<_PhonemeButton> createState() => _PhonemeButtonState();
 }
 
-class _PhonemeButtonState extends State<_PhonemeButton> {
+class _PhonemeButtonState extends ConsumerState<_PhonemeButton> {
   bool _tapped = false;
+
+  Future<void> _playPhonemeAudio() async {
+    final audioUrl = widget.phoneme.audioUrl;
+
+    setState(() {
+      _tapped = true;
+    });
+
+    // ── FIX: always register the tap so the vowel highlight works in the
+    //    blended word display regardless of whether the phoneme is a vowel.
+    widget.onSelected();
+
+    if (audioUrl.isNotEmpty) {
+      ref.read(lessonAudioControllerProvider).playUrl(
+            audioUrl,
+            sourceId: widget.sourceId,
+          );
+    }
+
+    Future.delayed(const Duration(milliseconds: 150), () {  
+      if (mounted) {
+        setState(() => _tapped = false);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final highlighted = widget.phoneme.highlighted;
+    final isHighlighted = widget.phoneme.highlighted;
+    final isActive = isHighlighted || _tapped;
     final label = widget.phoneme.label;
 
-    final borderColor = highlighted
+    final borderColor = isActive
         ? AppColors.primaryColor
-        : (_tapped ? AppColors.primaryColor : const Color(0xFFD9D0C7));
+        : const Color(0xFFD9D0C7);
 
-    final bgColor = highlighted
-        ? AppColors.primaryColor.withOpacity(0.07)
-        : (_tapped ? AppColors.primaryColor.withOpacity(0.05) : Colors.white);
+    final bgColor = isActive
+        ? AppColors.primaryColor.withOpacity(0.05)
+        : Colors.white;
 
     return GestureDetector(
-      onTap: () => setState(() => _tapped = true),
+      onTap: _playPhonemeAudio,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         width: 68,
@@ -258,7 +309,7 @@ class _PhonemeButtonState extends State<_PhonemeButton> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: borderColor,
-            width: highlighted ? 1.5 : 1.0,
+            width: isActive ? 1.5 : 1.0,
           ),
         ),
         alignment: Alignment.center,
@@ -267,9 +318,7 @@ class _PhonemeButtonState extends State<_PhonemeButton> {
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
-            color: highlighted
-                ? AppColors.primaryColor
-                : (_tapped ? AppColors.primaryColor : AppColors.textColor),
+            color: isActive ? AppColors.primaryColor : AppColors.textColor,
           ),
         ),
       ),
@@ -327,12 +376,14 @@ class _BlendedWordDisplay extends StatelessWidget {
   final String stepKey;
   final int exampleIndex;
   final BlendingExample example;
+  final Set<String> selectedSourceIds;
 
   const _BlendedWordDisplay({
     super.key,
     required this.stepKey,
     required this.exampleIndex,
     required this.example,
+    required this.selectedSourceIds,
   });
 
   @override
@@ -341,6 +392,9 @@ class _BlendedWordDisplay extends StatelessWidget {
       child: _HighlightedBlendedWord(
         word: example.word,
         phonemes: example.phonemes,
+        stepKey: stepKey,
+        exampleIndex: exampleIndex,
+        selectedSourceIds: selectedSourceIds,
       ),
     );
   }
@@ -349,10 +403,16 @@ class _BlendedWordDisplay extends StatelessWidget {
 class _HighlightedBlendedWord extends StatelessWidget {
   final String word;
   final List<BlendingPhoneme> phonemes;
+  final String stepKey;
+  final int exampleIndex;
+  final Set<String> selectedSourceIds;
 
   const _HighlightedBlendedWord({
     required this.word,
     required this.phonemes,
+    required this.stepKey,
+    required this.exampleIndex,
+    required this.selectedSourceIds,
   });
 
   @override
@@ -361,9 +421,14 @@ class _HighlightedBlendedWord extends StatelessWidget {
     int cursor = 0;
     final lowerWord = word.toLowerCase();
 
-    for (final phoneme in phonemes) {
-      final lowerLabel = phoneme.label.toLowerCase();
-      final matchIndex = lowerWord.indexOf(lowerLabel, cursor);
+    for (var i = 0; i < phonemes.length; i++) {
+      final phoneme = phonemes[i];
+      final normalizedLabel = phoneme.label
+          .toLowerCase()
+          .replaceAll(RegExp(r'[^a-z0-9]'), '');
+      if (normalizedLabel.isEmpty) continue;
+
+      final matchIndex = lowerWord.indexOf(normalizedLabel, cursor);
       if (matchIndex < 0) continue;
 
       if (matchIndex > cursor) {
@@ -373,16 +438,18 @@ class _HighlightedBlendedWord extends StatelessWidget {
         ));
       }
 
+      final shouldHighlight = phoneme.highlighted;
+
       spans.add(TextSpan(
-        text: word.substring(matchIndex, matchIndex + lowerLabel.length),
+        text: word.substring(matchIndex, matchIndex + normalizedLabel.length),
         style: TextStyle(
-          color: phoneme.highlighted
+          color: shouldHighlight
               ? AppColors.primaryColor
               : const Color(0xFF171B22),
         ),
       ));
 
-      cursor = matchIndex + lowerLabel.length;
+      cursor = matchIndex + normalizedLabel.length;
     }
 
     if (cursor < word.length) {

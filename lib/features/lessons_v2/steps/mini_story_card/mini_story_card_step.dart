@@ -376,47 +376,50 @@ class _PhonemeChipsState extends State<_PhonemeChips> {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 14),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(letters.length, (i) {
-          final isHighlighted = _highlightedIndex == i;
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 5),
-            child: GestureDetector(
-              onTap: () => setState(() {
-                _highlightedIndex = isHighlighted ? null : i;
-              }),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                width: 60,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: isHighlighted
-                      ? const Color(0xFFFAEDE6)
-                      : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(letters.length, (i) {
+            final isHighlighted = _highlightedIndex == i;
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 5),
+              child: GestureDetector(
+                onTap: () => setState(() {
+                  _highlightedIndex = isHighlighted ? null : i;
+                }),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: 60,
+                  height: 44,
+                  decoration: BoxDecoration(
                     color: isHighlighted
-                        ? AppColors.primaryColor
-                        : const Color(0xFFD9D5CF),
-                    width: isHighlighted ? 1.5 : 1,
+                        ? const Color(0xFFFAEDE6)
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isHighlighted
+                          ? AppColors.primaryColor
+                          : const Color(0xFFD9D5CF),
+                      width: isHighlighted ? 1.5 : 1,
+                    ),
                   ),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  '/${letters[i]}/',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: isHighlighted
-                        ? AppColors.primaryColor
-                        : AppColors.textColor,
+                  alignment: Alignment.center,
+                  child: Text(
+                    '/${letters[i]}/',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: isHighlighted
+                          ? AppColors.primaryColor
+                          : AppColors.textColor,
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        }),
+            );
+          }),
+        ),
       ),
     );
   }

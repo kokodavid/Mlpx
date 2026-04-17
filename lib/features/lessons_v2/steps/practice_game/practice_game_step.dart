@@ -150,7 +150,10 @@ class _PracticeGameStepState extends State<PracticeGameStep> {
                 LessonAudioInlineButton(
                   sourceId: '${widget.step.key}-instruction',
                   url: _config.instructionAudioUrl,
-                  backgroundColor: const Color(0xFFF8F8F8),
+                  backgroundColor: AppColors.primaryColor,
+                  iconColor: Colors.white,
+                  isCircular: true,
+                  defaultIcon: Icons.play_arrow,
                 ),
                 const SizedBox(height: 18),
                 _HighlightedInstruction(
@@ -406,7 +409,7 @@ class _GameOptionCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Text(
               option.title,
               maxLines: 1,
@@ -417,12 +420,13 @@ class _GameOptionCard extends StatelessWidget {
                 color: Color(0xFF171B22),
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 2),
             IgnorePointer(
               child: LessonAudioInlineButton(
                 sourceId: sourceId,
                 url: option.audioUrl,
                 backgroundColor: const Color(0xFFF8F8F8),
+                buttonSize: 25,
               ),
             ),
           ],
