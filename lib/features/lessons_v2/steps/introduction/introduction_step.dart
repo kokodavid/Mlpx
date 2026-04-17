@@ -165,6 +165,8 @@ class _IntroductionStepState extends State<IntroductionStep> {
                       child: SvgPicture.network(
                         howToSvgUrl,
                         fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.image_not_supported),
                       ),
                     ),
                   ),

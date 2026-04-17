@@ -66,6 +66,7 @@ class _PracticeStepState extends State<PracticeStep> {
                 label: item['label'] as String? ?? '',
                 imageUrl: item['image_url'] as String? ?? '',
                 audioUrl: item['sound_url'] as String? ?? '',
+                highlightedLetters: item['highlighted_letters'] as String? ?? '',
                 sourceId: '${widget.step.key}-item-$index',
               );
             },
@@ -87,18 +88,34 @@ class _ExampleCard extends StatelessWidget {
   final String imageUrl;
   final String audioUrl;
   final String sourceId;
+  final String highlightedLetters;
 
   const _ExampleCard({
     required this.label,
     required this.imageUrl,
     required this.audioUrl,
     required this.sourceId,
+    this.highlightedLetters = '',
   });
 
   @override
   Widget build(BuildContext context) {
-    final firstLetter = label.isNotEmpty ? label[0] : '';
-    final rest = label.length > 1 ? label.substring(1) : '';
+    final highlight = highlightedLetters.trim().isNotEmpty
+        ? highlightedLetters.trim()
+        : (label.isNotEmpty ? label[0] : '');
+
+    final idx = label.toLowerCase().indexOf(highlight.toLowerCase());
+
+    final String before, focused, after;
+    if (idx == -1 || highlight.isEmpty) {
+      before = label;
+      focused = '';
+      after = '';
+    } else {
+      before = label.substring(0, idx);
+      focused = label.substring(idx, idx + highlight.length);
+      after = label.substring(idx + highlight.length);
+    }
 
     return Container(
       padding: const EdgeInsets.all(10),
@@ -113,44 +130,53 @@ class _ExampleCard extends StatelessWidget {
             flex: 4,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Container(
-                child: imageUrl.isEmpty
-                    ? const Center(
-                        child: Icon(
-                          Icons.image_outlined,
-                          size: 32,
-                          color: AppColors.textColor,
-                        ),
-                      )
-                    : Image.network(
-                        imageUrl,
-                        width: 120,
-                        height: 80,
-                        fit: BoxFit.cover,
+              child: imageUrl.isEmpty
+                  ? const Center(
+                      child: Icon(
+                        Icons.image_outlined,
+                        size: 32,
+                        color: AppColors.textColor,
                       ),
-              ),
+                    )
+                  : Image.network(
+                      imageUrl,
+                      width: 120,
+                      height: 80,
+                      fit: BoxFit.cover,
+                    ),
             ),
           ),
           const SizedBox(height: 8),
           Text.rich(
             TextSpan(
               children: [
-                TextSpan(
-                  text: firstLetter,
-                  style: const TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primaryColor,
+                if (before.isNotEmpty)
+                  TextSpan(
+                    text: before,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textColor,
+                    ),
                   ),
-                ),
-                TextSpan(
-                  text: rest,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textColor,
+                if (focused.isNotEmpty)
+                  TextSpan(
+                    text: focused,
+                    style: const TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primaryColor,
+                    ),
                   ),
-                ),
+                if (after.isNotEmpty)
+                  TextSpan(
+                    text: after,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textColor,
+                    ),
+                  ),
               ],
             ),
             overflow: TextOverflow.ellipsis,

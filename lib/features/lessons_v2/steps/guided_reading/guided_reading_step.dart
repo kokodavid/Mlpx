@@ -113,7 +113,7 @@ class _GuidedReadingStepState extends State<GuidedReadingStep> {
                   size: 28,
                 ),
                 const SizedBox(height: 14),
-                _WordAudioCard(
+                _WaveformPlayer(
                   sourceId: '${widget.step.key}-word-$_currentActivityIndex',
                   audioUrl: activity.wordAudioUrl,
                 ),
@@ -141,7 +141,7 @@ class _Header extends StatelessWidget {
       style: const TextStyle(
         fontSize: 18,
         fontWeight: FontWeight.w700,
-        color: Color(0xFFC08BF8),
+        color: Color(0xFF171B22),
       ),
     );
   }
@@ -175,23 +175,23 @@ class _InstructionPlayButton extends ConsumerWidget {
               ? null
               : () => controller.playUrl(url, sourceId: sourceId),
           child: Container(
-            width: 52,
-            height: 52,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: AppColors.primaryColor,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
                   color: AppColors.primaryColor.withValues(alpha: 0.25),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
                 ),
               ],
             ),
             child: Icon(
               isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
               color: Colors.white,
-              size: 28,
+              size: 22,
             ),
           ),
         );
@@ -275,10 +275,8 @@ class _SegmentChip extends ConsumerWidget {
             state.status == LessonAudioStatus.playing;
 
         final bg = isPlaying
-            ? AppColors.primaryColor.withValues(alpha: 0.12)
-            : isFocused
-                ? AppColors.primaryColor.withValues(alpha: 0.07)
-                : const Color(0xFFF8F8F8);
+            ? AppColors.primaryColor.withValues(alpha: 0.10)
+            : Colors.white;
 
         final labelColor =
             isFocused ? AppColors.primaryColor : AppColors.copBlue;
@@ -289,23 +287,30 @@ class _SegmentChip extends ConsumerWidget {
               : () => controller.playUrl(segment.audioUrl, sourceId: sourceId),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            width: 58,
-            height: 58,
+            width: 70,
+            height: 70,
             decoration: BoxDecoration(
               color: bg,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(18),
               border: isFocused
                   ? null
-                  : Border.all(color: const Color(0xFFF2ECE4), width: 1),
+                  : Border.all(color: const Color(0xFFDDD8D1), width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: isFocused
                 ? CustomPaint(
                     painter: _DashedRoundedBorderPainter(
                       color: AppColors.primaryColor,
-                      radius: 16,
-                      dashLength: 5,
+                      radius: 18,
+                      dashLength: 6,
                       dashGap: 4,
-                      strokeWidth: 1.6,
+                      strokeWidth: 2.0,
                     ),
                     child: _chipLabel(segment.phonemeLabel, labelColor),
                   )
@@ -321,8 +326,8 @@ class _SegmentChip extends ConsumerWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
+          fontSize: 17,
+          fontWeight: FontWeight.w700,
           color: color,
         ),
       ),
@@ -451,66 +456,90 @@ class _WordText extends StatelessWidget {
 // _WordAudioCard
 // ---------------------------------------------------------------------------
 
-class _WordAudioCard extends ConsumerWidget {
+class _WaveformPlayer extends ConsumerStatefulWidget {
   final String sourceId;
   final String audioUrl;
 
-  const _WordAudioCard({required this.sourceId, required this.audioUrl});
+  const _WaveformPlayer({required this.sourceId, required this.audioUrl});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_WaveformPlayer> createState() => _WaveformPlayerState();
+}
+
+class _WaveformPlayerState extends ConsumerState<_WaveformPlayer>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _animController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final controller = ref.watch(lessonAudioControllerProvider);
 
     return ValueListenableBuilder<LessonAudioState>(
       valueListenable: controller.state,
       builder: (context, state, _) {
-        final isActive = state.sourceId == sourceId;
-        final isLoading = isActive && state.status == LessonAudioStatus.loading;
+        final isActive = state.sourceId == widget.sourceId;
         final isPlaying = isActive && state.status == LessonAudioStatus.playing;
 
-        return Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFCFCFC),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFE7DDD0)),
-          ),
-          child: Row(
-            children: [
-              GestureDetector(
-                onTap: audioUrl.isEmpty
-                    ? null
-                    : () => controller.playUrl(audioUrl, sourceId: sourceId),
-                child: Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
+        if (isPlaying) {
+          if (!_animController.isAnimating) {
+            _animController.repeat(reverse: true);
+          }
+        } else {
+          if (_animController.isAnimating) _animController.stop();
+        }
+
+        return GestureDetector(
+          onTap: widget.audioUrl.isEmpty
+              ? null
+              : () =>
+                  controller.playUrl(widget.audioUrl, sourceId: widget.sourceId),
+          child: Container(
+            height: 52,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFAFAFA),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE8E8E8), width: 1),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: const BoxDecoration(
                     color: AppColors.primaryColor,
-                    borderRadius: BorderRadius.circular(14),
+                    shape: BoxShape.circle,
                   ),
-                  child: Center(
-                    child: isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : Icon(
-                            isPlaying ? Icons.pause : Icons.volume_up,
-                            color: Colors.white,
-                            size: 24,
-                          ),
+                  child: Icon(
+                    isPlaying ? Icons.pause_rounded : Icons.volume_up_rounded,
+                    color: Colors.white,
+                    size: 18,
                   ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              const Expanded(child: _WaveformPlaceholder()),
-            ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _WaveformBars(
+                    controller: _animController,
+                    playing: isPlaying,
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -518,38 +547,50 @@ class _WordAudioCard extends ConsumerWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// _WaveformPlaceholder
-// ---------------------------------------------------------------------------
+class _WaveformBars extends StatelessWidget {
+  final AnimationController controller;
+  final bool playing;
 
-class _WaveformPlaceholder extends StatelessWidget {
-  const _WaveformPlaceholder();
-
-  static const List<double> _heights = [
-    6, 10, 16, 8, 20, 12, 24, 14, 22, 10, 18, 13, 21,
-    9, 17, 11, 23, 14, 19, 8, 15, 10, 22, 12, 20,
+  static const List<double> _heightRatios = [
+    0.30, 0.55, 0.75, 0.90, 0.65, 1.00, 0.80, 0.55, 0.95, 0.70,
+    0.45, 0.85, 0.60, 1.00, 0.75, 0.50, 0.90, 0.65, 0.40, 0.80,
+    0.55, 0.70, 0.95, 0.60, 0.35, 0.75, 0.50, 0.88, 0.65, 0.40,
   ];
+
+  const _WaveformBars({required this.controller, required this.playing});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 30,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: _heights
-            .map(
-              (h) => Container(
-                width: 3.5,
-                height: h,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryColor.withValues(alpha: 0.65),
-                  borderRadius: BorderRadius.circular(999),
-                ),
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: List.generate(_heightRatios.length, (i) {
+            final scale = playing
+                ? (0.4 +
+                    0.6 *
+                        ((0.5 +
+                                    0.5 *
+                                        (controller.value * 2 * 3.14159 +
+                                                i * 0.4)
+                                            .abs()) %
+                                1.0)
+                            .clamp(0.0, 1.0))
+                : 0.35;
+
+            return Container(
+              width: 3,
+              height: 32 * _heightRatios[i] * scale,
+              decoration: BoxDecoration(
+                color: AppColors.primaryColor.withValues(alpha: 0.85),
+                borderRadius: BorderRadius.circular(2),
               ),
-            )
-            .toList(),
-      ),
+            );
+          }),
+        );
+      },
     );
   }
 }

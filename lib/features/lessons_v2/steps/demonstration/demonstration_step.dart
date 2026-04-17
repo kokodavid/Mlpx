@@ -201,6 +201,8 @@ class _SvgTab extends StatelessWidget {
                         height: 24,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Icon(Icons.image_not_supported),
                     )
                   : Image.network(
                       url,
