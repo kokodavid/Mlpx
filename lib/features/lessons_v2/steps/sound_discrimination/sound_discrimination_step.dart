@@ -95,7 +95,6 @@ class _SoundDiscriminationStepState extends State<SoundDiscriminationStep> {
                 _StepTitle(
                   stepKey: widget.step.key,
                   title: _config.title,
-                 
                 ),
                 const SizedBox(height: 16),
                 LessonStepCard(
@@ -113,6 +112,31 @@ class _SoundDiscriminationStepState extends State<SoundDiscriminationStep> {
                         barHeight: 10,
                         barBackgroundColor: const Color(0xFFF3E8DD),
                       ),
+                      const SizedBox(height: 20),
+                      Center(
+                        child: LessonAudioInlineButton(
+                          sourceId:
+                              'sound_discrimination_title_$_currentItemIndex',
+                          url: item.titleAudioUrl,
+                          isCircular: true,
+                          buttonSize: 40,
+                          backgroundColor: AppColors.primaryColor,
+                          iconColor: Colors.white,
+                          defaultIcon: Icons.play_arrow,
+                        ),
+                      ),
+                      if (_config.instructionText.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          _config.instructionText,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF171B22),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 20),
                       _PromptCard(
                         stepKey: widget.step.key,
@@ -168,8 +192,7 @@ class _SoundDiscriminationStepState extends State<SoundDiscriminationStep> {
                                 message: _isCorrect
                                     ? '"${item.title}" has the ${_config.displayTargetSound} sound.'
                                     : 'Listen again for ${_config.displayTargetSound} like in "${_config.referenceWord}".',
-                                actionLabel:
-                                    _isCorrect ? 'Continue' : 'Review',
+                                actionLabel: _isCorrect ? 'Continue' : 'Review',
                                 onActionPressed: _isCorrect
                                     ? _handleContinue
                                     : _handleReview,
@@ -194,12 +217,10 @@ class _SoundDiscriminationStepState extends State<SoundDiscriminationStep> {
 class _StepTitle extends StatelessWidget {
   final String stepKey;
   final String title;
- 
 
   const _StepTitle({
     required this.stepKey,
     required this.title,
-   
   });
 
   @override
@@ -215,7 +236,6 @@ class _StepTitle extends StatelessWidget {
             color: Color(0xFF171B22),
           ),
         ),
-       
       ],
     );
   }

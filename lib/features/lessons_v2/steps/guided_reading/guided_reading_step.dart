@@ -73,7 +73,7 @@ class _GuidedReadingStepState extends State<GuidedReadingStep> {
           _Header(title: _config.title),
           const SizedBox(height: 14),
           LessonStepCard(
-            color: const Color(0xFFF5F3F0),
+            color: Colors.white,
             elevation: 3,
             borderRadius: 24,
             padding: const EdgeInsets.fromLTRB(18, 22, 18, 22),

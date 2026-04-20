@@ -16,12 +16,12 @@ Future<void> confirmGoHome(BuildContext context, {required String courseId}) asy
             width: 52,
             height: 52,
             decoration: BoxDecoration(
-              color: AppColors.correctAnswerColor.withOpacity(0.12),
+              color: AppColors.primaryColor.withOpacity(0.12),
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.home_outlined,
-              color: AppColors.correctAnswerColor,
+              color: AppColors.primaryColor,
               size: 26,
             ),
           ),
@@ -42,7 +42,7 @@ Future<void> confirmGoHome(BuildContext context, {required String courseId}) asy
             width: double.infinity,
             child: FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.correctAnswerColor,
+                backgroundColor: AppColors.primaryColor,
                 shape: const StadiumBorder(),
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
@@ -60,6 +60,7 @@ Future<void> confirmGoHome(BuildContext context, {required String courseId}) asy
               style: OutlinedButton.styleFrom(
                 shape: const StadiumBorder(),
                 padding: const EdgeInsets.symmetric(vertical: 14),
+                
               ),
               onPressed: () => Navigator.of(context).pop(false),
               child: const Text(

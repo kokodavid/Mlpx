@@ -86,7 +86,7 @@ class _SoundPresenceCheckStepState extends State<SoundPresenceCheckStep> {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       child: LessonStepCard(
-        color: const Color(0xFFF5F3F0),
+        color: Colors.white,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

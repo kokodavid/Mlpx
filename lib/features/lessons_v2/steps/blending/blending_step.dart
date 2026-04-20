@@ -102,7 +102,7 @@ class _BlendingStepState extends State<BlendingStep> {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 540),
                   child: LessonStepCard(
-                    color: const Color(0xFFF5F3F0),
+                    color: Colors.white,
                     padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,

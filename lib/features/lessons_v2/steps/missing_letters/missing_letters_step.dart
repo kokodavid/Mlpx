@@ -146,58 +146,74 @@ class _MissingLettersStepState extends State<MissingLettersStep> {
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      child: LessonStepCard(
-        color: const Color(0xFFFCFBF8),
-        elevation: 3,
-        borderRadius: 24,
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            LessonStepProgressHeader(
-              current: _activityIndex + 1,
-              total: _config.activities.length,
-              itemLabel: 'Word',
-              barColor: AppColors.copBlue,
-              barHeight: 8,
-              barBackgroundColor: const Color(0xFFDDD8D1),
-            ),
-            const SizedBox(height: 20),
-            _InstructionSection(
-              stepKey: widget.step.key,
-              title: _config.title,
-              promptText: _activity.promptText,
-              instructionAudioUrl: _config.instructionAudioUrl,
-            ),
-            const SizedBox(height: 20),
-            _SlotRow(slots: _slots, result: _result),
-            const SizedBox(height: 12),
-            const LessonStepChevronDown(
-              color: Color(0xFF8A8A8A),
-              size: 26,
-            ),
-            const SizedBox(height: 10),
-            const Center(
-              child: Text(
-                'Selects missing letter',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF142C44),
-                ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_config.title.isNotEmpty) ...[
+            Text(
+              _config.title,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF171B22),
               ),
             ),
-            const SizedBox(height: 14),
-            _OptionGrid(
-              options: _options,
-              usedIndices: _usedOptionIndices,
-              locked: _result != _CheckResult.none,
-              onTap: _handleOptionTap,
-            ),
-            const SizedBox(height: 14),
-            _buildBottomAction(),
+            const SizedBox(height: 12),
           ],
-        ),
+          LessonStepCard(
+            color: Colors.white,
+            elevation: 3,
+            borderRadius: 24,
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                LessonStepProgressHeader(
+                  current: _activityIndex + 1,
+                  total: _config.activities.length,
+                  itemLabel: 'Word',
+                  barColor: AppColors.copBlue,
+                  barHeight: 8,
+                  barBackgroundColor: const Color(0xFFDDD8D1),
+                ),
+                const SizedBox(height: 20),
+                _InstructionSection(
+                  stepKey: widget.step.key,
+                  instructionText: _config.instructionText,
+                  promptText: _activity.promptText,
+                  instructionAudioUrl: _config.instructionAudioUrl,
+                ),
+                const SizedBox(height: 20),
+                _SlotRow(slots: _slots, result: _result),
+                const SizedBox(height: 12),
+                const LessonStepChevronDown(
+                  color: Color(0xFF8A8A8A),
+                  size: 26,
+                ),
+                const SizedBox(height: 10),
+                const Center(
+                  child: Text(
+                    'Selects missing letter',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF142C44),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                _OptionGrid(
+                  options: _options,
+                  usedIndices: _usedOptionIndices,
+                  locked: _result != _CheckResult.none,
+                  onTap: _handleOptionTap,
+                ),
+                const SizedBox(height: 14),
+                _buildBottomAction(),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -245,13 +261,13 @@ class _MissingLettersStepState extends State<MissingLettersStep> {
 
 class _InstructionSection extends StatelessWidget {
   final String stepKey;
-  final String title;
+  final String instructionText;
   final String promptText;
   final String? instructionAudioUrl;
 
   const _InstructionSection({
     required this.stepKey,
-    required this.title,
+    required this.instructionText,
     required this.promptText,
     this.instructionAudioUrl,
   });
@@ -270,14 +286,17 @@ class _InstructionSection extends StatelessWidget {
           defaultIcon: Icons.play_arrow,
         ),
         const SizedBox(height: 10),
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF171B22),
-         ) ),
-        const SizedBox(height: 4),
+        if (instructionText.isNotEmpty) ...[
+          Text(
+            instructionText,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF171B22),
+            ),
+          ),
+          const SizedBox(height: 6),
+        ],
         Text(
           'Make "$promptText"',
           style: const TextStyle(

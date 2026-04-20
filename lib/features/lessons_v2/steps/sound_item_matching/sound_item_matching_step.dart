@@ -125,7 +125,7 @@ class _SoundItemMatchingStepState extends State<SoundItemMatchingStep> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(24),
             ),
-            color: const Color(0xFFF5F3F0),
+            color: Colors.white,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
               child: Column(

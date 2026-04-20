@@ -76,7 +76,7 @@ class _SentenceReadingStepState extends State<SentenceReadingStep> {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       child: LessonStepCard(
-        color: const Color(0xFFF5F3F0),
+        color:Colors.white,
         elevation: 3,
         borderRadius: 24,
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),

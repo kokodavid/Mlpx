@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:milpress/features/lessons_v2/providers/lesson_audio_providers.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_step_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../../models/lesson_models.dart';
 import '../../widgets/lesson_audio_buttons.dart';
+import '../../services/lesson_audio_controller.dart';
 import 'model.dart';
-
-
 
 class WordReadingStep extends StatefulWidget {
   final LessonStepDefinition step;
@@ -27,14 +28,10 @@ class _WordReadingStepState extends State<WordReadingStep> {
   int _itemIndex = 0;
   bool _segmentsExpanded = false;
 
-  // ── Accessors ─────────────────────────────────────────────────────────────
-
   WordReadingItem get _item =>
       _config.items[_itemIndex.clamp(0, _config.items.length - 1)];
 
   bool get _isLastItem => _itemIndex >= _config.items.length - 1;
-
-  // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   @override
   void initState() {
@@ -53,8 +50,6 @@ class _WordReadingStepState extends State<WordReadingStep> {
     );
   }
 
-  // ── Interaction handlers ──────────────────────────────────────────────────
-
   void _handleNextWord() {
     if (_isLastItem) {
       widget.onStepStateChanged(const LessonStepUiState(canAdvance: true));
@@ -71,8 +66,6 @@ class _WordReadingStepState extends State<WordReadingStep> {
     setState(() => _segmentsExpanded = !_segmentsExpanded);
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     if (_config.items.isEmpty) {
@@ -86,19 +79,8 @@ class _WordReadingStepState extends State<WordReadingStep> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (_config.title.isNotEmpty) ...[
-            Text(
-              _config.title,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF171B22),
-              ),
-            ),
-            const SizedBox(height: 18),
-          ],
           LessonStepCard(
-            color: const Color(0xFFF5F3F0),
+            color: Colors.white,
             elevation: 3,
             borderRadius: 24,
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
@@ -116,7 +98,7 @@ class _WordReadingStepState extends State<WordReadingStep> {
                 const SizedBox(height: 18),
                 LessonStepInstructionSection(
                   stepKey: widget.step.key,
-                  title: '',
+                  title: _config.title,
                   audioUrl: _config.instructionAudioUrl,
                   audioButtonIsCircular: true,
                   audioButtonDefaultIcon: Icons.play_arrow,
@@ -150,8 +132,6 @@ class _WordReadingStepState extends State<WordReadingStep> {
     );
   }
 }
-
-
 
 class _WordCard extends StatelessWidget {
   final String stepKey;
@@ -231,8 +211,6 @@ class _WordCard extends StatelessWidget {
   }
 }
 
-
-
 class _ModelReadingAccordion extends StatelessWidget {
   final String stepKey;
   final int itemIndex;
@@ -262,13 +240,11 @@ class _ModelReadingAccordion extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Header row — always visible
           InkWell(
             onTap: onToggle,
             borderRadius: BorderRadius.circular(16),
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Row(
                 children: [
                   Expanded(
@@ -299,7 +275,6 @@ class _ModelReadingAccordion extends StatelessWidget {
               ),
             ),
           ),
-          // Expanded segment row
           AnimatedCrossFade(
             firstChild: const SizedBox.shrink(),
             secondChild: Padding(
@@ -310,9 +285,8 @@ class _ModelReadingAccordion extends StatelessWidget {
                 segments: item.segments,
               ),
             ),
-            crossFadeState: expanded
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
+            crossFadeState:
+                expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
             duration: const Duration(milliseconds: 200),
             sizeCurve: Curves.easeInOut,
           ),
@@ -321,8 +295,6 @@ class _ModelReadingAccordion extends StatelessWidget {
     );
   }
 }
-
-
 
 class _SegmentRow extends StatelessWidget {
   final String stepKey;
@@ -351,7 +323,7 @@ class _SegmentRow extends StatelessWidget {
   }
 }
 
-class _SegmentTile extends StatefulWidget {
+class _SegmentTile extends ConsumerWidget {
   final String sourceId;
   final WordSegment segment;
 
@@ -361,10 +333,31 @@ class _SegmentTile extends StatefulWidget {
   });
 
   @override
-  State<_SegmentTile> createState() => _SegmentTileState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final controller = ref.watch(lessonAudioControllerProvider);
+    return _SegmentTileStateful(
+      segment: segment,
+      onTap: () {
+        controller.playUrl(segment.audioUrl, sourceId: sourceId);
+      },
+    );
+  }
 }
 
-class _SegmentTileState extends State<_SegmentTile> {
+class _SegmentTileStateful extends StatefulWidget {
+  final WordSegment segment;
+  final VoidCallback onTap;
+
+  const _SegmentTileStateful({
+    required this.segment,
+    required this.onTap,
+  });
+
+  @override
+  State<_SegmentTileStateful> createState() => _SegmentTileStatefulState();
+}
+
+class _SegmentTileStatefulState extends State<_SegmentTileStateful> {
   bool _tapped = false;
 
   @override
@@ -383,7 +376,10 @@ class _SegmentTileState extends State<_SegmentTile> {
         (highlighted || _tapped) ? AppColors.primaryColor : AppColors.textColor;
 
     return GestureDetector(
-      onTap: () => setState(() => _tapped = true),
+      onTap: () {
+        setState(() => _tapped = true);
+        widget.onTap();
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         width: 72,

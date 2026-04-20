@@ -1,10 +1,12 @@
 class MissingLettersConfig {
   final String title;
+  final String instructionText;
   final String instructionAudioUrl;
   final List<MissingLettersActivity> activities;
 
   const MissingLettersConfig({
     required this.title,
+    required this.instructionText,
     required this.instructionAudioUrl,
     required this.activities,
   });
@@ -14,6 +16,7 @@ class MissingLettersConfig {
 
     return MissingLettersConfig(
       title: map['title'] as String? ?? '',
+      instructionText: map['instruction_text'] as String? ?? '',
       instructionAudioUrl: map['instruction_audio_url'] as String? ?? '',
       activities: rawActivities
           .whereType<Map>()

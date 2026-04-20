@@ -23,7 +23,6 @@ class _MiniStoryCardStepState extends State<MiniStoryCardStep> {
   late final MiniStoryCardConfig _config;
 
   int _itemIndex = 0;
-  bool _accordionExpanded = false;
 
   MiniStoryCardItem get _item =>
       _config.items[_itemIndex.clamp(0, _config.items.length - 1)];
@@ -54,13 +53,8 @@ class _MiniStoryCardStepState extends State<MiniStoryCardStep> {
     }
     setState(() {
       _itemIndex += 1;
-      _accordionExpanded = false;
     });
     _publishUiState();
-  }
-
-  void _toggleAccordion() {
-    setState(() => _accordionExpanded = !_accordionExpanded);
   }
 
   @override
@@ -74,7 +68,7 @@ class _MiniStoryCardStepState extends State<MiniStoryCardStep> {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       child: LessonStepCard(
-        color: const Color(0xFFF5F3F0),
+        color: Colors.white,
         elevation: 3,
         borderRadius: 24,
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
@@ -84,7 +78,7 @@ class _MiniStoryCardStepState extends State<MiniStoryCardStep> {
             LessonStepProgressHeader(
               current: _itemIndex + 1,
               total: _config.items.length,
-              itemLabel: 'Word',
+              itemLabel: 'Sentence',
               barColor: AppColors.copBlue,
               barHeight: 8,
               barBackgroundColor: const Color(0xFFDDD8D1),
@@ -92,7 +86,7 @@ class _MiniStoryCardStepState extends State<MiniStoryCardStep> {
             const SizedBox(height: 20),
             Center(
               child: LessonAudioInlineButton(
-                sourceId: '${widget.step.key}-top-story-${_itemIndex}',
+                sourceId: '${widget.step.key}-top-story-$_itemIndex',
                 url: item.storyAudioUrl,
                 isCircular: true,
                 backgroundColor: AppColors.primaryColor,
@@ -118,22 +112,18 @@ class _MiniStoryCardStepState extends State<MiniStoryCardStep> {
             ),
             const SizedBox(height: 14),
             _MiniStoryPlaybackPreview(
-              sourceId: '${widget.step.key}-story-preview-${_itemIndex}',
+              sourceId: '${widget.step.key}-story-preview-$_itemIndex',
               audioUrl: item.storyAudioUrl,
             ),
-            const SizedBox(height: 12),
-            _ModelReadingAccordion(
-              stepKey: widget.step.key,
-              itemIndex: _itemIndex,
-              item: item,
-              expanded: _accordionExpanded,
-              onToggle: _toggleAccordion,
+            const SizedBox(height: 10),
+            _ListenToSentenceButton(
+              sourceId: '${widget.step.key}-listen-$_itemIndex',
+              audioUrl: item.storyAudioUrl,
+              label: item.ctaLabel ?? 'Listen to the sentence',
             ),
             const SizedBox(height: 16),
             LessonStepNextButton(
-              label: _isLastItem
-                  ? (item.ctaLabel ?? 'Finish')
-                  : (item.ctaLabel ?? 'Next Word'),
+              label: _isLastItem ? 'Finish' : 'Continue',
               onPressed: _handleNext,
               borderRadius: 28,
               height: 50,
@@ -173,7 +163,7 @@ class _StoryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          if (bodyLines.isNotEmpty) ...[
+          if (bodyLines.isNotEmpty)
             ...bodyLines.map(
               (line) => Padding(
                 padding: const EdgeInsets.only(bottom: 4),
@@ -188,7 +178,6 @@ class _StoryCard extends StatelessWidget {
                 ),
               ),
             ),
-          ],
         ],
       ),
     );
@@ -208,7 +197,7 @@ class _MiniStoryPlaybackPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        width: 300,
+        width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -266,159 +255,38 @@ class _MiniStoryWaveformPlaceholder extends StatelessWidget {
   }
 }
 
-class _ModelReadingAccordion extends StatelessWidget {
-  final String stepKey;
-  final int itemIndex;
-  final MiniStoryCardItem item;
-  final bool expanded;
-  final VoidCallback onToggle;
+class _ListenToSentenceButton extends StatelessWidget {
+  final String sourceId;
+  final String audioUrl;
+  final String label;
 
-  const _ModelReadingAccordion({
-    required this.stepKey,
-    required this.itemIndex,
-    required this.item,
-    required this.expanded,
-    required this.onToggle,
+  const _ListenToSentenceButton({
+    required this.sourceId,
+    required this.audioUrl,
+    required this.label,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8E3DC)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          InkWell(
-            onTap: onToggle,
-            borderRadius: BorderRadius.circular(18),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              child: Row(
-                children: [
-                  const Text(
-                    'Tap here',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF171B22),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Text(
-                    'word for model reading',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      color: AppColors.textColor,
-                    ),
-                  ),
-                  const Spacer(),
-                  AnimatedRotation(
-                    turns: expanded ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 200),
-                    child: const Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      color: AppColors.textColor,
-                      size: 22,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+    return SizedBox(
+      width: double.infinity,
+      height: 44,
+      child: OutlinedButton(
+        onPressed: () {},
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.textColor,
+          side: const BorderSide(color: Color(0xFFE8E3DC), width: 1.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
           ),
-          AnimatedCrossFade(
-            firstChild: const SizedBox.shrink(),
-            secondChild: _PhonemeChips(
-              stepKey: stepKey,
-              itemIndex: itemIndex,
-              item: item,
-            ),
-            crossFadeState: expanded
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
-            duration: const Duration(milliseconds: 200),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textColor,
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PhonemeChips extends StatefulWidget {
-  final String stepKey;
-  final int itemIndex;
-  final MiniStoryCardItem item;
-
-  const _PhonemeChips({
-    required this.stepKey,
-    required this.itemIndex,
-    required this.item,
-  });
-
-  @override
-  State<_PhonemeChips> createState() => _PhonemeChipsState();
-}
-
-class _PhonemeChipsState extends State<_PhonemeChips> {
-  int? _highlightedIndex;
-
-  @override
-  Widget build(BuildContext context) {
-    final letters = widget.item.heading
-        .toLowerCase()
-        .split('')
-        .where((c) => c.trim().isNotEmpty)
-        .toList();
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 14),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(letters.length, (i) {
-            final isHighlighted = _highlightedIndex == i;
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 5),
-              child: GestureDetector(
-                onTap: () => setState(() {
-                  _highlightedIndex = isHighlighted ? null : i;
-                }),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  width: 60,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: isHighlighted
-                        ? const Color(0xFFFAEDE6)
-                        : Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isHighlighted
-                          ? AppColors.primaryColor
-                          : const Color(0xFFD9D5CF),
-                      width: isHighlighted ? 1.5 : 1,
-                    ),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    '/${letters[i]}/',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: isHighlighted
-                          ? AppColors.primaryColor
-                          : AppColors.textColor,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }),
         ),
       ),
     );
