@@ -532,16 +532,9 @@ class _WaveformPlayerState extends ConsumerState<_WaveformPlayer>
   }
 }
 
-<<<<<<< HEAD
-
-
-class _WaveformPlaceholder extends StatelessWidget {
-  const _WaveformPlaceholder();
-=======
 class _WaveformBars extends StatelessWidget {
   final AnimationController controller;
   final bool playing;
->>>>>>> c099541836b727723b3ccd0c9cfb8529da54165b
 
   static const List<double> _heightRatios = [
     0.30, 0.55, 0.75, 0.90, 0.65, 1.00, 0.80, 0.55, 0.95, 0.70,

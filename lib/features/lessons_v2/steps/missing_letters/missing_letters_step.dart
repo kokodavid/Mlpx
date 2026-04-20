@@ -8,9 +8,11 @@ import 'model.dart';
 class _RuntimeSlot {
   final AnswerSlotDefinition definition;
   String? filledValue;
+  int? selectedOptionIndex;
 
   _RuntimeSlot(this.definition)
-      : filledValue = definition.isGiven ? definition.value : null;
+      : filledValue = definition.isGiven ? definition.value : null,
+        selectedOptionIndex = null;
 
   bool get isFilled => filledValue != null;
 }
@@ -82,13 +84,28 @@ class _MissingLettersStepState extends State<MissingLettersStep> {
 
   void _handleOptionTap(int optionIndex) {
     if (_result != _CheckResult.none) return;
-    if (_usedOptionIndices.contains(optionIndex)) return;
+
+    final isAlreadyUsed = _usedOptionIndices.contains(optionIndex);
+    if (isAlreadyUsed) {
+      final slotIndex = _slots.indexWhere(
+        (slot) => slot.selectedOptionIndex == optionIndex,
+      );
+      if (slotIndex >= 0) {
+        setState(() {
+          _slots[slotIndex].filledValue = null;
+          _slots[slotIndex].selectedOptionIndex = null;
+          _usedOptionIndices.remove(optionIndex);
+        });
+      }
+      return;
+    }
 
     final emptyIdx = _nextEmptySlotIndex;
     if (emptyIdx == null) return;
 
     setState(() {
       _slots[emptyIdx].filledValue = _options[optionIndex];
+      _slots[emptyIdx].selectedOptionIndex = optionIndex;
       _usedOptionIndices.add(optionIndex);
     });
   }
@@ -431,7 +448,7 @@ class _OptionButton extends StatelessWidget {
     const primaryLight = Color(0xFFFAEDE6);
 
     return GestureDetector(
-      onTap: (used || locked) ? null : onTap,
+      onTap: locked ? null : onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         width: 80,

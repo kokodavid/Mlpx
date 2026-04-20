@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milpress/utils/app_colors.dart';
+import 'package:milpress/utils/confirm_go_home.dart';
 import '../providers/lesson_providers.dart' as lessons_v2;
 import '../../course/providers/module_provider.dart';
 
@@ -33,7 +34,7 @@ class LessonCompleteV2Screen extends ConsumerWidget {
         (safeIndex + 1 < moduleLessons.length) ? moduleLessons[safeIndex + 1] : null;
     final hasNext = nextLesson != null;
     final moduleAsync = ref.watch(moduleFromSupabaseProvider(moduleId));
-    final courseId = moduleAsync.value?.module.courseId;
+    final courseId = moduleAsync.value?.module.courseId ?? '';
 
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
@@ -41,7 +42,10 @@ class LessonCompleteV2Screen extends ConsumerWidget {
         elevation: 0,
         backgroundColor: Colors.white,
         automaticallyImplyLeading: false,
-        
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => confirmGoHome(context, courseId: courseId),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.help_outline, color: Colors.black),
@@ -126,7 +130,7 @@ class LessonCompleteV2Screen extends ConsumerWidget {
                             '/lesson-attempt',
                             extra: {'lessonId': nextLesson!.id},
                           )
-                      : (courseId == null || courseId.isEmpty)
+                      : (courseId.isEmpty)
                           ? null
                           : () => context.go('/course/$courseId'),
                   style: ElevatedButton.styleFrom(
