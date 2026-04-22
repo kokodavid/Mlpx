@@ -86,7 +86,7 @@ class _SoundDiscriminationStepState extends State<SoundDiscriminationStep> {
     return LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight - 28),
             child: Column(
@@ -98,6 +98,7 @@ class _SoundDiscriminationStepState extends State<SoundDiscriminationStep> {
                 ),
                 const SizedBox(height: 16),
                 LessonStepCard(
+                  color: const Color(0xFFF6F6F6),
                   elevation: 2,
                   borderRadius: 28,
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
@@ -130,8 +131,10 @@ class _SoundDiscriminationStepState extends State<SoundDiscriminationStep> {
                         Text(
                           _config.instructionText,
                           textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            fontSize: 18,
+                            fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: Color(0xFF171B22),
                           ),
@@ -146,44 +149,21 @@ class _SoundDiscriminationStepState extends State<SoundDiscriminationStep> {
                         imageUrl: item.imageUrl,
                         audioUrl: item.titleAudioUrl,
                       ),
-                      const SizedBox(height: 12),
+
+                      const SizedBox(height: 8),
                       const LessonStepChevronDown(
-                          color: AppColors.copBlue, size: 28),
-                      const SizedBox(height: 12),
+                          color: AppColors.copBlue, size: 24),
+                      const SizedBox(height: 8),
+                      // FIX: tip text deduplication — avoids "like in 'apple'?., like in apple"
                       LessonStepTipBanner(
-                        text:
-                            '${_config.tipText}${_config.referenceWord.isEmpty ? '' : ', like in "${_config.referenceWord}".'}',
+                        text: _buildTipText(),
                         borderRadius: 16,
                       ),
                       const SizedBox(height: 16),
                       AnimatedSwitcher(
                         duration: const Duration(milliseconds: 180),
                         child: _selectedAnswer == null
-                            ? Row(
-                                key: ValueKey<String>(
-                                    'choices-$_currentItemIndex'),
-                                children: [
-                                  Expanded(
-                                    child: _AnswerButton(
-                                      label:
-                                          'Yes, ${_config.displayTargetSound}',
-                                      borderColor: AppColors.successColor,
-                                      foregroundColor: AppColors.successColor,
-                                      onPressed: () => _handleAnswer(true),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: _AnswerButton(
-                                      label:
-                                          'No, Not ${_config.displayTargetSound}',
-                                      borderColor: AppColors.errorColor,
-                                      foregroundColor: AppColors.errorColor,
-                                      onPressed: () => _handleAnswer(false),
-                                    ),
-                                  ),
-                                ],
-                              )
+                            ? _buildAnswerButtons()
                             : LessonFeedbackBar(
                                 key: ValueKey<String>(
                                   'feedback-$_currentItemIndex-$_isCorrect',
@@ -208,11 +188,41 @@ class _SoundDiscriminationStepState extends State<SoundDiscriminationStep> {
       },
     );
   }
-}
 
-// ---------------------------------------------------------------------------
-// _StepTitle
-// ---------------------------------------------------------------------------
+  String _buildTipText() {
+    if (_config.referenceWord.isEmpty) return _config.tipText;
+    if (_config.tipText.contains(_config.referenceWord)) return _config.tipText;
+    return '${_config.tipText}, like in "${_config.referenceWord}".';
+  }
+
+  Widget _buildAnswerButtons() {
+    return Padding(
+      key: ValueKey<String>('choices-$_currentItemIndex'),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: _AnswerButton(
+              label: 'Yes, ${_config.displayTargetSound}',
+              borderColor: AppColors.successColor,
+              foregroundColor: AppColors.successColor,
+              onPressed: () => _handleAnswer(true),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _AnswerButton(
+              label: 'No, Not ${_config.displayTargetSound}',
+              borderColor: AppColors.errorColor,
+              foregroundColor: AppColors.errorColor,
+              onPressed: () => _handleAnswer(false),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _StepTitle extends StatelessWidget {
   final String stepKey;
@@ -241,10 +251,6 @@ class _StepTitle extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// _PromptCard
-// ---------------------------------------------------------------------------
-
 class _PromptCard extends StatelessWidget {
   final String stepKey;
   final int itemIndex;
@@ -266,6 +272,7 @@ class _PromptCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Container(
+        // FIX: fixed width 194 kept — ensures card never stretches full width on Android
         width: 194,
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
         decoration: BoxDecoration(
@@ -320,10 +327,6 @@ class _PromptCard extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// _HighlightedWord
-// ---------------------------------------------------------------------------
-
 class _HighlightedWord extends StatelessWidget {
   final String word;
   final String highlightedText;
@@ -341,43 +344,10 @@ class _HighlightedWord extends StatelessWidget {
       color: Color(0xFF171B22),
     );
 
-    if (highlightedText.isEmpty) {
-      return Text(word, style: baseStyle, textAlign: TextAlign.center);
-    }
-
-    final lowerWord = word.toLowerCase();
-    final lowerHighlight = highlightedText.toLowerCase();
-    final matchIndex = lowerWord.indexOf(lowerHighlight);
-
-    if (matchIndex < 0) {
-      return Text(word, style: baseStyle, textAlign: TextAlign.center);
-    }
-
-    final start = word.substring(0, matchIndex);
-    final match =
-        word.substring(matchIndex, matchIndex + highlightedText.length);
-    final end = word.substring(matchIndex + highlightedText.length);
-
-    return Text.rich(
-      TextSpan(
-        style: baseStyle,
-        children: [
-          TextSpan(text: start),
-          TextSpan(
-            text: match,
-            style: const TextStyle(color: AppColors.primaryColor),
-          ),
-          TextSpan(text: end),
-        ],
-      ),
-      textAlign: TextAlign.center,
-    );
+    // Display word without any highlighting
+    return Text(word, style: baseStyle, textAlign: TextAlign.center);
   }
 }
-
-// ---------------------------------------------------------------------------
-// _AnswerButton
-// ---------------------------------------------------------------------------
 
 class _AnswerButton extends StatelessWidget {
   final String label;
@@ -395,7 +365,8 @@ class _AnswerButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 54,
+      // FIX: reduced height 54 → 48 to match the more compact Figma button height
+      height: 48,
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
@@ -405,8 +376,10 @@ class _AnswerButton extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
+          // FIX: tightened padding so text sits more compactly like Figma
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
           textStyle: const TextStyle(
-            fontSize: 16,
+            fontSize: 15,
             fontWeight: FontWeight.w600,
           ),
         ),

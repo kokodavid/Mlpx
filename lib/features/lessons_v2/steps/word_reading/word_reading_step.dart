@@ -75,12 +75,23 @@ class _WordReadingStepState extends State<WordReadingStep> {
     final item = _item;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (widget.step.key.isNotEmpty) ...[
+            Text(
+              widget.step.key,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF171B22),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           LessonStepCard(
-            color: Colors.white,
+            color: const Color(0xFFF6F6F6),
             elevation: 3,
             borderRadius: 24,
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),

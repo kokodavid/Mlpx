@@ -93,69 +93,77 @@ class _MatchingWordsStepState extends State<MatchingWordsStep> {
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      child: LessonStepCard(
-        color: Colors.white,
-        elevation: 3,
-        borderRadius: 24,
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            LessonStepProgressHeader(
-              current: _activityIndex + 1,
-              total: _config.activities.length,
-              itemLabel: 'Word',
-              barColor: AppColors.copBlue,
-              barBackgroundColor: const Color(0xFFDDD8D1),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            widget.step.key,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF171B22),
             ),
-            const SizedBox(height: 28),
-            _PromptSection(
-              stepKey: widget.step.key,
-              activityIndex: _activityIndex,
-              activity: activity,
-              stepTitle: _config.title,
-              instructionAudioUrl: _config.instructionAudioUrl,
+          ),
+          const SizedBox(height: 12),
+          LessonStepCard(
+            color: const Color(0xFFF6F6F6),
+            elevation: 3,
+            borderRadius: 24,
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                LessonStepProgressHeader(
+                  current: _activityIndex + 1,
+                  total: _config.activities.length,
+                  itemLabel: 'Word',
+                  barColor: AppColors.copBlue,
+                  barBackgroundColor: const Color(0xFFDDD8D1),
+                ),
+                const SizedBox(height: 28),
+                _PromptSection(
+                  stepKey: widget.step.key,
+                  activityIndex: _activityIndex,
+                  activity: activity,
+                  stepTitle: _config.title,
+                  instructionAudioUrl: _config.instructionAudioUrl,
+                ),
+                const SizedBox(height: 16),
+                const LessonStepChevronDown(),
+                const SizedBox(height: 16),
+                _OptionsSection(
+                  activity: activity,
+                  selectedOptionId: _selectedOptionId,
+                  answered: _answered,
+                  onOptionTap: _handleOptionTap,
+                ),
+                if (_answered) ...[
+                  const SizedBox(height: 20),
+                  LessonFeedbackBar(
+                    isCorrect: _isCorrect,
+                    message: _isCorrect
+                        ? '"${_activity.options.firstWhere((o) => o.id == _selectedOptionId, orElse: () => const MatchingOption(id: '', label: '', imageUrl: '')).label}" — Well done!'
+                        : 'Not quite. Try again!',
+                    actionLabel: _isCorrect
+                        ? (_isLastActivity ? 'Finish' : 'Continue')
+                        : 'Try Again',
+                    onActionPressed: _handleContinue,
+                  ),
+                ],
+              ],
             ),
-            const SizedBox(height: 16),
-            const LessonStepChevronDown(),
-            const SizedBox(height: 16),
-            _OptionsSection(
-              activity: activity,
-              selectedOptionId: _selectedOptionId,
-              answered: _answered,
-              onOptionTap: _handleOptionTap,
-            ),
-            if (_answered) ...[
-              const SizedBox(height: 20),
-              LessonFeedbackBar(
-                isCorrect: _isCorrect,
-                message: _isCorrect
-                    ? '"${_activity.options.firstWhere((o) => o.id == _selectedOptionId, orElse: () => const MatchingOption(id: '', label: '', imageUrl: '')).label}" — Well done!'
-                    : 'Not quite. Try again!',
-                actionLabel: _isCorrect
-                    ? (_isLastActivity ? 'Finish' : 'Continue')
-                    : 'Try Again',
-                onActionPressed: _handleContinue,
-              ),
-            ],
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-// ---------------------------------------------------------------------------
-// _PromptSection
-// ---------------------------------------------------------------------------
-
 class _PromptSection extends StatelessWidget {
   final String stepKey;
   final int activityIndex;
   final MatchingActivity activity;
-
-  /// The step-level title (e.g. "Check Your Learning") shown as the bold heading.
   final String stepTitle;
   final String instructionAudioUrl;
 
@@ -175,7 +183,6 @@ class _PromptSection extends StatelessWidget {
 
     return Column(
       children: [
-        // Large orange circle audio button — matches screenshot
         if (audioUrl.isNotEmpty)
           LessonAudioInlineButton(
             sourceId: '$stepKey-activity-$activityIndex-prompt',
@@ -200,7 +207,6 @@ class _PromptSection extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 14),
-        // Bold large heading — step title e.g. "Check Your Learning"
         if (stepTitle.isNotEmpty)
           Text(
             stepTitle,
@@ -214,7 +220,6 @@ class _PromptSection extends StatelessWidget {
           ),
         if (activity.promptText.isNotEmpty) ...[
           const SizedBox(height: 6),
-          // Smaller grey sub-prompt — e.g. 'Select "cat"'
           Text(
             activity.promptText,
             textAlign: TextAlign.center,
@@ -270,10 +275,6 @@ class _PromptImage extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// _OptionsSection
-// ---------------------------------------------------------------------------
-
 class _OptionsSection extends StatelessWidget {
   final MatchingActivity activity;
   final String? selectedOptionId;
@@ -307,10 +308,6 @@ class _OptionsSection extends StatelessWidget {
     };
   }
 }
-
-// ---------------------------------------------------------------------------
-// _ImageOptionRow — evenly fills full row width, square image, label below
-// ---------------------------------------------------------------------------
 
 class _ImageOptionRow extends StatelessWidget {
   final List<MatchingOption> options;
@@ -368,7 +365,6 @@ class _ImageOptionRow extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Square image area using AspectRatio so all cards are same height
                     AspectRatio(
                       aspectRatio: 1,
                       child: ClipRRect(
@@ -420,10 +416,6 @@ class _ImageOptionRow extends StatelessWidget {
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// _WordOptionRow
-// ---------------------------------------------------------------------------
 
 class _WordOptionRow extends StatelessWidget {
   final List<MatchingOption> options;

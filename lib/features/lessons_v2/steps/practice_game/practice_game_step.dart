@@ -123,15 +123,17 @@ class _PracticeGameStepState extends State<PracticeGameStep> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            _config.title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF171B22),
+          if (widget.step.key.isNotEmpty) ...[
+            Text(
+              widget.step.key,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF171B22),
+              ),
             ),
-          ),
-          const SizedBox(height: 14),
+            const SizedBox(height: 14),
+          ],
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
@@ -224,8 +226,6 @@ class _PracticeGameStepState extends State<PracticeGameStep> {
   }
 }
 
-
-
 class _HighlightedInstruction extends StatelessWidget {
   final String title;
   final String instructionText;
@@ -292,8 +292,6 @@ class _HighlightedInstruction extends StatelessWidget {
   }
 }
 
-
-
 class _StatChip extends StatelessWidget {
   final IconData? icon;
   final String text;
@@ -335,7 +333,6 @@ class _StatChip extends StatelessWidget {
     );
   }
 }
-
 
 enum _GameCardState { idle, correct, incorrect }
 

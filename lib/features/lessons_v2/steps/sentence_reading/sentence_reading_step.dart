@@ -75,52 +75,68 @@ class _SentenceReadingStepState extends State<SentenceReadingStep> {
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      child: LessonStepCard(
-        color:Colors.white,
-        elevation: 3,
-        borderRadius: 24,
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            LessonStepProgressHeader(
-              current: _itemIndex + 1,
-              total: _config.items.length,
-              itemLabel: 'Sentence',
-              barColor: AppColors.copBlue,
-              barHeight: 8,
-              barBackgroundColor: const Color(0xFFDDD8D1),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (widget.step.key.isNotEmpty) ...[
+            Text(
+              widget.step.key,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF171B22),
+              ),
             ),
-            const SizedBox(height: 24),
-            LessonStepInstructionSection(
-              stepKey: widget.step.key,
-              title: _config.title,
-              audioUrl: _config.instructionAudioUrl,
-              audioButtonIsCircular: true,
-              audioButtonDefaultIcon: Icons.play_arrow,
-            ),
-            const SizedBox(height: 24),
-            _TokenRow(tokens: item.displayTokens),
-            const SizedBox(height: 20),
-            _SentenceAudioSection(
-              stepKey: widget.step.key,
-              itemIndex: _itemIndex,
-              item: item,
-              selfReadEnabled: _selfReadEnabled,
-              onSelfReadToggle: _handleSelfReadToggle,
-            ),
-            const SizedBox(height: 16),
-            const LessonStepChevronDown(
-              color: Color(0xFF8A8A8A),
-              size: 26,
-            ),
-            const SizedBox(height: 16),
-            LessonStepNextButton(
-              label: _isLastItem ? 'Finish' : 'Next Word',
-              onPressed: _handleNextWord,
-            ),
+            const SizedBox(height: 12),
           ],
-        ),
+          LessonStepCard(
+            color: const Color(0xFFF6F6F6),
+            elevation: 3,
+            borderRadius: 24,
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                LessonStepProgressHeader(
+                  current: _itemIndex + 1,
+                  total: _config.items.length,
+                  itemLabel: 'Sentence',
+                  barColor: AppColors.copBlue,
+                  barHeight: 8,
+                  barBackgroundColor: const Color(0xFFDDD8D1),
+                ),
+                const SizedBox(height: 24),
+                LessonStepInstructionSection(
+                  stepKey: widget.step.key,
+                  title: _config.title,
+                  audioUrl: _config.instructionAudioUrl,
+                  audioButtonIsCircular: true,
+                  audioButtonDefaultIcon: Icons.play_arrow,
+                ),
+                const SizedBox(height: 24),
+                _TokenRow(tokens: item.displayTokens),
+                const SizedBox(height: 20),
+                _SentenceAudioSection(
+                  stepKey: widget.step.key,
+                  itemIndex: _itemIndex,
+                  item: item,
+                  selfReadEnabled: _selfReadEnabled,
+                  onSelfReadToggle: _handleSelfReadToggle,
+                ),
+                const SizedBox(height: 16),
+                const LessonStepChevronDown(
+                  color: Color(0xFF8A8A8A),
+                  size: 26,
+                ),
+                const SizedBox(height: 16),
+                LessonStepNextButton(
+                  label: _isLastItem ? 'Finish' : 'Next Word',
+                  onPressed: _handleNextWord,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -275,11 +291,11 @@ class _WaveformPlayerState extends State<_WaveformPlayer>
 
   Future<void> _handleTap(LessonAudioController controller) async {
     final state = controller.state.value;
-    if (state.sourceId == _sourceId && state.status == LessonAudioStatus.playing) {
+    if (state.sourceId == _sourceId &&
+        state.status == LessonAudioStatus.playing) {
       await controller.stop();
       return;
     }
-
     await controller.playUrl(widget.audioUrl, sourceId: _sourceId);
   }
 
@@ -293,8 +309,10 @@ class _WaveformPlayerState extends State<_WaveformPlayer>
           valueListenable: controller.state,
           builder: (context, state, _) {
             final isActive = state.sourceId == _sourceId;
-            final isPlaying = isActive && state.status == LessonAudioStatus.playing;
-            final isLoading = isActive && state.status == LessonAudioStatus.loading;
+            final isPlaying =
+                isActive && state.status == LessonAudioStatus.playing;
+            final isLoading =
+                isActive && state.status == LessonAudioStatus.loading;
 
             return GestureDetector(
               onTap: () => _handleTap(controller),
@@ -304,7 +322,8 @@ class _WaveformPlayerState extends State<_WaveformPlayer>
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE8E3DC), width: 1),
+                  border:
+                      Border.all(color: const Color(0xFFE8E3DC), width: 1),
                 ),
                 child: Row(
                   children: [
@@ -328,7 +347,9 @@ class _WaveformPlayerState extends State<_WaveformPlayer>
                                 ),
                               )
                             : Icon(
-                                isPlaying ? Icons.pause_rounded : Icons.volume_up_rounded,
+                                isPlaying
+                                    ? Icons.pause_rounded
+                                    : Icons.volume_up_rounded,
                                 color: Colors.white,
                                 size: 18,
                               ),
@@ -420,9 +441,7 @@ class _SelfReadToggle extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: value
-              ? AppColors.primaryColor.withOpacity(0.08)
-              : Colors.white,
+          color: value ? AppColors.primaryColor.withOpacity(0.08) : Colors.white,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
             color: value ? AppColors.primaryColor : const Color(0xFFD9D5CF),
@@ -437,9 +456,7 @@ class _SelfReadToggle extends StatelessWidget {
               width: 36,
               height: 20,
               decoration: BoxDecoration(
-                color: value
-                    ? AppColors.primaryColor
-                    : const Color(0xFFD9D0C7),
+                color: value ? AppColors.primaryColor : const Color(0xFFD9D0C7),
                 borderRadius: BorderRadius.circular(999),
               ),
               child: AnimatedAlign(

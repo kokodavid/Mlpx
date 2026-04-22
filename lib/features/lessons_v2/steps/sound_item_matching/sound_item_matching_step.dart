@@ -8,7 +8,6 @@ class SoundItemMatchingStep extends StatefulWidget {
   final LessonStepDefinition step;
   final ValueChanged<LessonStepUiState> onStepStateChanged;
   final VoidCallback onAdvanceRequested;
-  
 
   const SoundItemMatchingStep({
     super.key,
@@ -60,24 +59,17 @@ class _SoundItemMatchingStepState extends State<SoundItemMatchingStep> {
   }
 
   void _handleOptionTap(int index) {
-    if (_hasAnswered) {
-      return;
-    }
-
+    if (_hasAnswered) return;
     final option = _currentActivity.options[index];
     setState(() {
       _selectedOptionIndex = index;
-      if (option.isCorrect) {
-        _score += 1;
-      }
+      if (option.isCorrect) _score += 1;
     });
     _publishUiState();
   }
 
   void _handleReview() {
-    setState(() {
-      _selectedOptionIndex = null;
-    });
+    setState(() => _selectedOptionIndex = null);
     _publishUiState();
   }
 
@@ -86,12 +78,10 @@ class _SoundItemMatchingStepState extends State<SoundItemMatchingStep> {
       _handleReview();
       return;
     }
-
     if (_isLastActivity) {
       widget.onAdvanceRequested();
       return;
     }
-
     setState(() {
       _currentActivityIndex += 1;
       _selectedOptionIndex = null;
@@ -104,7 +94,7 @@ class _SoundItemMatchingStepState extends State<SoundItemMatchingStep> {
     final activity = _currentActivity;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -114,32 +104,29 @@ class _SoundItemMatchingStepState extends State<SoundItemMatchingStep> {
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: Color.fromARGB(255, 17, 16, 16),
+                color: Color(0xFF171B22),
               ),
             ),
             const SizedBox(height: 12),
           ],
           Card(
-            elevation: 3,
+            elevation: 2,
             margin: EdgeInsets.zero,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(28),
             ),
-            color: Colors.white,
+            color: const Color(0xFFF6F6F6),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Header: Activity counter + score + progress bar
                   _MatchingHeader(
                     current: _currentActivityIndex + 1,
                     total: _config.activities.length,
                     score: _score,
                   ),
-                  const SizedBox(height: 24),
-
-                  // Prompt text centered
+                  const SizedBox(height: 20),
                   _PromptBlock(
                     prompt: activity.prompt,
                     targetSound: activity.targetSound,
@@ -147,26 +134,17 @@ class _SoundItemMatchingStepState extends State<SoundItemMatchingStep> {
                     sourceId:
                         '${widget.step.key}-prompt-$_currentActivityIndex',
                   ),
-                  const SizedBox(height: 28),
-
-                  
-            
-
-                  // Double chevron down arrow
+                  const SizedBox(height: 8),
                   const Center(
                     child: Icon(
                       Icons.keyboard_double_arrow_down_rounded,
                       color: Color(0xFF8A8A8A),
-                      size: 26,
+                      size: 24,
                     ),
                   ),
-                  const SizedBox(height: 16),
-
-                  // Tip banner
+                  const SizedBox(height: 8),
                   _TipBanner(text: activity.tipText),
-                  const SizedBox(height: 16),
-
-                  // Option buttons row
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       for (var index = 0;
@@ -180,14 +158,12 @@ class _SoundItemMatchingStepState extends State<SoundItemMatchingStep> {
                           ),
                         ),
                         if (index < activity.options.length - 1)
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 8),
                       ],
                     ],
                   ),
-
-                  // Feedback bar (shown after answering)
                   if (_hasAnswered) ...[
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     _FeedbackBar(
                       isCorrect: _isCorrect,
                       message: _isCorrect
@@ -208,9 +184,7 @@ class _SoundItemMatchingStepState extends State<SoundItemMatchingStep> {
   }
 
   _OptionVisualState _optionState(int index) {
-    if (!_hasAnswered) {
-      return _OptionVisualState.idle;
-    }
+    if (!_hasAnswered) return _OptionVisualState.idle;
     if (_selectedOptionIndex == index) {
       return _currentActivity.options[index].isCorrect
           ? _OptionVisualState.correct
@@ -265,8 +239,8 @@ class _MatchingHeader extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
           child: LinearProgressIndicator(
             value: safeCurrent / safeTotal,
-            minHeight: 8,
-            backgroundColor: const Color(0xFFDDD8D1),
+            minHeight: 10,
+            backgroundColor: const Color(0xFFF3E8DD),
             valueColor: const AlwaysStoppedAnimation<Color>(AppColors.copBlue),
           ),
         ),
@@ -290,24 +264,29 @@ class _PromptBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayTargetSound = '/$targetSound/';
-    final targetIndex = prompt.indexOf(displayTargetSound);
+    final vowel = targetSound.replaceAll('/', '');
     const defaultStyle = TextStyle(
-      fontSize: 22,
+      fontSize: 20,
       fontWeight: FontWeight.w700,
       color: Color(0xFF171B22),
       height: 1.3,
     );
 
+    final slashPattern = '/$vowel/';
+    final slashIndex =
+        prompt.toLowerCase().indexOf(slashPattern.toLowerCase());
+    final targetIndex = slashIndex >= 0 ? slashIndex + 1 : -1;
+
     return Column(
       children: [
         if (promptAudioUrl.isNotEmpty) ...[
-          LessonAudioInlineButton(
-            sourceId: sourceId,
-            url: promptAudioUrl,
-            backgroundColor: const Color(0xFFF8F8F8),
+          Center(
+            child: _AudioRoundedRectButton(
+              sourceId: sourceId,
+              url: promptAudioUrl,
+            ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
         ],
         if (targetIndex >= 0)
           Text.rich(
@@ -316,12 +295,11 @@ class _PromptBlock extends StatelessWidget {
               children: [
                 TextSpan(text: prompt.substring(0, targetIndex)),
                 TextSpan(
-                  text: displayTargetSound,
+                  text: prompt.substring(targetIndex, targetIndex + vowel.length),
                   style: const TextStyle(color: AppColors.primaryColor),
                 ),
                 TextSpan(
-                  text:
-                      prompt.substring(targetIndex + displayTargetSound.length),
+                  text: prompt.substring(targetIndex + vowel.length),
                 ),
               ],
             ),
@@ -338,8 +316,6 @@ class _PromptBlock extends StatelessWidget {
   }
 }
 
-
-
 class _TipBanner extends StatelessWidget {
   final String text;
 
@@ -348,7 +324,7 @@ class _TipBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -396,7 +372,7 @@ class _OptionButton extends StatelessWidget {
         state == _OptionVisualState.idle ? AppColors.textColor : Colors.white;
 
     return SizedBox(
-      height: 54,
+      height: 44,
       child: OutlinedButton(
         onPressed: state == _OptionVisualState.idle ? onPressed : null,
         style: OutlinedButton.styleFrom(
@@ -404,10 +380,11 @@ class _OptionButton extends StatelessWidget {
           disabledBackgroundColor: backgroundColor,
           side: BorderSide(color: borderColor),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
           ),
+          padding: const EdgeInsets.symmetric(horizontal: 4),
           textStyle: const TextStyle(
-            fontSize: 16,
+            fontSize: 15,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -455,21 +432,21 @@ class _FeedbackBar extends StatelessWidget {
             color: borderColor,
             size: 24,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               message,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 13,
                 height: 1.35,
                 color: borderColor,
                 fontWeight: FontWeight.w500,
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           SizedBox(
-            height: 48,
+            height: 44,
             child: ElevatedButton(
               onPressed: onActionPressed,
               style: ElevatedButton.styleFrom(
@@ -477,10 +454,10 @@ class _FeedbackBar extends StatelessWidget {
                 backgroundColor: borderColor,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               ),
               child: Text(
                 actionLabel,
@@ -493,6 +470,29 @@ class _FeedbackBar extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AudioRoundedRectButton extends StatelessWidget {
+  final String sourceId;
+  final String url;
+
+  const _AudioRoundedRectButton({
+    required this.sourceId,
+    required this.url,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LessonAudioInlineButton(
+      sourceId: sourceId,
+      url: url,
+      isCircular: false,
+      buttonSize: 48,
+      backgroundColor: const Color(0xFF1B2A3B),
+      iconColor: Colors.white,
+      defaultIcon: Icons.volume_up_rounded,
     );
   }
 }

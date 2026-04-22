@@ -161,7 +161,7 @@ class _MissingLettersStepState extends State<MissingLettersStep> {
             const SizedBox(height: 12),
           ],
           LessonStepCard(
-            color: Colors.white,
+            color: const Color(0xFFF6F6F6),
             elevation: 3,
             borderRadius: 24,
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
