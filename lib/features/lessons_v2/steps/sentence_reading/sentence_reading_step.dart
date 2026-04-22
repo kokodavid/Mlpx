@@ -129,9 +129,14 @@ class _SentenceReadingStepState extends State<SentenceReadingStep> {
                   size: 26,
                 ),
                 const SizedBox(height: 16),
-                LessonStepNextButton(
-                  label: _isLastItem ? 'Finish' : 'Next Word',
-                  onPressed: _handleNextWord,
+                Center(
+                  child: SizedBox(
+                    width: 220,
+                    child: LessonStepNextButton(
+                      label: _isLastItem ? 'Finish' : 'Next Word',
+                      onPressed: _handleNextWord,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -151,7 +156,7 @@ class _TokenRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -175,7 +180,7 @@ class _TokenPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: const Color(0xFFF7F5F2),
         borderRadius: BorderRadius.circular(8),
@@ -218,7 +223,7 @@ class _SentenceAudioSection extends StatelessWidget {
       children: [
         if (item.sentenceText.isNotEmpty)
           Text(
-            '"${item.sentenceText}"',
+            item.sentenceText,
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 16,

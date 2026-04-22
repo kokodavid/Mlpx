@@ -222,20 +222,22 @@ class _MissingLettersStepState extends State<MissingLettersStep> {
     switch (_result) {
       case _CheckResult.none:
         if (!_allMissingFilled) return const SizedBox.shrink();
-        return SizedBox(
-          width: double.infinity,
-          height: 52,
-          child: ElevatedButton(
-            onPressed: _handleCheckWord,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryColor,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-            ),
-            child: const Text(
-              'Check Word',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        return Center(
+          child: SizedBox(
+            width: 220,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: _handleCheckWord,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+              ),
+              child: const Text(
+                'Check Word',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
             ),
           ),
         );
@@ -320,9 +322,17 @@ class _SlotRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(slots.length, (i) {
+        final isFirst = i == 0;
+        final isLast = i == slots.length - 1;
+        final tile = _SlotTile(
+          slot: slots[i],
+          result: result,
+          isFirstOrLast: isFirst || isLast,
+        );
+
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 5),
-          child: _SlotTile(slot: slots[i], result: result),
+          child: tile,
         );
       }),
     );
@@ -332,8 +342,13 @@ class _SlotRow extends StatelessWidget {
 class _SlotTile extends StatelessWidget {
   final _RuntimeSlot slot;
   final _CheckResult result;
+  final bool isFirstOrLast;
 
-  const _SlotTile({required this.slot, required this.result});
+  const _SlotTile({
+    required this.slot,
+    required this.result,
+    required this.isFirstOrLast,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -379,6 +394,35 @@ class _SlotTile extends StatelessWidget {
       textColor = AppColors.primaryColor;
     }
 
+    // Use dotted border for first and last slots
+    if (isFirstOrLast && !filled) {
+      return CustomPaint(
+        painter: _DottedBorderPainter(
+          color: AppColors.primaryColor,
+          strokeWidth: 6.0,
+          gap: 6,
+          borderRadius: 14,
+        ),
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            '_',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primaryColor,
+            ),
+          ),
+        ),
+      );
+    }
+
     return Container(
       width: size,
       height: size,
@@ -397,16 +441,65 @@ class _SlotTile extends StatelessWidget {
                 color: textColor,
               ),
             )
-          : Container(
-              width: 18,
-              height: 3,
-              decoration: BoxDecoration(
+          : Text(
+              '_',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
                 color: borderColor,
-                borderRadius: BorderRadius.circular(2),
               ),
             ),
     );
   }
+}
+
+class _DottedBorderPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double gap;
+  final double borderRadius;
+
+  _DottedBorderPainter({
+    required this.color,
+    required this.strokeWidth,
+    required this.gap,
+    required this.borderRadius,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
+    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(borderRadius));
+    final path = Path()..addRRect(rrect);
+
+    final dashPath = _createDashedPath(path, gap, strokeWidth);
+    canvas.drawPath(dashPath, paint);
+  }
+
+  Path _createDashedPath(Path source, double dashGap, double dashWidth) {
+    final dashedPath = Path();
+    for (final metric in source.computeMetrics()) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        final nextDistance = distance + dashWidth;
+        final extractPath = metric.extractPath(
+          distance,
+          nextDistance > metric.length ? metric.length : nextDistance,
+        );
+        dashedPath.addPath(extractPath, Offset.zero);
+        distance = nextDistance + dashGap;
+      }
+    }
+    return dashedPath;
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _OptionGrid extends StatelessWidget {
@@ -444,6 +537,7 @@ class _OptionGrid extends StatelessWidget {
           }),
         ),
       );
+      if (i + 3 < options.length) const SizedBox(height: 8);
     }
     return Column(children: rows);
   }
@@ -470,23 +564,39 @@ class _OptionButton extends StatelessWidget {
       onTap: locked ? null : onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        width: 80,
-        height: 44,
+        width: 100,
+        height: 56,
         decoration: BoxDecoration(
           color: used ? primaryLight : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: used ? AppColors.primaryColor : AppColors.borderColor,
-            width: used ? 2 : 1.5,
-          ),
+          borderRadius: BorderRadius.circular(18),
+          border: used
+              ? Border(
+                  top: BorderSide(color: AppColors.primaryColor, width: 4.0),
+                  bottom: BorderSide(color: AppColors.primaryColor, width: 4.0),
+                  left: BorderSide(color: AppColors.primaryColor, width: 1.5),
+                  right: BorderSide(color: AppColors.primaryColor, width: 1.5),
+                )
+              : Border.all(
+                  color: const Color(0xFFE0DBD5),
+                  width: 1.5,
+                ),
+          boxShadow: used
+              ? null
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
         ),
         alignment: Alignment.center,
         child: Text(
           letter,
           style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: used ? AppColors.primaryColor : AppColors.textColor,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: used ? AppColors.primaryColor : const Color(0xFF9E9E9E),
           ),
         ),
       ),

@@ -161,6 +161,10 @@ class _BlendingStepState extends State<BlendingStep> {
                               : const SizedBox.shrink(
                                   key: ValueKey<String>('blank')),
                         ),
+                        if (_blended) ...[
+                          const SizedBox(height: 12),
+                          const _TipBanner(),
+                        ],
                         const SizedBox(height: 16),
                         _buildBottomAction(example),
                       ],
@@ -177,9 +181,27 @@ class _BlendingStepState extends State<BlendingStep> {
 
   Widget _buildBottomAction(BlendingExample example) {
     if (_blended) {
-      return LessonStepNextButton(
-        label: _isLastExample ? 'Finish' : 'Next Question',
-        onPressed: _handleNext,
+      return Center(
+        child: SizedBox(
+          width: 220,
+          height: 48,
+          child: OutlinedButton(
+            onPressed: _handleNext,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primaryColor,
+              backgroundColor: AppColors.primaryColor.withOpacity(0.06),
+              side: const BorderSide(color: AppColors.primaryColor),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              textStyle: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            child: Text(_isLastExample ? 'Finish' : 'Next Question'),
+          ),
+        ),
       );
     }
 
@@ -192,9 +214,44 @@ class _BlendingStepState extends State<BlendingStep> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// _PhonemeRow
-// ---------------------------------------------------------------------------
+
+
+class _TipBanner extends StatelessWidget {
+  const _TipBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE8E2DB)),
+      ),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.lightbulb_outline,
+            size: 16,
+            color: Color(0xFF8A8A8A),
+          ),
+          SizedBox(width: 6),
+          Text(
+            'Tip: Tap to Hear, Tap to Blend',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF8A8A8A),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
 
 class _PhonemeRow extends StatelessWidget {
   final String stepKey;
@@ -266,8 +323,6 @@ class _PhonemeButtonState extends ConsumerState<_PhonemeButton> {
       _tapped = true;
     });
 
-    // ── FIX: always register the tap so the vowel highlight works in the
-    //    blended word display regardless of whether the phoneme is a vowel.
     widget.onSelected();
 
     if (audioUrl.isNotEmpty) {
@@ -277,7 +332,7 @@ class _PhonemeButtonState extends ConsumerState<_PhonemeButton> {
           );
     }
 
-    Future.delayed(const Duration(milliseconds: 150), () {  
+    Future.delayed(const Duration(milliseconds: 150), () {
       if (mounted) {
         setState(() => _tapped = false);
       }
@@ -298,37 +353,96 @@ class _PhonemeButtonState extends ConsumerState<_PhonemeButton> {
         ? AppColors.primaryColor.withOpacity(0.05)
         : Colors.white;
 
-    return GestureDetector(
-      onTap: _playPhonemeAudio,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        width: 68,
-        height: 44,
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: borderColor,
-            width: isActive ? 1.5 : 1.0,
-          ),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            color: isActive ? AppColors.primaryColor : AppColors.textColor,
-          ),
+    final innerChild = AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      width: 68,
+      height: 44,
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        // No solid border when highlighted — the CustomPaint dashed border
+        // handles it instead.
+        border: isHighlighted
+            ? null
+            : Border.all(
+                color: borderColor,
+                width: isActive ? 1.0 : 1.0,
+              ),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: isActive ? AppColors.primaryColor : AppColors.textColor,
         ),
       ),
+    );
+
+    return GestureDetector(
+      onTap: _playPhonemeAudio,
+      child: isHighlighted
+          ? CustomPaint(
+              painter: _PhonemeDottedBorderPainter(
+                color: AppColors.primaryColor,
+                strokeWidth: 2.0,
+                gap: 5.0,
+                borderRadius: 12,
+              ),
+              child: innerChild,
+            )
+          : innerChild,
     );
   }
 }
 
-// ---------------------------------------------------------------------------
-// _BlendButton
-// ---------------------------------------------------------------------------
+
+
+class _PhonemeDottedBorderPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double gap;
+  final double borderRadius;
+
+  _PhonemeDottedBorderPainter({
+    required this.color,
+    required this.strokeWidth,
+    required this.gap,
+    required this.borderRadius,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
+    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(borderRadius));
+    final path = Path()..addRRect(rrect);
+
+    final dashedPath = Path();
+    for (final metric in path.computeMetrics()) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        final nextDistance = distance + strokeWidth;
+        final extractPath = metric.extractPath(
+          distance,
+          nextDistance > metric.length ? metric.length : nextDistance,
+        );
+        dashedPath.addPath(extractPath, Offset.zero);
+        distance = nextDistance + gap;
+      }
+    }
+    canvas.drawPath(dashedPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
 
 class _BlendButton extends StatelessWidget {
   final String stepKey;
@@ -368,9 +482,7 @@ class _BlendButton extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// _BlendedWordDisplay
-// ---------------------------------------------------------------------------
+
 
 class _BlendedWordDisplay extends StatelessWidget {
   final String stepKey;
