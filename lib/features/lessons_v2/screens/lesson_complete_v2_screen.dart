@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milpress/utils/app_colors.dart';
 import 'package:milpress/utils/confirm_go_home.dart';
+import 'package:milpress/features/lessons_v2/widgets/lesson_audio_buttons.dart';
 import '../providers/lesson_providers.dart' as lessons_v2;
 import '../../course/providers/module_provider.dart';
 
@@ -11,6 +12,9 @@ class LessonCompleteV2Screen extends ConsumerWidget {
   final String moduleId;
   final String lessonTitle;
   final String? timeRemainingLabel;
+
+  static const _completionAudioUrl =
+      'https://bdlfghvrbjjzybuexdwe.supabase.co/storage/v1/object/sign/App%20content/Audio/Exit%20audio.mp3?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8yODhmMGY2OC05OTJlLTQ5ODktYjcxZi1jZTM0ZjlkNDQyN2IiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJBcHAgY29udGVudC9BdWRpby9FeGl0IGF1ZGlvLm1wMyIsImlhdCI6MTc3NzAyODQ2MywiZXhwIjoxODA4NTY0NDYzfQ.NJxHEed8bZv5_4P_qaPhMGcIxC80pfWD4_JmCp4j0G0';
 
   const LessonCompleteV2Screen({
     super.key,
@@ -47,15 +51,20 @@ class LessonCompleteV2Screen extends ConsumerWidget {
           child: Center(
             child: _CircleIconButton(
               icon: Icons.close,
-              onPressed: () => confirmGoHome(context, courseId: courseId),
+              onPressed: courseId.isEmpty
+                  ? null
+                  : () => confirmGoHome(context, courseId: courseId),
             ),
           ),
         ),
         actions: [
-          _CircleIconButton(
-            icon: Icons.volume_up_rounded,
-            filled: true,
-            onPressed: () {},
+          LessonAudioInlineButton(
+            sourceId: 'lesson-complete-completion-audio',
+            url: _completionAudioUrl,
+            isCircular: true,
+            buttonSize: 38,
+            backgroundColor: AppColors.primaryColor.withOpacity(0.12),
+            iconColor: AppColors.primaryColor,
           ),
           const SizedBox(width: 8),
           _CircleIconButton(
@@ -153,7 +162,7 @@ class LessonCompleteV2Screen extends ConsumerWidget {
 
               const Spacer(),
 
-              // ── Progress label + motivational text ──────────────────
+              
               Text(
                 progressLabel,
                 style: const TextStyle(
@@ -176,7 +185,7 @@ class LessonCompleteV2Screen extends ConsumerWidget {
 
               const Spacer(),
 
-              // ── Next lesson / Finish module CTA ─────────────────────
+             
               GestureDetector(
                 onTap: hasNext
                     ? () => context.push(
@@ -248,7 +257,7 @@ class LessonCompleteV2Screen extends ConsumerWidget {
   }
 }
 
-// ── Reusable circle icon button ──────────────────────────────────────────────
+
 class _CircleIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onPressed;

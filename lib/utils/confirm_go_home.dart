@@ -7,6 +7,7 @@ Future<void> confirmGoHome(BuildContext context, {required String courseId}) asy
     context: context,
     barrierDismissible: false,
     builder: (context) => AlertDialog(
+      backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
       content: Column(
