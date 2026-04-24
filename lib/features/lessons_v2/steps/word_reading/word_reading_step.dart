@@ -131,9 +131,14 @@ class _WordReadingStepState extends State<WordReadingStep> {
                   onToggle: _toggleSegments,
                 ),
                 const SizedBox(height: 18),
-                LessonStepNextButton(
-                  label: _isLastItem ? 'Finish' : 'Next Word',
-                  onPressed: _handleNextWord,
+                Center(
+                  child: SizedBox(
+                    width: 220,
+                    child: LessonStepNextButton(
+                      label: _isLastItem ? 'Finish' : 'Next Word',
+                      onPressed: _handleNextWord,
+                    ),
+                  ),
                 ),
               ],
             ),

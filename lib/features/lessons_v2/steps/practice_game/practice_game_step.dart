@@ -1,13 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:milpress/features/lessons_v2/providers/lesson_audio_providers.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_audio_buttons.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_step_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../../models/lesson_models.dart';
 import 'model.dart';
 
-class PracticeGameStep extends StatefulWidget {
+class PracticeGameStep extends ConsumerStatefulWidget {
   final LessonStepDefinition step;
   final ValueChanged<LessonStepUiState> onStepStateChanged;
   final VoidCallback onAdvanceRequested;
@@ -20,10 +22,10 @@ class PracticeGameStep extends StatefulWidget {
   });
 
   @override
-  State<PracticeGameStep> createState() => _PracticeGameStepState();
+  ConsumerState<PracticeGameStep> createState() => _PracticeGameStepState();
 }
 
-class _PracticeGameStepState extends State<PracticeGameStep> {
+class _PracticeGameStepState extends ConsumerState<PracticeGameStep> {
   late final PracticeGameConfig _config;
   final Set<int> _selected = <int>{};
   Timer? _timer;
@@ -198,7 +200,15 @@ class _PracticeGameStepState extends State<PracticeGameStep> {
                 option: option,
                 state: state,
                 sourceId: '${widget.step.key}-option-$index',
-                onTap: () => _handleOptionTap(index),
+                onTap: () {
+                  // play audio for this option
+                  final controller = ref.read(lessonAudioControllerProvider);
+                  if (option.audioUrl.isNotEmpty) {
+                    controller.playUrl(option.audioUrl,
+                        sourceId: '${widget.step.key}-option-$index');
+                  }
+                  _handleOptionTap(index);
+                },
               );
             },
           ),

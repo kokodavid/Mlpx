@@ -181,6 +181,8 @@ class _PromptSection extends StatelessWidget {
         ? activity.promptAudioUrl
         : instructionAudioUrl;
 
+    final showTitle = activity.mode == MatchingMode.soundToImage;
+
     return Column(
       children: [
         if (audioUrl.isNotEmpty)
@@ -207,7 +209,7 @@ class _PromptSection extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 14),
-        if (stepTitle.isNotEmpty)
+        if (showTitle && stepTitle.isNotEmpty)
           Text(
             stepTitle,
             textAlign: TextAlign.center,
@@ -440,25 +442,52 @@ class _WordOptionRow extends StatelessWidget {
         final isSelected = selectedOptionId == opt.id;
         final isCorrect = opt.id == correctOptionId;
 
-        Color borderColor = const Color(0xFFD9D0C7);
-        Color bgColor = Colors.white;
-        Color textColor = AppColors.textColor;
-        double borderWidth = 1.5;
+        Color textColor = const Color(0xFF9E9E9E);
+        BoxDecoration decoration;
 
         if (isSelected && answered) {
-          borderColor =
+          final feedbackColor =
               isCorrect ? AppColors.successColor : AppColors.errorColor;
-          bgColor = isCorrect
-              ? AppColors.successColor.withOpacity(0.06)
-              : AppColors.errorColor.withOpacity(0.06);
-          textColor =
-              isCorrect ? AppColors.successColor : AppColors.errorColor;
-          borderWidth = 2;
+          textColor = feedbackColor;
+          decoration = BoxDecoration(
+            color: isCorrect
+                ? AppColors.successColor.withOpacity(0.06)
+                : AppColors.errorColor.withOpacity(0.06),
+            borderRadius: BorderRadius.circular(18),
+            border: Border(
+              top: BorderSide(color: feedbackColor, width: 3.5),
+              bottom: BorderSide(color: feedbackColor, width: 3.5),
+              left: BorderSide(color: feedbackColor, width: 2.0),
+              right: BorderSide(color: feedbackColor, width: 2.0),
+            ),
+          );
         } else if (isSelected) {
-          borderColor = AppColors.primaryColor;
-          bgColor = AppColors.primaryColor.withOpacity(0.06);
-          textColor = AppColors.primaryColor;
-          borderWidth = 2;
+          decoration = BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: const Border(
+              top: BorderSide(color: AppColors.primaryColor, width: 3.5),
+              bottom: BorderSide(color: AppColors.primaryColor, width: 3.5),
+              left: BorderSide(color: AppColors.primaryColor, width: 2.0),
+              right: BorderSide(color: AppColors.primaryColor, width: 2.0),
+            ),
+          );
+        } else {
+          decoration = BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: const Color(0xFFE0DBD5),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          );
         }
 
         return Expanded(
@@ -468,12 +497,8 @@ class _WordOptionRow extends StatelessWidget {
               onTap: answered ? null : () => onOptionTap(opt.id),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
-                height: 48,
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: borderColor, width: borderWidth),
-                ),
+                height: 56,
+                decoration: decoration,
                 alignment: Alignment.center,
                 child: Text(
                   opt.label,
