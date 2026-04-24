@@ -7,7 +7,7 @@ Future<void> confirmGoHome(BuildContext context, {required String courseId}) asy
     context: context,
     barrierDismissible: false,
     builder: (context) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -20,20 +20,24 @@ Future<void> confirmGoHome(BuildContext context, {required String courseId}) asy
               shape: BoxShape.circle,
             ),
             child: const Icon(
-              Icons.home_outlined,
+              Icons.bookmark_outline_rounded,
               color: AppColors.primaryColor,
               size: 26,
             ),
           ),
           const SizedBox(height: 16),
           const Text(
-            'Leave this lesson?',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            'Save & exit?',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF142C44),
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           const Text(
-            'Your progress is saved. You can pick up right where you left off.',
+            'Your progress is saved. You can pick up this lesson again from the course screen.',
             style: TextStyle(fontSize: 13, color: Colors.grey, height: 1.5),
             textAlign: TextAlign.center,
           ),
@@ -48,24 +52,30 @@ Future<void> confirmGoHome(BuildContext context, {required String courseId}) asy
               ),
               onPressed: () => Navigator.of(context).pop(true),
               child: const Text(
-                'Exit Lesson',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                'Yes, save & exit',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 4),
           SizedBox(
             width: double.infinity,
-            child: OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                shape: const StadiumBorder(),
+            child: TextButton(
+              style: TextButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                
               ),
               onPressed: () => Navigator.of(context).pop(false),
               child: const Text(
-                'Keep learning',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                'Keep going',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF142C44),
+                ),
               ),
             ),
           ),

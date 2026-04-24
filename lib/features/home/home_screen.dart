@@ -357,7 +357,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           },
                         ),
                       ),
-                      if (!isOnIntroSlide)
+                      if (!isOnIntroSlide &&
+                          const ['Letter', 'Word', 'Sentence', 'Writing']
+                              .contains(selectedCourse.course.type))
                         SafeArea(
                           top: false,
                           minimum: const EdgeInsets.only(bottom: 8),
