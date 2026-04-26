@@ -5,6 +5,9 @@ import 'package:milpress/features/lessons_v2/services/lesson_audio_controller.da
 import 'package:milpress/features/course/providers/course_provider.dart';
 import 'package:milpress/features/course/providers/module_provider.dart';
 import 'package:milpress/features/reviews/providers/bookmark_provider.dart';
+import 'package:milpress/features/user_progress/models/course_progress_model.dart';
+import 'package:milpress/features/user_progress/providers/course_progress_providers.dart';
+import 'package:milpress/features/user_progress/providers/user_progress_providers.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../models/lesson_models.dart';
 import '../models/lesson_attempt_request.dart';
@@ -217,8 +220,65 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
       if (moduleId.isNotEmpty) {
         ref.invalidate(completedLessonIdsV2Provider(moduleId));
       }
+      await _updateCourseProgress(lessonId, moduleId);
     } catch (e) {
       debugPrint('LessonAttemptScreen: failed to record attempt: $e');
+    }
+  }
+
+  Future<void> _updateCourseProgress(String lessonId, String moduleId) async {
+    if (moduleId.isEmpty) return;
+    try {
+      final module = await ref.read(moduleFromSupabaseProvider(moduleId).future);
+      if (module == null) return;
+
+      final courseId = module.module.courseId;
+      if (courseId.isEmpty) return;
+
+      final courseProgressId =
+          await ref.read(getOrCreateCourseProgressProvider(courseId).future);
+      if (courseProgressId.isEmpty) return;
+
+      final courseProgress =
+          await ref.read(courseProgressByIdProvider(courseProgressId).future);
+      if (courseProgress == null) return;
+
+      // Invalidate stale module/course completion providers so the check below is fresh
+      ref.invalidate(completedModulesProvider(courseId));
+      ref.invalidate(courseCompletionProvider(courseId));
+
+      final isNowComplete =
+          await ref.read(courseCompletionProvider(courseId).future);
+
+      final now = DateTime.now();
+      final updated = CourseProgressModel(
+        id: courseProgress.id,
+        userId: courseProgress.userId,
+        courseId: courseProgress.courseId,
+        startedAt: courseProgress.startedAt,
+        completedAt: isNowComplete
+            ? (courseProgress.completedAt ?? now)
+            : courseProgress.completedAt,
+        currentModuleId: moduleId,
+        currentLessonId: lessonId,
+        isCompleted: isNowComplete,
+        createdAt: courseProgress.createdAt,
+        updatedAt: now,
+        needsSync: false,
+      );
+
+      final service = ref.read(courseProgressServiceProvider);
+      await service.updateCourseProgress(updated);
+
+      ref.invalidate(courseCompletedLessonsProvider(courseId));
+      ref.invalidate(courseLessonProgressValueProvider(courseId));
+      ref.invalidate(courseCompletedModulesProvider(courseId));
+      if (isNowComplete) {
+        ref.invalidate(activeCourseWithDetailsProvider);
+        ref.invalidate(completedCoursesWithDetailsProvider);
+      }
+    } catch (e) {
+      debugPrint('LessonAttemptScreen: failed to update course progress: $e');
     }
   }
 
