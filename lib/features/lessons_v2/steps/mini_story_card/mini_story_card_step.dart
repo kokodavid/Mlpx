@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:milpress/features/lessons_v2/services/lesson_audio_controller.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_step_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../../models/lesson_models.dart';
-import '../../providers/lesson_audio_providers.dart';
 import '../../widgets/lesson_audio_buttons.dart';
 import 'model.dart';
 
@@ -54,9 +51,7 @@ class _MiniStoryCardStepState extends State<MiniStoryCardStep> {
       widget.onStepStateChanged(const LessonStepUiState(canAdvance: true));
       return;
     }
-    setState(() {
-      _itemIndex += 1;
-    });
+    setState(() => _itemIndex += 1);
     _publishUiState();
   }
 
@@ -74,14 +69,7 @@ class _MiniStoryCardStepState extends State<MiniStoryCardStep> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (widget.step.key.isNotEmpty) ...[
-            Text(
-              widget.step.key,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF171B22),
-              ),
-            ),
+            LessonStepTitle(title: widget.step.key),
             const SizedBox(height: 12),
           ],
           LessonStepCard(
@@ -122,21 +110,14 @@ class _MiniStoryCardStepState extends State<MiniStoryCardStep> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                _StoryCard(
-                  stepKey: widget.step.key,
-                  itemIndex: _itemIndex,
-                  item: item,
-                ),
+                _StoryCard(item: item),
                 const SizedBox(height: 14),
-                _MiniStoryWaveformPlayer(
-                  stepKey: widget.step.key,
-                  itemIndex: _itemIndex,
+                LessonWaveformPlayer(
+                  sourceId: '${widget.step.key}-story-preview-$_itemIndex',
                   audioUrl: item.storyAudioUrl,
                 ),
                 const SizedBox(height: 10),
                 _ListenToSentenceButton(
-                  sourceId: '${widget.step.key}-listen-$_itemIndex',
-                  audioUrl: item.storyAudioUrl,
                   label: item.ctaLabel ?? 'Listen to the sentence',
                 ),
                 const SizedBox(height: 16),
@@ -156,15 +137,9 @@ class _MiniStoryCardStepState extends State<MiniStoryCardStep> {
 }
 
 class _StoryCard extends StatelessWidget {
-  final String stepKey;
-  final int itemIndex;
   final MiniStoryCardItem item;
 
-  const _StoryCard({
-    required this.stepKey,
-    required this.itemIndex,
-    required this.item,
-  });
+  const _StoryCard({required this.item});
 
   @override
   Widget build(BuildContext context) {
@@ -204,187 +179,10 @@ class _StoryCard extends StatelessWidget {
   }
 }
 
-class _MiniStoryWaveformPlayer extends StatefulWidget {
-  final String stepKey;
-  final int itemIndex;
-  final String audioUrl;
-
-  const _MiniStoryWaveformPlayer({
-    required this.stepKey,
-    required this.itemIndex,
-    required this.audioUrl,
-  });
-
-  @override
-  State<_MiniStoryWaveformPlayer> createState() =>
-      _MiniStoryWaveformPlayerState();
-}
-
-class _MiniStoryWaveformPlayerState extends State<_MiniStoryWaveformPlayer>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _animController;
-
-  String get _sourceId =>
-      '${widget.stepKey}-story-preview-${widget.itemIndex}';
-
-  @override
-  void initState() {
-    super.initState();
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _animController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _handleTap(LessonAudioController controller) async {
-    final state = controller.state.value;
-    if (state.sourceId == _sourceId &&
-        state.status == LessonAudioStatus.playing) {
-      await controller.stop();
-      return;
-    }
-    await controller.playUrl(widget.audioUrl, sourceId: _sourceId);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) {
-        final controller = ref.watch(lessonAudioControllerProvider);
-
-        return ValueListenableBuilder<LessonAudioState>(
-          valueListenable: controller.state,
-          builder: (context, state, _) {
-            final isActive = state.sourceId == _sourceId;
-            final isPlaying =
-                isActive && state.status == LessonAudioStatus.playing;
-            final isLoading =
-                isActive && state.status == LessonAudioStatus.loading;
-
-            return GestureDetector(
-              onTap: () => _handleTap(controller),
-              child: Container(
-                height: 52,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                      color: const Color(0xFFE8E3DC), width: 1),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: const BoxDecoration(
-                        color: AppColors.primaryColor,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: isLoading
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
-                                ),
-                              )
-                            : Icon(
-                                isPlaying
-                                    ? Icons.pause_rounded
-                                    : Icons.volume_up_rounded,
-                                color: Colors.white,
-                                size: 18,
-                              ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _WaveformBars(
-                        controller: _animController,
-                        playing: isPlaying || isLoading,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-class _WaveformBars extends StatelessWidget {
-  final AnimationController controller;
-  final bool playing;
-
-  static const List<double> _heightRatios = [
-    0.30, 0.55, 0.75, 0.90, 0.65, 1.00, 0.80, 0.55, 0.95, 0.70,
-    0.45, 0.85, 0.60, 1.00, 0.75, 0.50, 0.90, 0.65, 0.40, 0.80,
-    0.55, 0.70, 0.95, 0.60, 0.35, 0.75, 0.50, 0.88, 0.65, 0.40,
-  ];
-
-  const _WaveformBars({required this.controller, required this.playing});
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (context, _) {
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: List.generate(_heightRatios.length, (i) {
-            double scale = playing
-                ? (0.4 +
-                    0.6 *
-                        (0.5 +
-                                0.5 *
-                                    (controller.value * 2 * 3.14159 +
-                                                i * 0.4)
-                                        .clamp(-100.0, 100.0)
-                                        .abs() %
-                                1.0)
-                            .clamp(0.0, 1.0))
-                : 0.35;
-
-            return Container(
-              width: 3,
-              height: 32 * _heightRatios[i] * scale,
-              decoration: BoxDecoration(
-                color: AppColors.primaryColor.withOpacity(0.85),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            );
-          }),
-        );
-      },
-    );
-  }
-}
-
 class _ListenToSentenceButton extends StatelessWidget {
-  final String sourceId;
-  final String audioUrl;
   final String label;
 
-  const _ListenToSentenceButton({
-    required this.sourceId,
-    required this.audioUrl,
-    required this.label,
-  });
+  const _ListenToSentenceButton({required this.label});
 
   @override
   Widget build(BuildContext context) {

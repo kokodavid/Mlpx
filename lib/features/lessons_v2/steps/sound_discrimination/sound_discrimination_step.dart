@@ -92,10 +92,7 @@ class _SoundDiscriminationStepState extends State<SoundDiscriminationStep> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _StepTitle(
-                  stepKey: widget.step.key,
-                  title: _config.title,
-                ),
+                LessonStepTitle(title: _config.title),
                 const SizedBox(height: 16),
                 LessonStepCard(
                   color: const Color(0xFFF6F6F6),
@@ -149,12 +146,10 @@ class _SoundDiscriminationStepState extends State<SoundDiscriminationStep> {
                         imageUrl: item.imageUrl,
                         audioUrl: item.titleAudioUrl,
                       ),
-
                       const SizedBox(height: 8),
                       const LessonStepChevronDown(
                           color: AppColors.copBlue, size: 24),
                       const SizedBox(height: 8),
-                      // FIX: tip text deduplication — avoids "like in 'apple'?., like in apple"
                       LessonStepTipBanner(
                         text: _buildTipText(),
                         borderRadius: 16,
@@ -224,33 +219,6 @@ class _SoundDiscriminationStepState extends State<SoundDiscriminationStep> {
   }
 }
 
-class _StepTitle extends StatelessWidget {
-  final String stepKey;
-  final String title;
-
-  const _StepTitle({
-    required this.stepKey,
-    required this.title,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF171B22),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _PromptCard extends StatelessWidget {
   final String stepKey;
   final int itemIndex;
@@ -272,7 +240,6 @@ class _PromptCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        // FIX: fixed width 194 kept — ensures card never stretches full width on Android
         width: 194,
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
         decoration: BoxDecoration(
@@ -313,7 +280,15 @@ class _PromptCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            _HighlightedWord(word: title, highlightedText: highlightedText),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF171B22),
+              ),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 12),
             LessonAudioInlineButton(
               sourceId: '$stepKey-item-$itemIndex',
@@ -324,28 +299,6 @@ class _PromptCard extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class _HighlightedWord extends StatelessWidget {
-  final String word;
-  final String highlightedText;
-
-  const _HighlightedWord({
-    required this.word,
-    required this.highlightedText,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const baseStyle = TextStyle(
-      fontSize: 18,
-      fontWeight: FontWeight.w700,
-      color: Color(0xFF171B22),
-    );
-
-    // Display word without any highlighting
-    return Text(word, style: baseStyle, textAlign: TextAlign.center);
   }
 }
 
@@ -365,7 +318,6 @@ class _AnswerButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      // FIX: reduced height 54 → 48 to match the more compact Figma button height
       height: 48,
       child: OutlinedButton(
         onPressed: onPressed,
@@ -376,7 +328,6 @@ class _AnswerButton extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          // FIX: tightened padding so text sits more compactly like Figma
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
           textStyle: const TextStyle(
             fontSize: 15,

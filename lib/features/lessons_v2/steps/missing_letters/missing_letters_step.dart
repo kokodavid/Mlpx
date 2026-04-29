@@ -120,9 +120,7 @@ class _MissingLettersStepState extends State<MissingLettersStep> {
   }
 
   void _handleTryAgain() {
-    setState(() {
-      _loadActivity(_activityIndex);
-    });
+    setState(() => _loadActivity(_activityIndex));
     _publishUiState();
   }
 
@@ -150,14 +148,7 @@ class _MissingLettersStepState extends State<MissingLettersStep> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (_config.title.isNotEmpty) ...[
-            Text(
-              _config.title,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF171B22),
-              ),
-            ),
+            LessonStepTitle(title: _config.title),
             const SizedBox(height: 12),
           ],
           LessonStepCard(
@@ -322,184 +313,32 @@ class _SlotRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(slots.length, (i) {
-        final isFirst = i == 0;
-        final isLast = i == slots.length - 1;
-        final tile = _SlotTile(
-          slot: slots[i],
-          result: result,
-          isFirstOrLast: isFirst || isLast,
-        );
+        final slot = slots[i];
+        final isEdge = i == 0 || i == slots.length - 1;
+
+        final PhonemeSlotState slotState;
+        if (slot.definition.isGiven) {
+          slotState = PhonemeSlotState.given;
+        } else if (!slot.isFilled && isEdge) {
+          slotState = PhonemeSlotState.emptyDotted;
+        } else if (!slot.isFilled) {
+          slotState = PhonemeSlotState.empty;
+        } else if (result == _CheckResult.incorrect) {
+          slotState = PhonemeSlotState.filledError;
+        } else {
+          slotState = PhonemeSlotState.filled;
+        }
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 5),
-          child: tile,
+          child: PhonemeButton.slot(
+            label: slot.isFilled ? slot.filledValue! : slot.definition.value,
+            slotState: slotState,
+          ),
         );
       }),
     );
   }
-}
-
-class _SlotTile extends StatelessWidget {
-  final _RuntimeSlot slot;
-  final _CheckResult result;
-  final bool isFirstOrLast;
-
-  const _SlotTile({
-    required this.slot,
-    required this.result,
-    required this.isFirstOrLast,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const double size = 52;
-
-    if (slot.definition.isGiven) {
-      return Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: AppColors.primaryColor,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          slot.definition.value,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-          ),
-        ),
-      );
-    }
-
-    final filled = slot.isFilled;
-
-    final Color borderColor;
-    final Color bgColor;
-    final Color textColor;
-
-    if (!filled) {
-      borderColor = AppColors.primaryColor.withOpacity(0.5);
-      bgColor = Colors.white;
-      textColor = AppColors.primaryColor;
-    } else if (result == _CheckResult.incorrect) {
-      borderColor = AppColors.errorColor;
-      bgColor = const Color(0xFFFFF0F0);
-      textColor = AppColors.errorColor;
-    } else {
-      borderColor = AppColors.primaryColor.withOpacity(0.7);
-      bgColor = const Color(0xFFFAEDE6);
-      textColor = AppColors.primaryColor;
-    }
-
-    // Use dotted border for first and last slots
-    if (isFirstOrLast && !filled) {
-      return CustomPaint(
-        painter: _DottedBorderPainter(
-          color: AppColors.primaryColor,
-          strokeWidth: 6.0,
-          gap: 6,
-          borderRadius: 14,
-        ),
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            '_',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primaryColor,
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderColor, width: 2),
-      ),
-      alignment: Alignment.center,
-      child: filled
-          ? Text(
-              slot.filledValue!,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: textColor,
-              ),
-            )
-          : Text(
-              '_',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-                color: borderColor,
-              ),
-            ),
-    );
-  }
-}
-
-class _DottedBorderPainter extends CustomPainter {
-  final Color color;
-  final double strokeWidth;
-  final double gap;
-  final double borderRadius;
-
-  _DottedBorderPainter({
-    required this.color,
-    required this.strokeWidth,
-    required this.gap,
-    required this.borderRadius,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke;
-
-    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
-    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(borderRadius));
-    final path = Path()..addRRect(rrect);
-
-    final dashPath = _createDashedPath(path, gap, strokeWidth);
-    canvas.drawPath(dashPath, paint);
-  }
-
-  Path _createDashedPath(Path source, double dashGap, double dashWidth) {
-    final dashedPath = Path();
-    for (final metric in source.computeMetrics()) {
-      double distance = 0.0;
-      while (distance < metric.length) {
-        final nextDistance = distance + dashWidth;
-        final extractPath = metric.extractPath(
-          distance,
-          nextDistance > metric.length ? metric.length : nextDistance,
-        );
-        dashedPath.addPath(extractPath, Offset.zero);
-        distance = nextDistance + dashGap;
-      }
-    }
-    return dashedPath;
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _OptionGrid extends StatelessWidget {
@@ -527,9 +366,12 @@ class _OptionGrid extends StatelessWidget {
             final idx = i + j;
             return Padding(
               padding: const EdgeInsets.all(4),
-              child: _OptionButton(
-                letter: options[idx],
-                used: usedIndices.contains(idx),
+              child: OptionButton(
+                label: options[idx],
+                variant: OptionButtonVariant.letterTile,
+                state: usedIndices.contains(idx)
+                    ? OptionButtonState.selected
+                    : OptionButtonState.idle,
                 locked: locked,
                 onTap: () => onTap(idx),
               ),
@@ -537,70 +379,8 @@ class _OptionGrid extends StatelessWidget {
           }),
         ),
       );
-      if (i + 3 < options.length) const SizedBox(height: 8);
     }
     return Column(children: rows);
-  }
-}
-
-class _OptionButton extends StatelessWidget {
-  final String letter;
-  final bool used;
-  final bool locked;
-  final VoidCallback onTap;
-
-  const _OptionButton({
-    required this.letter,
-    required this.used,
-    required this.locked,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const primaryLight = Color(0xFFFAEDE6);
-
-    return GestureDetector(
-      onTap: locked ? null : onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        width: 100,
-        height: 56,
-        decoration: BoxDecoration(
-          color: used ? primaryLight : Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: used
-              ? Border(
-                  top: BorderSide(color: AppColors.primaryColor, width: 4.0),
-                  bottom: BorderSide(color: AppColors.primaryColor, width: 4.0),
-                  left: BorderSide(color: AppColors.primaryColor, width: 1.5),
-                  right: BorderSide(color: AppColors.primaryColor, width: 1.5),
-                )
-              : Border.all(
-                  color: const Color(0xFFE0DBD5),
-                  width: 1.5,
-                ),
-          boxShadow: used
-              ? null
-              : [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          letter,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: used ? AppColors.primaryColor : const Color(0xFF9E9E9E),
-          ),
-        ),
-      ),
-    );
   }
 }
 

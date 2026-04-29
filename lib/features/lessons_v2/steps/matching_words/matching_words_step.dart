@@ -26,9 +26,8 @@ class _MatchingWordsStepState extends State<MatchingWordsStep> {
   String? _selectedOptionId;
   bool _answered = false;
 
-  MatchingActivity get _activity =>
-      _config.activities[
-          _activityIndex.clamp(0, _config.activities.length - 1)];
+  MatchingActivity get _activity => _config.activities[
+      _activityIndex.clamp(0, _config.activities.length - 1)];
 
   bool get _isLastActivity => _activityIndex >= _config.activities.length - 1;
 
@@ -96,14 +95,7 @@ class _MatchingWordsStepState extends State<MatchingWordsStep> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            widget.step.key,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF171B22),
-            ),
-          ),
+          LessonStepTitle(title: widget.step.key),
           const SizedBox(height: 12),
           LessonStepCard(
             color: const Color(0xFFF6F6F6),
@@ -442,73 +434,25 @@ class _WordOptionRow extends StatelessWidget {
         final isSelected = selectedOptionId == opt.id;
         final isCorrect = opt.id == correctOptionId;
 
-        Color textColor = const Color(0xFF9E9E9E);
-        BoxDecoration decoration;
-
+        final OptionButtonState buttonState;
         if (isSelected && answered) {
-          final feedbackColor =
-              isCorrect ? AppColors.successColor : AppColors.errorColor;
-          textColor = feedbackColor;
-          decoration = BoxDecoration(
-            color: isCorrect
-                ? AppColors.successColor.withOpacity(0.06)
-                : AppColors.errorColor.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(18),
-            border: Border(
-              top: BorderSide(color: feedbackColor, width: 3.5),
-              bottom: BorderSide(color: feedbackColor, width: 3.5),
-              left: BorderSide(color: feedbackColor, width: 2.0),
-              right: BorderSide(color: feedbackColor, width: 2.0),
-            ),
-          );
+          buttonState =
+              isCorrect ? OptionButtonState.correct : OptionButtonState.incorrect;
         } else if (isSelected) {
-          decoration = BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: const Border(
-              top: BorderSide(color: AppColors.primaryColor, width: 3.5),
-              bottom: BorderSide(color: AppColors.primaryColor, width: 3.5),
-              left: BorderSide(color: AppColors.primaryColor, width: 2.0),
-              right: BorderSide(color: AppColors.primaryColor, width: 2.0),
-            ),
-          );
+          buttonState = OptionButtonState.selected;
         } else {
-          decoration = BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: const Color(0xFFE0DBD5),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          );
+          buttonState = OptionButtonState.idle;
         }
 
         return Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: GestureDetector(
-              onTap: answered ? null : () => onOptionTap(opt.id),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                height: 56,
-                decoration: decoration,
-                alignment: Alignment.center,
-                child: Text(
-                  opt.label,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: textColor,
-                  ),
-                ),
-              ),
+            child: OptionButton(
+              label: opt.label,
+              variant: OptionButtonVariant.answerChip,
+              state: buttonState,
+              locked: answered,
+              onTap: () => onOptionTap(opt.id),
             ),
           ),
         );

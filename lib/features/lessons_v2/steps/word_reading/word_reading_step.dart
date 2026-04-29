@@ -80,14 +80,7 @@ class _WordReadingStepState extends State<WordReadingStep> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (widget.step.key.isNotEmpty) ...[
-            Text(
-              widget.step.key,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF171B22),
-              ),
-            ),
+            LessonStepTitle(title: widget.step.key),
             const SizedBox(height: 12),
           ],
           LessonStepCard(
@@ -353,9 +346,7 @@ class _SegmentTile extends ConsumerWidget {
     final controller = ref.watch(lessonAudioControllerProvider);
     return _SegmentTileStateful(
       segment: segment,
-      onTap: () {
-        controller.playUrl(segment.audioUrl, sourceId: sourceId);
-      },
+      onTap: () => controller.playUrl(segment.audioUrl, sourceId: sourceId),
     );
   }
 }
@@ -379,15 +370,12 @@ class _SegmentTileStatefulState extends State<_SegmentTileStateful> {
   @override
   Widget build(BuildContext context) {
     final highlighted = widget.segment.highlighted;
-
     final borderColor = highlighted
         ? AppColors.primaryColor
         : (_tapped ? AppColors.primaryColor : const Color(0xFFD9D0C7));
-
     final bgColor = highlighted
         ? AppColors.primaryColor.withOpacity(0.07)
         : (_tapped ? AppColors.primaryColor.withOpacity(0.05) : Colors.white);
-
     final textColor =
         (highlighted || _tapped) ? AppColors.primaryColor : AppColors.textColor;
 

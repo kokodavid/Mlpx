@@ -27,8 +27,8 @@ class _SoundPresenceCheckStepState extends State<SoundPresenceCheckStep> {
   int _score = 0;
   bool? _selectedAnswer;
 
-  SoundPresenceQuestion get _question => _config
-      .questions[_currentQuestionIndex.clamp(0, _config.questions.length - 1)];
+  SoundPresenceQuestion get _question => _config.questions[
+      _currentQuestionIndex.clamp(0, _config.questions.length - 1)];
 
   bool get _isCorrect =>
       _selectedAnswer != null && _selectedAnswer == _question.correctAnswer;
@@ -168,8 +168,6 @@ class _SoundPresenceCheckStepState extends State<SoundPresenceCheckStep> {
   }
 }
 
-
-
 enum _PresenceButtonState { idle, correct, incorrect }
 
 class _AnswerButton extends StatelessWidget {
@@ -185,17 +183,17 @@ class _AnswerButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isYes = label.toLowerCase() == 'yes';
+
     final borderColor = switch (state) {
-      _PresenceButtonState.idle => label.toLowerCase() == 'yes'
-          ? AppColors.successColor
-          : AppColors.errorColor,
+      _PresenceButtonState.idle =>
+        isYes ? AppColors.successColor : AppColors.errorColor,
       _PresenceButtonState.correct => AppColors.successColor,
       _PresenceButtonState.incorrect => AppColors.errorColor,
     };
     final backgroundColor = switch (state) {
-      _PresenceButtonState.idle => label.toLowerCase() == 'yes'
-          ? const Color(0xFFF2F8EE)
-          : const Color(0xFFFFF1F0),
+      _PresenceButtonState.idle =>
+        isYes ? const Color(0xFFF2F8EE) : const Color(0xFFFFF1F0),
       _PresenceButtonState.correct => AppColors.successColor,
       _PresenceButtonState.incorrect => AppColors.errorColor,
     };

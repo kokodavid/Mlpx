@@ -38,7 +38,7 @@ class _PracticeGameStepState extends ConsumerState<PracticeGameStep> {
   bool get _passed => _score >= _config.passingScore;
 
   int get _correctOptionCount =>
-      _config.options.where((option) => option.isCorrect).length;
+      _config.options.where((o) => o.isCorrect).length;
 
   @override
   void initState() {
@@ -113,9 +113,7 @@ class _PracticeGameStepState extends ConsumerState<PracticeGameStep> {
         _selected.add(index);
       }
     });
-    if (_score >= _correctOptionCount) {
-      _finishGame();
-    }
+    if (_score >= _correctOptionCount) _finishGame();
   }
 
   @override
@@ -126,14 +124,7 @@ class _PracticeGameStepState extends ConsumerState<PracticeGameStep> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (widget.step.key.isNotEmpty) ...[
-            Text(
-              widget.step.key,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF171B22),
-              ),
-            ),
+            LessonStepTitle(title: widget.step.key),
             const SizedBox(height: 14),
           ],
           Container(
@@ -201,11 +192,12 @@ class _PracticeGameStepState extends ConsumerState<PracticeGameStep> {
                 state: state,
                 sourceId: '${widget.step.key}-option-$index',
                 onTap: () {
-                  // play audio for this option
                   final controller = ref.read(lessonAudioControllerProvider);
                   if (option.audioUrl.isNotEmpty) {
-                    controller.playUrl(option.audioUrl,
-                        sourceId: '${widget.step.key}-option-$index');
+                    controller.playUrl(
+                      option.audioUrl,
+                      sourceId: '${widget.step.key}-option-$index',
+                    );
                   }
                   _handleOptionTap(index);
                 },

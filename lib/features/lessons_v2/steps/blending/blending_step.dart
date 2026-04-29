@@ -49,9 +49,7 @@ class _BlendingStepState extends State<BlendingStep> {
     );
   }
 
-  void _handleBlend() {
-    setState(() => _blended = true);
-  }
+  void _handleBlend() => setState(() => _blended = true);
 
   void _handleNext() {
     if (_isLastExample) {
@@ -67,9 +65,7 @@ class _BlendingStepState extends State<BlendingStep> {
   }
 
   void _handlePhonemeSelected(String sourceId) {
-    setState(() {
-      _selectedPhonemeIds.add(sourceId);
-    });
+    setState(() => _selectedPhonemeIds.add(sourceId));
   }
 
   @override
@@ -88,14 +84,7 @@ class _BlendingStepState extends State<BlendingStep> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (_config.title.isNotEmpty) ...[
-                Text(
-                  _config.title,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF171B22),
-                  ),
-                ),
+                LessonStepTitle(title: _config.title),
                 const SizedBox(height: 6),
               ],
               Center(
@@ -163,7 +152,9 @@ class _BlendingStepState extends State<BlendingStep> {
                         ),
                         if (_blended) ...[
                           const SizedBox(height: 12),
-                          const _TipBanner(),
+                          const LessonStepTipBanner(
+                            text: 'Tip: Tap to Hear, Tap to Blend',
+                          ),
                         ],
                         const SizedBox(height: 16),
                         _buildBottomAction(example),
@@ -214,45 +205,6 @@ class _BlendingStepState extends State<BlendingStep> {
   }
 }
 
-
-
-class _TipBanner extends StatelessWidget {
-  const _TipBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE8E2DB)),
-      ),
-      child: const Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.lightbulb_outline,
-            size: 16,
-            color: Color(0xFF8A8A8A),
-          ),
-          SizedBox(width: 6),
-          Text(
-            'Tip: Tap to Hear, Tap to Blend',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF8A8A8A),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-
-
 class _PhonemeRow extends StatelessWidget {
   final String stepKey;
   final int exampleIndex;
@@ -283,11 +235,12 @@ class _PhonemeRow extends StatelessWidget {
           final sourceId = '$stepKey-example-$exampleIndex-phoneme-$i';
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 5),
-            child: _PhonemeButton(
+            child: PhonemeButton.phoneme(
               sourceId: sourceId,
-              phoneme: phonemes[i],
-              isSelected: selectedSourceIds.contains(sourceId),
-              onSelected: () => onPhonemeSelected(sourceId),
+              label: phonemes[i].label,
+              audioUrl: phonemes[i].audioUrl,
+              highlighted: phonemes[i].highlighted,
+              onTap: () => onPhonemeSelected(sourceId),
             ),
           );
         }),
@@ -295,154 +248,6 @@ class _PhonemeRow extends StatelessWidget {
     );
   }
 }
-
-class _PhonemeButton extends ConsumerStatefulWidget {
-  final String sourceId;
-  final BlendingPhoneme phoneme;
-  final bool isSelected;
-  final VoidCallback onSelected;
-
-  const _PhonemeButton({
-    required this.sourceId,
-    required this.phoneme,
-    required this.isSelected,
-    required this.onSelected,
-  });
-
-  @override
-  ConsumerState<_PhonemeButton> createState() => _PhonemeButtonState();
-}
-
-class _PhonemeButtonState extends ConsumerState<_PhonemeButton> {
-  bool _tapped = false;
-
-  Future<void> _playPhonemeAudio() async {
-    final audioUrl = widget.phoneme.audioUrl;
-
-    setState(() {
-      _tapped = true;
-    });
-
-    widget.onSelected();
-
-    if (audioUrl.isNotEmpty) {
-      ref.read(lessonAudioControllerProvider).playUrl(
-            audioUrl,
-            sourceId: widget.sourceId,
-          );
-    }
-
-    Future.delayed(const Duration(milliseconds: 150), () {
-      if (mounted) {
-        setState(() => _tapped = false);
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isHighlighted = widget.phoneme.highlighted;
-    final isActive = isHighlighted || _tapped;
-    final label = widget.phoneme.label;
-
-    final borderColor = isActive
-        ? AppColors.primaryColor
-        : const Color(0xFFD9D0C7);
-
-    final bgColor = isActive
-        ? AppColors.primaryColor.withOpacity(0.05)
-        : Colors.white;
-
-    final innerChild = AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
-      width: 68,
-      height: 44,
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-        // No solid border when highlighted — the CustomPaint dashed border
-        // handles it instead.
-        border: isHighlighted
-            ? null
-            : Border.all(
-                color: borderColor,
-                width: isActive ? 1.0 : 1.0,
-              ),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
-          color: isActive ? AppColors.primaryColor : AppColors.textColor,
-        ),
-      ),
-    );
-
-    return GestureDetector(
-      onTap: _playPhonemeAudio,
-      child: isHighlighted
-          ? CustomPaint(
-              painter: _PhonemeDottedBorderPainter(
-                color: AppColors.primaryColor,
-                strokeWidth: 2.0,
-                gap: 5.0,
-                borderRadius: 12,
-              ),
-              child: innerChild,
-            )
-          : innerChild,
-    );
-  }
-}
-
-
-
-class _PhonemeDottedBorderPainter extends CustomPainter {
-  final Color color;
-  final double strokeWidth;
-  final double gap;
-  final double borderRadius;
-
-  _PhonemeDottedBorderPainter({
-    required this.color,
-    required this.strokeWidth,
-    required this.gap,
-    required this.borderRadius,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke;
-
-    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
-    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(borderRadius));
-    final path = Path()..addRRect(rrect);
-
-    final dashedPath = Path();
-    for (final metric in path.computeMetrics()) {
-      double distance = 0.0;
-      while (distance < metric.length) {
-        final nextDistance = distance + strokeWidth;
-        final extractPath = metric.extractPath(
-          distance,
-          nextDistance > metric.length ? metric.length : nextDistance,
-        );
-        dashedPath.addPath(extractPath, Offset.zero);
-        distance = nextDistance + gap;
-      }
-    }
-    canvas.drawPath(dashedPath, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
 
 class _BlendButton extends StatelessWidget {
   final String stepKey;
@@ -482,8 +287,6 @@ class _BlendButton extends StatelessWidget {
   }
 }
 
-
-
 class _BlendedWordDisplay extends StatelessWidget {
   final String stepKey;
   final int exampleIndex;
@@ -504,9 +307,6 @@ class _BlendedWordDisplay extends StatelessWidget {
       child: _HighlightedBlendedWord(
         word: example.word,
         phonemes: example.phonemes,
-        stepKey: stepKey,
-        exampleIndex: exampleIndex,
-        selectedSourceIds: selectedSourceIds,
       ),
     );
   }
@@ -515,16 +315,10 @@ class _BlendedWordDisplay extends StatelessWidget {
 class _HighlightedBlendedWord extends StatelessWidget {
   final String word;
   final List<BlendingPhoneme> phonemes;
-  final String stepKey;
-  final int exampleIndex;
-  final Set<String> selectedSourceIds;
 
   const _HighlightedBlendedWord({
     required this.word,
     required this.phonemes,
-    required this.stepKey,
-    required this.exampleIndex,
-    required this.selectedSourceIds,
   });
 
   @override
@@ -533,11 +327,9 @@ class _HighlightedBlendedWord extends StatelessWidget {
     int cursor = 0;
     final lowerWord = word.toLowerCase();
 
-    for (var i = 0; i < phonemes.length; i++) {
-      final phoneme = phonemes[i];
-      final normalizedLabel = phoneme.label
-          .toLowerCase()
-          .replaceAll(RegExp(r'[^a-z0-9]'), '');
+    for (final phoneme in phonemes) {
+      final normalizedLabel =
+          phoneme.label.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
       if (normalizedLabel.isEmpty) continue;
 
       final matchIndex = lowerWord.indexOf(normalizedLabel, cursor);
@@ -550,12 +342,10 @@ class _HighlightedBlendedWord extends StatelessWidget {
         ));
       }
 
-      final shouldHighlight = phoneme.highlighted;
-
       spans.add(TextSpan(
         text: word.substring(matchIndex, matchIndex + normalizedLabel.length),
         style: TextStyle(
-          color: shouldHighlight
+          color: phoneme.highlighted
               ? AppColors.primaryColor
               : const Color(0xFF171B22),
         ),

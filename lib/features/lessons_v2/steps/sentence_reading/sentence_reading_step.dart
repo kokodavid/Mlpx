@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:milpress/features/lessons_v2/services/lesson_audio_controller.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_step_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../../models/lesson_models.dart';
-import '../../providers/lesson_audio_providers.dart';
 import 'model.dart';
 
 class SentenceReadingStep extends StatefulWidget {
@@ -79,14 +76,7 @@ class _SentenceReadingStepState extends State<SentenceReadingStep> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (widget.step.key.isNotEmpty) ...[
-            Text(
-              widget.step.key,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF171B22),
-              ),
-            ),
+            LessonStepTitle(title: widget.step.key),
             const SizedBox(height: 12),
           ],
           LessonStepCard(
@@ -234,9 +224,8 @@ class _SentenceAudioSection extends StatelessWidget {
           ),
         const SizedBox(height: 16),
         AnimatedCrossFade(
-          firstChild: _WaveformPlayer(
-            stepKey: stepKey,
-            itemIndex: itemIndex,
+          firstChild: LessonWaveformPlayer(
+            sourceId: '$stepKey-sentence-$itemIndex-audio',
             audioUrl: item.sentenceAudioUrl,
           ),
           secondChild: const SizedBox.shrink(),
@@ -253,176 +242,6 @@ class _SentenceAudioSection extends StatelessWidget {
           onChanged: onSelfReadToggle,
         ),
       ],
-    );
-  }
-}
-
-class _WaveformPlayer extends StatefulWidget {
-  final String stepKey;
-  final int itemIndex;
-  final String audioUrl;
-
-  const _WaveformPlayer({
-    required this.stepKey,
-    required this.itemIndex,
-    required this.audioUrl,
-  });
-
-  @override
-  State<_WaveformPlayer> createState() => _WaveformPlayerState();
-}
-
-class _WaveformPlayerState extends State<_WaveformPlayer>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _animController;
-
-  String get _sourceId =>
-      '${widget.stepKey}-sentence-${widget.itemIndex}-audio';
-
-  @override
-  void initState() {
-    super.initState();
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _animController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _handleTap(LessonAudioController controller) async {
-    final state = controller.state.value;
-    if (state.sourceId == _sourceId &&
-        state.status == LessonAudioStatus.playing) {
-      await controller.stop();
-      return;
-    }
-    await controller.playUrl(widget.audioUrl, sourceId: _sourceId);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) {
-        final controller = ref.watch(lessonAudioControllerProvider);
-
-        return ValueListenableBuilder<LessonAudioState>(
-          valueListenable: controller.state,
-          builder: (context, state, _) {
-            final isActive = state.sourceId == _sourceId;
-            final isPlaying =
-                isActive && state.status == LessonAudioStatus.playing;
-            final isLoading =
-                isActive && state.status == LessonAudioStatus.loading;
-
-            return GestureDetector(
-              onTap: () => _handleTap(controller),
-              child: Container(
-                height: 52,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border:
-                      Border.all(color: const Color(0xFFE8E3DC), width: 1),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: const BoxDecoration(
-                        color: AppColors.primaryColor,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: isLoading
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
-                                ),
-                              )
-                            : Icon(
-                                isPlaying
-                                    ? Icons.pause_rounded
-                                    : Icons.volume_up_rounded,
-                                color: Colors.white,
-                                size: 18,
-                              ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _WaveformBars(
-                        controller: _animController,
-                        playing: isPlaying || isLoading,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-class _WaveformBars extends StatelessWidget {
-  final AnimationController controller;
-  final bool playing;
-
-  static const List<double> _heightRatios = [
-    0.30, 0.55, 0.75, 0.90, 0.65, 1.00, 0.80, 0.55, 0.95, 0.70,
-    0.45, 0.85, 0.60, 1.00, 0.75, 0.50, 0.90, 0.65, 0.40, 0.80,
-    0.55, 0.70, 0.95, 0.60, 0.35, 0.75, 0.50, 0.88, 0.65, 0.40,
-  ];
-
-  const _WaveformBars({required this.controller, required this.playing});
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (context, _) {
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: List.generate(_heightRatios.length, (i) {
-            double scale = playing
-                ? (0.4 +
-                    0.6 *
-                        (0.5 +
-                                0.5 *
-                                    (controller.value * 2 * 3.14159 +
-                                                i * 0.4)
-                                        .clamp(-100.0, 100.0)
-                                        .abs() %
-                                1.0)
-                            .clamp(0.0, 1.0))
-                : 0.35;
-
-            return Container(
-              width: 3,
-              height: 32 * _heightRatios[i] * scale,
-              decoration: BoxDecoration(
-                color: AppColors.primaryColor.withOpacity(0.85),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            );
-          }),
-        );
-      },
     );
   }
 }
@@ -446,7 +265,8 @@ class _SelfReadToggle extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: value ? AppColors.primaryColor.withOpacity(0.08) : Colors.white,
+          color:
+              value ? AppColors.primaryColor.withOpacity(0.08) : Colors.white,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
             color: value ? AppColors.primaryColor : const Color(0xFFD9D5CF),
@@ -461,7 +281,8 @@ class _SelfReadToggle extends StatelessWidget {
               width: 36,
               height: 20,
               decoration: BoxDecoration(
-                color: value ? AppColors.primaryColor : const Color(0xFFD9D0C7),
+                color:
+                    value ? AppColors.primaryColor : const Color(0xFFD9D0C7),
                 borderRadius: BorderRadius.circular(999),
               ),
               child: AnimatedAlign(
