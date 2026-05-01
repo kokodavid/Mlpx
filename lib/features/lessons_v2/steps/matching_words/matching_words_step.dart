@@ -288,14 +288,12 @@ class _OptionsSection extends StatelessWidget {
       MatchingMode.soundToImage => _ImageOptionRow(
           options: activity.options,
           selectedOptionId: selectedOptionId,
-          correctOptionId: activity.correctOptionId,
           answered: answered,
           onOptionTap: onOptionTap,
         ),
       MatchingMode.soundToWord || MatchingMode.imageToWord => _WordOptionRow(
           options: activity.options,
           selectedOptionId: selectedOptionId,
-          correctOptionId: activity.correctOptionId,
           answered: answered,
           onOptionTap: onOptionTap,
         ),
@@ -306,14 +304,12 @@ class _OptionsSection extends StatelessWidget {
 class _ImageOptionRow extends StatelessWidget {
   final List<MatchingOption> options;
   final String? selectedOptionId;
-  final String correctOptionId;
   final bool answered;
   final ValueChanged<String> onOptionTap;
 
   const _ImageOptionRow({
     required this.options,
     required this.selectedOptionId,
-    required this.correctOptionId,
     required this.answered,
     required this.onOptionTap,
   });
@@ -326,16 +322,11 @@ class _ImageOptionRow extends StatelessWidget {
         final i = entry.key;
         final opt = entry.value;
         final isSelected = selectedOptionId == opt.id;
-        final isCorrect = opt.id == correctOptionId;
 
         Color borderColor = const Color(0xFFE8E0D8);
         double borderWidth = 1.5;
 
-        if (isSelected && answered) {
-          borderColor =
-              isCorrect ? AppColors.successColor : AppColors.errorColor;
-          borderWidth = 2.5;
-        } else if (isSelected) {
+        if (isSelected) {
           borderColor = AppColors.primaryColor;
           borderWidth = 2.5;
         }
@@ -392,11 +383,7 @@ class _ImageOptionRow extends StatelessWidget {
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: isSelected
-                            ? (answered
-                                ? (isCorrect
-                                    ? AppColors.successColor
-                                    : AppColors.errorColor)
-                                : AppColors.primaryColor)
+                            ? AppColors.primaryColor
                             : AppColors.textColor,
                       ),
                     ),
@@ -414,14 +401,12 @@ class _ImageOptionRow extends StatelessWidget {
 class _WordOptionRow extends StatelessWidget {
   final List<MatchingOption> options;
   final String? selectedOptionId;
-  final String correctOptionId;
   final bool answered;
   final ValueChanged<String> onOptionTap;
 
   const _WordOptionRow({
     required this.options,
     required this.selectedOptionId,
-    required this.correctOptionId,
     required this.answered,
     required this.onOptionTap,
   });
@@ -432,13 +417,9 @@ class _WordOptionRow extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: options.map((opt) {
         final isSelected = selectedOptionId == opt.id;
-        final isCorrect = opt.id == correctOptionId;
 
         final OptionButtonState buttonState;
-        if (isSelected && answered) {
-          buttonState =
-              isCorrect ? OptionButtonState.correct : OptionButtonState.incorrect;
-        } else if (isSelected) {
+        if (isSelected) {
           buttonState = OptionButtonState.selected;
         } else {
           buttonState = OptionButtonState.idle;

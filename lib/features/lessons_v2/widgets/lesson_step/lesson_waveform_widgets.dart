@@ -131,11 +131,11 @@ class _LessonWaveformPlayerState extends ConsumerState<LessonWaveformPlayer>
             child: Row(
               children: [
                 Container(
-                  width: 36,
+                  width: 56,
                   height: 36,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: AppColors.primaryColor,
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Center(
                     child: isLoading
@@ -153,7 +153,7 @@ class _LessonWaveformPlayerState extends ConsumerState<LessonWaveformPlayer>
                                 ? Icons.pause_rounded
                                 : Icons.volume_up_rounded,
                             color: Colors.white,
-                            size: 18,
+                            size: 24,
                           ),
                   ),
                 ),

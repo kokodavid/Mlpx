@@ -143,6 +143,7 @@ class _SoundItemMatchingStepState extends State<SoundItemMatchingStep> {
                           label: activity.options[index].label,
                           variant: OptionButtonVariant.answerChip,
                           state: _optionState(index),
+                          filledFeedbackStates: true,
                           onTap: () => _handleOptionTap(index),
                         ),
                       ),

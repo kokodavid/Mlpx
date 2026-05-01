@@ -10,6 +10,7 @@ class OptionButton extends StatelessWidget {
   final OptionButtonVariant variant;
   final OptionButtonState state;
   final bool locked;
+  final bool filledFeedbackStates;
   final VoidCallback onTap;
 
   const OptionButton({
@@ -19,6 +20,7 @@ class OptionButton extends StatelessWidget {
     required this.state,
     required this.onTap,
     this.locked = false,
+    this.filledFeedbackStates = false,
   });
 
   @override
@@ -84,8 +86,12 @@ class OptionButton extends StatelessWidget {
     final Color bgColor = switch (state) {
       OptionButtonState.idle => Colors.white,
       OptionButtonState.selected => Colors.white,
-      OptionButtonState.correct => AppColors.successColor.withOpacity(0.06),
-      OptionButtonState.incorrect => AppColors.errorColor.withOpacity(0.06),
+      OptionButtonState.correct => filledFeedbackStates
+          ? AppColors.successColor
+          : AppColors.successColor.withOpacity(0.06),
+      OptionButtonState.incorrect => filledFeedbackStates
+          ? AppColors.errorColor
+          : AppColors.errorColor.withOpacity(0.06),
     };
 
     final Color borderAccent = switch (state) {
@@ -111,8 +117,10 @@ class OptionButton extends StatelessWidget {
     final Color textColor = switch (state) {
       OptionButtonState.idle => const Color(0xFF9E9E9E),
       OptionButtonState.selected => AppColors.primaryColor,
-      OptionButtonState.correct => AppColors.successColor,
-      OptionButtonState.incorrect => AppColors.errorColor,
+      OptionButtonState.correct =>
+        filledFeedbackStates ? Colors.white : AppColors.successColor,
+      OptionButtonState.incorrect =>
+        filledFeedbackStates ? Colors.white : AppColors.errorColor,
     };
 
     return GestureDetector(
