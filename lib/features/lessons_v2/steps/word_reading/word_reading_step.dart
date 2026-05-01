@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milpress/features/lessons_v2/providers/lesson_audio_providers.dart';
+import 'package:milpress/features/lessons_v2/widgets/lesson_step/lesson_dotted_border_painter.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_step_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../../models/lesson_models.dart';
@@ -237,9 +238,11 @@ class _ModelReadingAccordion extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = item.modelReadingLabel.isNotEmpty
-        ? item.modelReadingLabel
-        : 'model reading';
+    final rawLabel = item.modelReadingLabel.trim();
+    final label = rawLabel.isNotEmpty ? rawLabel : 'model reading';
+    final accordionTitle = label.toLowerCase().startsWith('tap here')
+        ? label
+        : 'Tap here word for $label';
 
     return Container(
       decoration: BoxDecoration(
@@ -257,19 +260,11 @@ class _ModelReadingAccordion extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: RichText(
-                      text: TextSpan(
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textColor,
-                        ),
-                        children: [
-                          const TextSpan(
-                            text: 'Tap here ',
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          TextSpan(text: 'word for $label'),
-                        ],
+                    child: Text(
+                      accordionTitle,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textColor,
                       ),
                     ),
                   ),
@@ -370,12 +365,11 @@ class _SegmentTileStatefulState extends State<_SegmentTileStateful> {
   @override
   Widget build(BuildContext context) {
     final highlighted = widget.segment.highlighted;
-    final borderColor = highlighted
-        ? AppColors.primaryColor
-        : (_tapped ? AppColors.primaryColor : const Color(0xFFD9D0C7));
     final bgColor = highlighted
         ? AppColors.primaryColor.withOpacity(0.07)
-        : (_tapped ? AppColors.primaryColor.withOpacity(0.05) : Colors.white);
+        : (_tapped
+            ? AppColors.primaryColor.withOpacity(0.05)
+            : const Color(0xFFF3F3F3));
     final textColor =
         (highlighted || _tapped) ? AppColors.primaryColor : AppColors.textColor;
 
@@ -384,26 +378,41 @@ class _SegmentTileStatefulState extends State<_SegmentTileStateful> {
         setState(() => _tapped = true);
         widget.onTap();
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        width: 72,
-        height: 48,
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: borderColor,
-            width: highlighted ? 2.0 : 1.0,
-          ),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          widget.segment.label,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: textColor,
-          ),
+      child: highlighted
+          ? CustomPaint(
+              painter: const LessonDottedBorderPainter(
+                color: AppColors.primaryColor,
+                strokeWidth: 2.0,
+                dotSize: 2.0,
+                dotGap: 3.0,
+                borderRadius: 13,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(1),
+                child: _buildTile(bgColor, textColor, highlighted),
+              ),
+            )
+          : _buildTile(bgColor, textColor, highlighted),
+    );
+  }
+
+  Widget _buildTile(Color bgColor, Color textColor, bool highlighted) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      width: 72,
+      height: 48,
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: null,
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        widget.segment.label,
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: textColor,
         ),
       ),
     );

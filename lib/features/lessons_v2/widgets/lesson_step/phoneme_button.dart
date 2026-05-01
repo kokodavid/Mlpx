@@ -65,8 +65,8 @@ class PhonemeButton extends ConsumerStatefulWidget {
   })  : _variant = _PhonemeButtonVariant.segment,
         slotState = PhonemeSlotState.empty,
         width = 70,
-        height = 70,
-        borderRadius = 18,
+        height = 56,
+        borderRadius = 14,
         fontSize = 17,
         fontWeight = FontWeight.w700,
         showShadow = true,
@@ -132,10 +132,9 @@ class _PhonemeButtonState extends ConsumerState<PhonemeButton> {
 
   Widget _buildPhoneme() {
     final isActive = widget.highlighted || _tapped;
-    final borderColor =
-        isActive ? AppColors.primaryColor : const Color(0xFFD9D0C7);
-    final bgColor =
-        isActive ? AppColors.primaryColor.withOpacity(0.05) : Colors.white;
+    final bgColor = isActive
+        ? AppColors.primaryColor.withOpacity(0.05)
+        : const Color(0xFFF3F3F3);
 
     final inner = AnimatedContainer(
       duration: const Duration(milliseconds: 150),
@@ -144,9 +143,7 @@ class _PhonemeButtonState extends ConsumerState<PhonemeButton> {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(widget.borderRadius),
-        border: widget.highlighted
-            ? null
-            : Border.all(color: borderColor, width: 1.0),
+        border: null,
       ),
       alignment: Alignment.center,
       child: Text(
@@ -192,7 +189,9 @@ class _PhonemeButtonState extends ConsumerState<PhonemeButton> {
 
         final bgColor = isPlaying
             ? AppColors.primaryColor.withOpacity(0.10)
-            : Colors.white;
+            : widget.highlighted
+                ? Colors.white
+                : const Color(0xFFF3F3F3);
         final labelColor =
             widget.highlighted ? AppColors.primaryColor : AppColors.copBlue;
 
@@ -203,10 +202,8 @@ class _PhonemeButtonState extends ConsumerState<PhonemeButton> {
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: BorderRadius.circular(widget.borderRadius),
-            border: widget.highlighted
-                ? null
-                : Border.all(color: const Color(0xFFDDD8D1), width: 1.5),
-            boxShadow: widget.showShadow
+            border: null,
+            boxShadow: widget.showShadow && widget.highlighted
                 ? [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.06),

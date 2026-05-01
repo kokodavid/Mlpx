@@ -109,7 +109,7 @@ class _GuidedReadingStepState extends State<GuidedReadingStep> {
                 ),
                 const SizedBox(height: 10),
                 const LessonStepChevronDown(
-                  color: AppColors.primaryColor,
+                  color: AppColors.textColor,
                   size: 28,
                 ),
                 const SizedBox(height: 14),

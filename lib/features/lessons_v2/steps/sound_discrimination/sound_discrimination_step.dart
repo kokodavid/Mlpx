@@ -253,7 +253,7 @@ class _PromptCard extends StatelessWidget {
               height: 132,
               width: double.infinity,
               decoration: BoxDecoration(
-                color: const Color(0xFFF7F7F7),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: ClipRRect(
@@ -268,7 +268,7 @@ class _PromptCard extends StatelessWidget {
                       )
                     : Image.network(
                         imageUrl,
-                        fit: BoxFit.cover,
+                        fit: BoxFit.contain,
                         errorBuilder: (_, __, ___) => const Center(
                           child: Icon(
                             Icons.broken_image_outlined,

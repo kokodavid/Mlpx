@@ -207,41 +207,77 @@ class _PromptBlock extends StatelessWidget {
     final slashPattern = '/$vowel/';
     final slashIndex =
         prompt.toLowerCase().indexOf(slashPattern.toLowerCase());
-    final targetIndex = slashIndex >= 0 ? slashIndex + 1 : -1;
+    final lowercasePrompt = prompt.toLowerCase();
+    final vowelPhraseIndex =
+        lowercasePrompt.lastIndexOf('the vowel $slashPattern');
+    final soundPhraseIndex = vowelPhraseIndex >= 0
+        ? vowelPhraseIndex
+        : lowercasePrompt.lastIndexOf('the $slashPattern');
+    final spaceBeforeSound =
+        slashIndex > 0 ? prompt.lastIndexOf(' ', slashIndex - 1) : -1;
+    int lineBreakIndex = -1;
+    if (soundPhraseIndex > 0) {
+      lineBreakIndex = soundPhraseIndex;
+    } else if (spaceBeforeSound > 0) {
+      lineBreakIndex = prompt.lastIndexOf(' ', spaceBeforeSound - 1) + 1;
+    }
 
     return Column(
       children: [
-        if (promptAudioUrl.isNotEmpty) ...[
-          Center(
-            child: LessonAudioInlineButton(
-              sourceId: sourceId,
-              url: promptAudioUrl,
-              isCircular: false,
-              buttonSize: 48,
-              backgroundColor: const Color(0xFF1B2A3B),
-              iconColor: Colors.white,
-              defaultIcon: Icons.volume_up_rounded,
-            ),
-          ),
-          const SizedBox(height: 14),
-        ],
-        if (targetIndex >= 0)
+        if (slashIndex >= 0)
           Text.rich(
             TextSpan(
               style: defaultStyle,
               children: [
-                TextSpan(text: prompt.substring(0, targetIndex)),
                 TextSpan(
-                  text: prompt.substring(targetIndex, targetIndex + vowel.length),
-                  style: const TextStyle(color: AppColors.primaryColor),
+                  text: lineBreakIndex > 0
+                      ? '${prompt.substring(0, lineBreakIndex).trimRight()}\n'
+                      : prompt.substring(0, slashIndex),
                 ),
-                TextSpan(text: prompt.substring(targetIndex + vowel.length)),
+                if (lineBreakIndex > 0)
+                  TextSpan(text: prompt.substring(lineBreakIndex, slashIndex)),
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.baseline,
+                  baseline: TextBaseline.alphabetic,
+                  child: Text.rich(
+                    TextSpan(
+                      style: defaultStyle,
+                      children: [
+                        const TextSpan(text: '/'),
+                        TextSpan(
+                          text: vowel,
+                          style: const TextStyle(
+                            color: AppColors.primaryColor,
+                          ),
+                        ),
+                        const TextSpan(text: '/'),
+                      ],
+                    ),
+                  ),
+                ),
+                TextSpan(
+                  text: prompt.substring(slashIndex + slashPattern.length),
+                ),
               ],
             ),
             textAlign: TextAlign.center,
           )
         else
           Text(prompt, textAlign: TextAlign.center, style: defaultStyle),
+        if (promptAudioUrl.isNotEmpty) ...[
+          const SizedBox(height: 28),
+          Center(
+            child: LessonAudioInlineButton(
+              sourceId: sourceId,
+              url: promptAudioUrl,
+              isCircular: false,
+              buttonSize: 50,
+              backgroundColor: const Color(0xFF1B2A3B),
+              iconColor: Colors.white,
+              defaultIcon: Icons.volume_up_rounded,
+            ),
+          ),
+        ],
       ],
     );
   }
