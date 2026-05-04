@@ -234,19 +234,29 @@ class _MissingLettersStepState extends State<MissingLettersStep> {
         );
 
       case _CheckResult.incorrect:
-        return LessonFeedbackBar(
-          isCorrect: false,
-          message: 'That\'s not quite right. Try again!',
-          actionLabel: 'Try Again',
-          onActionPressed: _handleTryAgain,
+        return Center(
+          child: LessonFeedbackBar(
+            isCorrect: false,
+            message: '',
+            actionLabel: 'Try Again!',
+            onActionPressed: _handleTryAgain,
+            borderRadius: 10,
+            actionOnly: true,
+            actionOnlyWidth: 140,
+            actionOnlyHeight:50,
+          ),
         );
 
       case _CheckResult.correct:
         return LessonFeedbackBar(
           isCorrect: true,
-          message: '"${_activity.targetWord}" — Well done!',
+          title: '${_activity.targetWord}!',
+          subtitle: 'Well done!',
+          message: '',
           actionLabel: _isLastActivity ? 'Finish' : 'Continue',
           onActionPressed: _handleContinue,
+          borderRadius: 15,
+          centerIconWithTitle: true,
         );
     }
   }

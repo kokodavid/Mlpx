@@ -152,20 +152,26 @@ class _SoundItemMatchingStepState extends State<SoundItemMatchingStep> {
                     ],
                   ],
                 ),
-                if (_hasAnswered) ...[
-                  const SizedBox(height: 12),
-                  LessonFeedbackBar(
-                    isCorrect: _isCorrect,
-                    message: _isCorrect
-                        ? '"${_selectedOption.label}" matches the ${activity.displayTargetSound} sound.'
-                        : 'Try again and listen for the ${activity.displayTargetSound} sound.',
-                    actionLabel: _isCorrect ? 'Continue' : 'Review',
-                    onActionPressed: _isCorrect ? _handleContinue : _handleReview,
-                  ),
-                ],
               ],
             ),
           ),
+          if (_hasAnswered) ...[
+            const SizedBox(height: 12),
+            LessonFeedbackBar(
+              isCorrect: _isCorrect,
+              title: _isCorrect ? 'Excellent!' : 'Try Again!',
+              subtitle: _isCorrect
+                  ? '${_selectedOption.label} - '
+                      '${activity.displayTargetSound} - '
+                      '${_selectedOption.label}'
+                  : null,
+              message: _isCorrect
+                  ? 'The ${activity.targetSound.replaceAll('/', '')} in ${_selectedOption.label} makes the ${activity.displayTargetSound} sound.'
+                  : 'Listen again for ${activity.displayTargetSound} like in \'apple\'.',
+              actionLabel: _isCorrect ? 'Continue' : 'Review',
+              onActionPressed: _isCorrect ? _handleContinue : _handleReview,
+            ),
+          ],
         ],
       ),
     );

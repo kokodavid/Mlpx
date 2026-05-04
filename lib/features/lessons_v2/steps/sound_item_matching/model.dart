@@ -72,7 +72,10 @@ class SoundItemMatchingActivity {
     );
   }
 
-  String get displayTargetSound => '/$targetSound/';
+  String get displayTargetSound {
+    final normalized = targetSound.replaceAll(RegExp(r'^/+|/+$'), '').trim();
+    return normalized.isEmpty ? '' : '/$normalized/';
+  }
 }
 
 class SoundItemMatchingOption {

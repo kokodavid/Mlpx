@@ -165,7 +165,7 @@ class _SoundDiscriminationStepState extends State<SoundDiscriminationStep> {
                                 ),
                                 isCorrect: _isCorrect,
                                 message: _isCorrect
-                                    ? '"${item.title}" has the ${_config.displayTargetSound} sound.'
+                                    ? 'Yes! "${item.title}" has the ${_config.displayTargetSound} sound.'
                                     : 'Listen again for ${_config.displayTargetSound} like in "${_config.referenceWord}".',
                                 actionLabel: _isCorrect ? 'Continue' : 'Review',
                                 onActionPressed: _isCorrect
