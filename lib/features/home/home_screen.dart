@@ -21,19 +21,12 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  late final PageController _pageController;
+  PageController? _pageController;
   int _selectedIndex = 0;
-  bool _hasScrolledToActive = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _pageController = PageController(viewportFraction: 0.92);
-  }
 
   @override
   void dispose() {
-    _pageController.dispose();
+    _pageController?.dispose();
     super.dispose();
   }
 
@@ -203,14 +196,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       : (activeIndex >= 0 ? activeIndex + 1 : 1)
                           .clamp(0, sortedCourses.length);
 
-                  if (!_hasScrolledToActive) {
-                    _hasScrolledToActive = true;
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (!mounted) return;
-                      if (_pageController.hasClients && targetIndex != 0) {
-                        _pageController.jumpToPage(targetIndex);
-                      }
-                    });
+                  if (_pageController == null) {
+                    _pageController = PageController(
+                      viewportFraction: 0.92,
+                      initialPage: targetIndex,
+                    );
+                    _selectedIndex = targetIndex;
                   }
 
                   final isOnIntroSlide = _selectedIndex == 0;
@@ -256,7 +247,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   SizedBox(
                                     height: pageViewHeight,
                                     child: PageView.builder(
-                                      controller: _pageController,
+                                      controller: _pageController!,
                                       itemCount: sortedCourses.length + 1,
                                       onPageChanged: (index) {
                                         setState(() {

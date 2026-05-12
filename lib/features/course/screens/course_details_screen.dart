@@ -172,7 +172,7 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.black),
-            onPressed: () => context.go('/'),
+            onPressed: () => context.pop(),
           ),
           actions: const [
             Padding(
