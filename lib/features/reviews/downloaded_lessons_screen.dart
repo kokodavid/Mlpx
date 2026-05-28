@@ -1,432 +1,392 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:milpress/features/lesson/providers/lesson_download_provider.dart';
-import 'package:milpress/features/course/providers/module_provider.dart';
+import 'package:milpress/features/lessons_v2/providers/lesson_v2_download_provider.dart';
 
 class DownloadedLessonsScreen extends ConsumerWidget {
   const DownloadedLessonsScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final downloadedLessonsAsync = ref.watch(downloadedLessonIdsProvider);
+    final downloadedLessonsAsync = ref.watch(downloadedLessonsV2Provider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text(
-          'Downloaded Lessons',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: downloadedLessonsAsync.when(
-        data: (lessonIds) {
-          if (lessonIds.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.download_done,
-                    size: 64,
-                    color: Color(0xFF4A90E2),
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'No downloaded lessons',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF232B3A),
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Download lessons to access them offline',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: lessonIds.length,
-            itemBuilder: (context, index) {
-              final lessonId = lessonIds[index];
-              return _DownloadedLessonCard(lessonId: lessonId);
-            },
-          );
-        },
-        loading: () => const Center(
-          child: CircularProgressIndicator(),
-        ),
-        error: (error, stack) => Center(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Colors.red,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Error loading downloaded lessons',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF232B3A),
-                ),
-              ),
+              const SizedBox(height: 18),
+              _DownloadedLessonsHeader(onBack: () => context.pop()),
+              const SizedBox(height: 22),
+              const _SearchLessonField(),
               const SizedBox(height: 8),
-              Text(
-                error.toString(),
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
+              Expanded(
+                child: downloadedLessonsAsync.when(
+                  data: (lessons) {
+                    final items = lessons
+                        .map(
+                          (lesson) => _DownloadedLessonUiItem(
+                            id: lesson.id,
+                            type: 'Lesson',
+                            title: lesson.title,
+                            downloadedAt: _formatDownloadedAt(
+                              ref
+                                  .watch(
+                                    downloadedLessonV2TimeProvider(lesson.id),
+                                  )
+                                  .valueOrNull,
+                            ),
+                          ),
+                        )
+                        .toList(growable: false);
+
+                    if (items.isEmpty) {
+                      return const _EmptyDownloadsState();
+                    }
+
+                    return _DownloadedLessonsList(
+                      items: items,
+                      onRemove: (lessonId) => _removeDownload(
+                        context,
+                        ref,
+                        lessonId,
+                      ),
+                    );
+                  },
+                  loading: () => const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                  error: (_, __) => const _EmptyDownloadsState(),
                 ),
-                textAlign: TextAlign.center,
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  String _formatDownloadedAt(DateTime? value) {
+    if (value == null) {
+      return 'Time: Unknown';
+    }
+
+    const months = <String>[
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final hour = value.hour == 0
+        ? 12
+        : value.hour > 12
+            ? value.hour - 12
+            : value.hour;
+    final minute = value.minute.toString().padLeft(2, '0');
+    final period = value.hour >= 12 ? 'PM' : 'AM';
+    final month = months[value.month - 1];
+    return 'Time: $month ${value.day}, ${value.year} . $hour:$minute $period';
+  }
+
+  Future<void> _removeDownload(
+    BuildContext context,
+    WidgetRef ref,
+    String lessonId,
+  ) async {
+    await ref
+        .read(lessonV2DownloadProvider(lessonId).notifier)
+        .removeDownload();
+    if (context.mounted) {
+      ref.invalidate(downloadedLessonsV2Provider);
+      ref.invalidate(downloadedLessonsV2CountProvider);
+    }
+  }
+}
+
+class _DownloadedLessonUiItem {
+  final String id;
+  final String type;
+  final String title;
+  final String downloadedAt;
+
+  const _DownloadedLessonUiItem({
+    required this.id,
+    required this.type,
+    required this.title,
+    required this.downloadedAt,
+  });
+}
+
+class _DownloadedLessonsHeader extends StatelessWidget {
+  final VoidCallback onBack;
+
+  const _DownloadedLessonsHeader({required this.onBack});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: SizedBox(
+            width: 34,
+            height: 34,
+            child: IconButton(
+              onPressed: onBack,
+              padding: EdgeInsets.zero,
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.white,
+                side: BorderSide(color: Colors.grey.shade200),
+              ),
+              icon: const Icon(
+                Icons.chevron_left,
+                color: Colors.black,
+                size: 24,
+              ),
+            ),
+          ),
+        ),
+        const Text(
+          'Downloaded Lesson',
+          style: TextStyle(
+            color: Color(0xFF101010),
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
     );
   }
 }
 
-class _DownloadedLessonCard extends ConsumerWidget {
-  final String lessonId;
-
-  const _DownloadedLessonCard({required this.lessonId});
+class _SearchLessonField extends StatelessWidget {
+  const _SearchLessonField();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final offlineLessonAsync = ref.watch(offlineLessonProvider(lessonId));
-    final onlineLessonAsync = ref.watch(lessonFromSupabaseProvider(lessonId));
-
-    return offlineLessonAsync.when(
-      data: (offlineLesson) {
-        return onlineLessonAsync.when(
-          data: (onlineLesson) {
-            final lesson = offlineLesson ?? onlineLesson;
-            final hasOffline = offlineLesson != null;
-            if (lesson == null) {
-              return _buildErrorCard('Lesson not found');
-            }
-
-            return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.all(16),
-            leading: Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: const Color(0xFF4A90E2).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: _buildThumbnail(lesson.thumbnailUrl),
-            ),
-            title: Text(
-              lesson.title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF232B3A),
-              ),
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 4),
-                Text(
-                  '${lesson.durationMinutes} min • ${lesson.quizzes.length} quiz${lesson.quizzes.length == 1 ? '' : 'es'}',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF4A90E2).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'Offline',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF4A90E2),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            trailing: PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, color: Colors.grey),
-              onSelected: (value) async {
-                switch (value) {
-                  case 'view':
-                    // Navigate to lesson screen
-                    if (hasOffline) {
-                      context.push('/offline-lesson/${lesson.id}');
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Offline data missing. Re-download the lesson.'),
-                          backgroundColor: Colors.orange,
-                        ),
-                      );
-                    }
-                    break;
-                  case 'remove':
-                    // Show confirmation dialog
-                    final shouldRemove = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Remove Download'),
-                        content: Text('Are you sure you want to remove "${lesson.title}" from offline storage?'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(false),
-                            child: const Text('Cancel'),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(true),
-                            child: const Text('Remove'),
-                          ),
-                        ],
-                      ),
-                    );
-                    
-                    if (shouldRemove == true) {
-                      await ref.read(lessonDownloadProvider(lesson.id).notifier).removeDownload();
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('${lesson.title} removed from offline storage'),
-                            backgroundColor: Colors.orange,
-                          ),
-                        );
-                      }
-                    }
-                    break;
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'view',
-                  child: Row(
-                    children: [
-                      Icon(Icons.play_circle_outline, size: 20),
-                      SizedBox(width: 8),
-                      Text('View Lesson'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'remove',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete_outline, size: 20, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text('Remove Download', style: TextStyle(color: Colors.red)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            onTap: () {
-              // Navigate to lesson screen
-              if (hasOffline) {
-                context.push('/offline-lesson/${lesson.id}');
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Offline data missing. Re-download the lesson.'),
-                    backgroundColor: Colors.orange,
-                  ),
-                );
-              }
-            },
-          ),
-        );
-          },
-          loading: () => const SizedBox.shrink(),
-          error: (_, __) => _buildErrorCard('Error loading lesson'),
-        );
-      },
-      loading: () => Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Row(
-          children: [
-            SizedBox(
-              width: 60,
-              height: 60,
-              child: CircularProgressIndicator(),
-            ),
-            SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 200,
-                    height: 16,
-                    child: LinearProgressIndicator(),
-                  ),
-                  SizedBox(height: 8),
-                  SizedBox(
-                    width: 150,
-                    height: 12,
-                    child: LinearProgressIndicator(),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      error: (_, __) => _buildErrorCard('Error loading lesson'),
-    );
-  }
-
-  Widget _buildThumbnail(String? thumbnailUrl) {
-    if (thumbnailUrl == null || thumbnailUrl.isEmpty) {
-      return const Icon(
-        Icons.download_done,
-        color: Color(0xFF4A90E2),
-        size: 28,
-      );
-    }
-
-    final file = File(thumbnailUrl);
-    if (file.existsSync()) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: Image.file(
-          file,
-          fit: BoxFit.cover,
-        ),
-      );
-    }
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
-      child: Image.network(
-        thumbnailUrl,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return const Icon(
-            Icons.download_done,
-            color: Color(0xFF4A90E2),
-            size: 28,
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildErrorCard(String message) {
+  Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      height: 41,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.red.withOpacity(0.3)),
+        color: const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(10),
       ),
-      child: Row(
+      child: const Row(
         children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.error_outline,
-              color: Colors.red,
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  message,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF232B3A),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Lesson ID: ',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
-                ),
-                Text(
-                  lessonId,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                    fontFamily: 'monospace',
-                  ),
-                ),
-              ],
+          Icon(Icons.search, color: Color(0xFF101010), size: 22),
+          SizedBox(width: 10),
+          Text(
+            'Search Lesson',
+            style: TextStyle(
+              color: Color(0xFF303030),
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
             ),
           ),
         ],
       ),
     );
   }
-} 
+}
+
+class _EmptyDownloadsState extends StatelessWidget {
+  const _EmptyDownloadsState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 80),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 74,
+              height: 74,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFEBDD),
+                borderRadius: BorderRadius.circular(37),
+              ),
+              child: Center(
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFD4B8),
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: const Icon(
+                    Icons.shopping_bag,
+                    color: Color(0xFFD96C1F),
+                    size: 23,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Yet to see downloaded\nlessons',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Color(0xFF101010),
+                fontSize: 24,
+                height: 1.2,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'There are currently no downloaded\nlessons to display.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Color(0xFF6D6D6D),
+                fontSize: 16,
+                height: 1.25,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DownloadedLessonsList extends StatelessWidget {
+  final List<_DownloadedLessonUiItem> items;
+  final ValueChanged<String> onRemove;
+
+  const _DownloadedLessonsList({
+    required this.items,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      padding: const EdgeInsets.only(top: 8, bottom: 24),
+      itemCount: items.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        return _DownloadedLessonCard(
+          item: items[index],
+          onRemove: () => onRemove(items[index].id),
+          onTap: () {
+            context.push(
+              '/lesson-attempt',
+              extra: {
+                'lessonId': items[index].id,
+                'isReattempt': true,
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _DownloadedLessonCard extends StatelessWidget {
+  final _DownloadedLessonUiItem item;
+  final VoidCallback onRemove;
+  final VoidCallback onTap;
+
+  const _DownloadedLessonCard({
+    required this.item,
+    required this.onRemove,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8F8F8),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE7E7E7)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 13,
+                        height: 13,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF88C678).withOpacity(0.18),
+                          borderRadius: BorderRadius.circular(7),
+                        ),
+                        child: const Icon(
+                          Icons.check_circle,
+                          color: Color(0xFF6BB255),
+                          size: 11,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        item.type,
+                        style: const TextStyle(
+                          color: Color(0xFF6D6D6D),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Downloaded: ${item.title}',
+                    style: const TextStyle(
+                      color: Color(0xFF5EAB45),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    item.downloadedAt,
+                    style: const TextStyle(
+                      color: Color(0xFF7A7A7A),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              onPressed: onRemove,
+              icon: const Icon(
+                Icons.delete_outline,
+                color: Colors.red,
+                size: 20,
+              ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -3,6 +3,7 @@ import 'package:milpress/utils/supabase_config.dart';
 import '../models/lesson_models.dart';
 import '../repositories/lesson_repository.dart';
 import '../models/lesson_attempt_request.dart';
+import 'lesson_v2_download_provider.dart';
 
 final lessonRepositoryProvider = Provider<LessonRepository>((ref) {
   return LessonRepository();
@@ -10,6 +11,9 @@ final lessonRepositoryProvider = Provider<LessonRepository>((ref) {
 
 final lessonDefinitionProvider =
     FutureProvider.family<LessonDefinition?, String>((ref, lessonId) async {
+  final offlineLesson =
+      await ref.read(offlineLessonV2Provider(lessonId).future);
+  if (offlineLesson != null) return offlineLesson;
   final repository = ref.watch(lessonRepositoryProvider);
   return repository.fetchLessonById(lessonId);
 });

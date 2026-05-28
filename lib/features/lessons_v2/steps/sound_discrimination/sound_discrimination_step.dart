@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:milpress/features/lessons_v2/widgets/lesson_asset_image.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_audio_buttons.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_step_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
@@ -258,25 +259,17 @@ class _PromptCard extends StatelessWidget {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
-                child: imageUrl.isEmpty
-                    ? const Center(
-                        child: Icon(
-                          Icons.image_outlined,
-                          color: AppColors.textColor,
-                          size: 40,
-                        ),
-                      )
-                    : Image.network(
-                        imageUrl,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => const Center(
-                          child: Icon(
-                            Icons.broken_image_outlined,
-                            color: AppColors.textColor,
-                            size: 40,
-                          ),
-                        ),
-                      ),
+                child: LessonAssetImage(
+                  source: imageUrl,
+                  fit: BoxFit.contain,
+                  placeholder: const Center(
+                    child: Icon(
+                      Icons.image_outlined,
+                      color: AppColors.textColor,
+                      size: 40,
+                    ),
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 12),

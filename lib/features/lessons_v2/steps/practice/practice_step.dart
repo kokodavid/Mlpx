@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:milpress/features/lessons_v2/widgets/lesson_asset_image.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_audio_buttons.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../../models/lesson_models.dart';
@@ -477,20 +478,19 @@ class _ExampleCard extends StatelessWidget {
             flex: 4,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: imageUrl.isEmpty
-                  ? const Center(
-                      child: Icon(
-                        Icons.image_outlined,
-                        size: 32,
-                        color: AppColors.textColor,
-                      ),
-                    )
-                  : Image.network(
-                      imageUrl,
-                      width: 120,
-                      height: 80,
-                      fit: BoxFit.cover,
-                    ),
+              child: LessonAssetImage(
+                source: imageUrl,
+                width: 120,
+                height: 80,
+                fit: BoxFit.cover,
+                placeholder: const Center(
+                  child: Icon(
+                    Icons.image_outlined,
+                    size: 32,
+                    color: AppColors.textColor,
+                  ),
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 8),

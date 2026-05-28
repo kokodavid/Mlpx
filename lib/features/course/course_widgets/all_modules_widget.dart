@@ -5,6 +5,8 @@ import '../course_models/complete_course_model.dart';
 import '../providers/course_provider.dart';
 import 'package:milpress/utils/app_colors.dart';
 import 'package:milpress/features/lessons_v2/models/lesson_models.dart';
+import 'package:milpress/features/lessons_v2/providers/lesson_v2_download_provider.dart'
+    as lesson_v2_download;
 import 'package:milpress/features/lessons_v2/providers/lesson_providers.dart'
     as lessons_v2;
 import 'package:milpress/features/course_assessment/models/assessment_sublevel_model.dart';
@@ -329,13 +331,22 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
                               ...List.generate(moduleLessons.length,
                                   (lessonIdx) {
                                 final lesson = moduleLessons[lessonIdx];
+                                final isLessonCompleted =
+                                    completedLessonIds.contains(lesson.id);
+                                final downloadState = isLessonCompleted
+                                    ? ref.watch(
+                                        lesson_v2_download
+                                            .lessonV2DownloadProvider(
+                                          lesson.id,
+                                        ),
+                                      )
+                                    : null;
 
                                 return Column(
                                   children: [
                                     InkWell(
                                       onTap: () {
-                                        if (!completedLessonIds
-                                            .contains(lesson.id)) {
+                                        if (!isLessonCompleted) {
                                           // ScaffoldMessenger.of(context)
                                           //     .showSnackBar(
                                           //   const SnackBar(
@@ -365,13 +376,11 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
                                         child: Row(
                                           children: [
                                             Icon(
-                                              completedLessonIds
-                                                      .contains(lesson.id)
+                                              isLessonCompleted
                                                   ? Icons.check_circle
                                                   : Icons.circle_outlined,
                                               size: 20,
-                                              color: completedLessonIds
-                                                      .contains(lesson.id)
+                                              color: isLessonCompleted
                                                   ? AppColors.correctAnswerColor
                                                   : AppColors.textColor,
                                             ),
@@ -386,6 +395,80 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
                                                 ),
                                               ),
                                             ),
+                                            if (downloadState != null) ...[
+                                              const SizedBox(width: 8),
+                                              GestureDetector(
+                                                behavior:
+                                                    HitTestBehavior.opaque,
+                                                onTap: () async {
+                                                  final notifier = ref.read(
+                                                    lesson_v2_download
+                                                        .lessonV2DownloadProvider(
+                                                      lesson.id,
+                                                    ).notifier,
+                                                  );
+                                                  await notifier
+                                                      .downloadLesson(lesson);
+                                                  final updatedState = ref.read(
+                                                    lesson_v2_download
+                                                        .lessonV2DownloadProvider(
+                                                      lesson.id,
+                                                    ),
+                                                  );
+                                                  if (updatedState
+                                                      .isDownloaded) {
+                                                    ref.invalidate(
+                                                      lessons_v2
+                                                          .lessonDefinitionProvider(
+                                                        lesson.id,
+                                                      ),
+                                                    );
+                                                  }
+                                                  if (context.mounted &&
+                                                      updatedState.error !=
+                                                          null) {
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      SnackBar(
+                                                        content: Text(
+                                                          updatedState.error!,
+                                                        ),
+                                                      ),
+                                                    );
+                                                  }
+                                                },
+                                                child: SizedBox(
+                                                  width: 24,
+                                                  height: 24,
+                                                  child: Center(
+                                                    child: downloadState
+                                                            .isLoading
+                                                        ? const SizedBox(
+                                                            width: 18,
+                                                            height: 18,
+                                                            child:
+                                                                CircularProgressIndicator(
+                                                              strokeWidth: 2,
+                                                            ),
+                                                          )
+                                                        : Icon(
+                                                            downloadState
+                                                                    .isDownloaded
+                                                                ? Icons
+                                                                    .download_done
+                                                                : Icons
+                                                                    .file_download_outlined,
+                                                            size: 18,
+                                                            color: downloadState
+                                                                    .isDownloaded
+                                                                ? Colors.green
+                                                                : Colors.grey,
+                                                          ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           ],
                                         ),
                                       ),

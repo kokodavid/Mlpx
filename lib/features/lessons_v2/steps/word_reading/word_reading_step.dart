@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milpress/features/lessons_v2/providers/lesson_audio_providers.dart';
+import 'package:milpress/features/lessons_v2/widgets/lesson_asset_image.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_step/lesson_dotted_border_painter.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_step_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
@@ -177,25 +178,17 @@ class _WordCard extends StatelessWidget {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: item.imageUrl.isEmpty
-                    ? const Center(
-                        child: Icon(
-                          Icons.image_outlined,
-                          color: AppColors.textColor,
-                          size: 42,
-                        ),
-                      )
-                    : Image.network(
-                        item.imageUrl,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => const Center(
-                          child: Icon(
-                            Icons.broken_image_outlined,
-                            color: AppColors.textColor,
-                            size: 42,
-                          ),
-                        ),
-                      ),
+                child: LessonAssetImage(
+                  source: item.imageUrl,
+                  fit: BoxFit.contain,
+                  placeholder: const Center(
+                    child: Icon(
+                      Icons.image_outlined,
+                      color: AppColors.textColor,
+                      size: 42,
+                    ),
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 16),

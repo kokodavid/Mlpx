@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milpress/features/lessons_v2/providers/lesson_audio_providers.dart';
+import 'package:milpress/features/lessons_v2/widgets/lesson_asset_image.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_audio_buttons.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_step_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
@@ -382,25 +383,17 @@ class _GameOptionCard extends StatelessWidget {
                 child: Container(
                   width: double.infinity,
                   color: const Color(0xFFF7F7F7),
-                  child: option.imageUrl.isEmpty
-                      ? const Center(
-                          child: Icon(
-                            Icons.image_outlined,
-                            color: AppColors.textColor,
-                            size: 32,
-                          ),
-                        )
-                      : Image.network(
-                          option.imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Center(
-                            child: Icon(
-                              Icons.broken_image_outlined,
-                              color: AppColors.textColor,
-                              size: 32,
-                            ),
-                          ),
-                        ),
+                  child: LessonAssetImage(
+                    source: option.imageUrl,
+                    fit: BoxFit.cover,
+                    placeholder: const Center(
+                      child: Icon(
+                        Icons.image_outlined,
+                        color: AppColors.textColor,
+                        size: 32,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
