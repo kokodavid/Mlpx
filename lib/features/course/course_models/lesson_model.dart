@@ -35,6 +35,8 @@ class LessonModel {
   final String? level;
   @HiveField(14)
   final String? description;
+  @HiveField(15)
+  final bool isPremium;
 
   LessonModel({
     required this.id,
@@ -52,6 +54,7 @@ class LessonModel {
     this.category,
     this.level,
     this.description,
+    this.isPremium = false,
   });
 
   factory LessonModel.fromJson(Map<String, dynamic> json) => LessonModel(
@@ -74,6 +77,7 @@ class LessonModel {
         category: json['category'] as String?,
         level: json['level'] as String?,
         description: json['description'] as String?,
+        isPremium: (json['is_premium'] as bool?) ?? false,
       );
 
   Map<String, dynamic> toJson() => {
@@ -92,6 +96,7 @@ class LessonModel {
         'category': category,
         'level': level,
         'description': description,
+        'is_premium': isPremium,
       };
 
   // Helper method to format duration for display

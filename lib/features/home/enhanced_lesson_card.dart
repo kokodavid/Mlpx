@@ -2,19 +2,27 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milpress/features/course/course_models/lesson_model.dart';
+import 'package:milpress/features/subscription/paywall_screen.dart';
+import 'package:milpress/providers/auth_provider.dart';
 import 'package:milpress/utils/app_colors.dart';
 
-class EnhancedLessonCard extends StatelessWidget {
+class EnhancedLessonCard extends ConsumerWidget {
   final LessonModel lesson;
   final VoidCallback onTap;
   final bool showPlayButton;
+
+  /// Optionally override the premium flag from the lesson model (e.g. to
+  /// preview locked state in design tools).
+  final bool? isPremiumOverride;
 
   const EnhancedLessonCard({
     Key? key,
     required this.lesson,
     required this.onTap,
     this.showPlayButton = true,
+    this.isPremiumOverride,
   }) : super(key: key);
 
   String? _getFormattedThumbnailUrl() {
@@ -92,9 +100,13 @@ class EnhancedLessonCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isPremium = isPremiumOverride ?? lesson.isPremium;
+    final hasAccess = ref.watch(hasPremiumAccessProvider);
+    final isLocked = isPremium && !hasAccess;
+
     return GestureDetector(
-      onTap: onTap,
+      onTap: isLocked ? () => showPaywall(context) : onTap,
       child: Container(
         width: 280,
         decoration: BoxDecoration(
@@ -163,8 +175,8 @@ class EnhancedLessonCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Play button overlay
-                if (showPlayButton)
+                // Play button overlay (hidden when locked)
+                if (showPlayButton && !isLocked)
                   Positioned.fill(
                     child: Center(
                       child: Container(
@@ -177,6 +189,51 @@ class EnhancedLessonCard extends StatelessWidget {
                           Icons.play_arrow,
                           color: Colors.white,
                           size: 32,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Premium lock overlay
+                if (isLocked)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.45),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(16),
+                          topRight: Radius.circular(16),
+                        ),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.lock_rounded,
+                          color: Colors.white,
+                          size: 36,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // "Premium" badge (top-left, shown when locked)
+                if (isLocked)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryColor,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'PREMIUM',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.8,
                         ),
                       ),
                     ),

@@ -10,9 +10,11 @@ class HomeSubCourseTile extends StatelessWidget {
   final String eligibilityText;
   final String buttonText;
   final bool isCompleted;
+  final bool isPremiumLocked;
   final VoidCallback? onStartCourse;
   final VoidCallback? onReviewCourse;
   final VoidCallback? onRestartCourse;
+  final VoidCallback? onUnlockPremium;
   final EdgeInsetsGeometry margin;
 
   const HomeSubCourseTile({
@@ -24,9 +26,11 @@ class HomeSubCourseTile extends StatelessWidget {
     this.eligibilityText = 'You are eligible to start this level',
     this.buttonText = 'Start Course',
     this.isCompleted = false,
+    this.isPremiumLocked = false,
     this.onStartCourse,
     this.onReviewCourse,
     this.onRestartCourse,
+    this.onUnlockPremium,
     this.margin = const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
   });
 
@@ -135,6 +139,47 @@ class HomeSubCourseTile extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ] else if (isPremiumLocked) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.lock_rounded, color: Color(0xFFE85D04), size: 16),
+                SizedBox(width: 6),
+                Text(
+                  'Premium course — upgrade to access',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFFE85D04),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: onUnlockPremium,
+                icon: const Icon(Icons.lock_open_rounded,
+                    size: 18, color: Colors.white),
+                label: const Text(
+                  'Unlock Premium',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE85D04),
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  elevation: 0,
+                ),
+              ),
             ),
           ] else ...[
             if (hasNoLessons)

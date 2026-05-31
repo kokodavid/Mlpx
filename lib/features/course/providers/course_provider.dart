@@ -5,6 +5,7 @@ import '../course_models/complete_course_model.dart';
 import '../services/course_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:milpress/features/user_progress/providers/course_progress_providers.dart';
+import 'package:milpress/providers/auth_provider.dart';
 import 'package:milpress/utils/dev_flags.dart';
 import 'package:milpress/utils/supabase_config.dart';
 import 'package:milpress/features/user_progress/models/course_progress_model.dart';
@@ -181,12 +182,17 @@ class CourseAccessState {
   final bool debugOverrideEnabled;
   final bool isActiveCourse;
   final bool isCompletedCourse;
+  /// True when the course is premium and the user lacks premium access.
+  /// Distinct from [canAccess] so the UI can show the paywall instead of the
+  /// generic "locked" message.
+  final bool isPremiumLocked;
 
   const CourseAccessState({
     required this.canAccess,
     required this.debugOverrideEnabled,
     required this.isActiveCourse,
     required this.isCompletedCourse,
+    this.isPremiumLocked = false,
   });
 }
 
@@ -199,6 +205,21 @@ final courseAccessProvider =
       isActiveCourse: false,
       isCompletedCourse: false,
     );
+  }
+
+  // Check premium gate first
+  final course = await ref.watch(courseByIdProvider(courseId).future);
+  if (course.isPremium) {
+    final hasPremium = ref.read(hasPremiumAccessProvider);
+    if (!hasPremium) {
+      return const CourseAccessState(
+        canAccess: false,
+        debugOverrideEnabled: false,
+        isActiveCourse: false,
+        isCompletedCourse: false,
+        isPremiumLocked: true,
+      );
+    }
   }
 
   final activeCourse = await ref.watch(activeCourseWithDetailsProvider.future);

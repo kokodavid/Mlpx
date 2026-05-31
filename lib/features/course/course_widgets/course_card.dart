@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:milpress/features/subscription/paywall_screen.dart';
 import 'package:milpress/features/widgets/custom_button.dart';
+import 'package:milpress/providers/auth_provider.dart';
 import 'package:milpress/utils/app_colors.dart';
 
 class CourseCard extends ConsumerWidget {
@@ -14,6 +16,7 @@ class CourseCard extends ConsumerWidget {
   final bool eligible;
   final bool locked;
   final String? lockMessage;
+  final bool isPremium;
   final VoidCallback? onStart;
   final String? audioPath;
   final bool isCompleted;
@@ -30,6 +33,7 @@ class CourseCard extends ConsumerWidget {
     this.eligible = true,
     this.locked = false,
     this.lockMessage,
+    this.isPremium = false,
     this.onStart,
     this.audioPath,
     this.isCompleted = false,
@@ -50,6 +54,9 @@ class CourseCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final hasAccess = ref.watch(hasPremiumAccessProvider);
+    final premiumLocked = isPremium && !hasAccess;
+
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.all(16),
@@ -109,6 +116,34 @@ class CourseCard extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
+                if (premiumLocked)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                          color: AppColors.primaryColor.withOpacity(0.3)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.lock_rounded,
+                            size: 13, color: AppColors.primaryColor),
+                        SizedBox(width: 4),
+                        Text(
+                          'Premium',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 Text(
                   title,
                   textAlign: TextAlign.center,
@@ -195,17 +230,26 @@ class CourseCard extends ConsumerWidget {
                       ],
                     ),
                   ),
-                CustomButton(
-                  text: isCompleted
-                      ? 'Review Level $level'
-                      : (completedLessons > 0 ? 'Continue Course' : 'Start Level $level'),
-                  onPressed: locked ? null : onStart,
-                  fillColor: locked
-                      ? Colors.grey
-                      : isCompleted
-                          ? Colors.green
-                          : AppColors.primaryColor,
-                ),
+                if (premiumLocked)
+                  CustomButton(
+                    text: '🔒 Unlock Premium',
+                    onPressed: () => showPaywall(context),
+                    fillColor: AppColors.primaryColor,
+                  )
+                else
+                  CustomButton(
+                    text: isCompleted
+                        ? 'Review Level $level'
+                        : (completedLessons > 0
+                            ? 'Continue Course'
+                            : 'Start Level $level'),
+                    onPressed: locked ? null : onStart,
+                    fillColor: locked
+                        ? Colors.grey
+                        : isCompleted
+                            ? Colors.green
+                            : AppColors.primaryColor,
+                  ),
               ],
             ),
           ],

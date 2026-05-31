@@ -5,6 +5,7 @@ import 'package:milpress/utils/app_colors.dart';
 import 'package:milpress/utils/dev_flags.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import '../../providers/auth_provider.dart';
+import '../subscription/paywall_screen.dart';
 import '../course/providers/course_provider.dart';
 import '../profile/providers/profile_provider.dart';
 import 'home_course_tile.dart';
@@ -30,8 +31,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.dispose();
   }
 
-  Future<void> _openCourse(String courseId) async {
+  Future<void> _openCourse(String courseId, {bool isPremium = false}) async {
     if (!mounted) return;
+    if (isPremium) {
+      final hasAccess = ref.read(hasPremiumAccessProvider);
+      if (!hasAccess) {
+        showPaywall(context);
+        return;
+      }
+    }
     context.push('/course/$courseId');
   }
 
@@ -239,7 +247,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           builder: (context, constraints) {
                             final pageViewHeight =
                                 (constraints.maxHeight * 0.85)
-                                    .clamp(420.0, 560.0);
+                                    .clamp(440.0, 590.0);
 
                             return SingleChildScrollView(
                               child: Column(
@@ -325,7 +333,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                               allLessonsComplete,
                                           allAssessmentsComplete:
                                               allAssessmentsComplete,
-                                          onTap: () => _openCourse(course.id),
+                                          isPremium: course.isPremium,
+                                          onTap: () => _openCourse(
+                                            course.id,
+                                            isPremium: course.isPremium,
+                                          ),
                                           previewUrl:
                                               course.soundUrlPreview ?? '',
                                           previewSourceId:
@@ -360,6 +372,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             lessonsCount: selectedCourse.totalLessons,
                             isCompleted: isCourseCompleted,
                             isEligible: isEligible,
+                            isPremiumLocked: selectedCourse.course.isPremium &&
+                                !ref.read(hasPremiumAccessProvider),
                             allowLockedAccessOverride: debugOverrideEnabled,
                             eligibilityText: debugOverrideEnabled
                                 ? 'Debug override enabled for locked courses'
@@ -368,14 +382,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     : 'Complete previous levels to unlock this level'),
                             buttonText: courseButtonText,
                             onStartCourse: isEligible
-                                ? () => _openCourse(selectedCourse.course.id)
+                                ? () => _openCourse(
+                                      selectedCourse.course.id,
+                                      isPremium:
+                                          selectedCourse.course.isPremium,
+                                    )
                                 : null,
                             onReviewCourse: () => context.push(
                               '/course/${selectedCourse.course.id}',
                               extra: {'isCompletedCourse': true},
                             ),
-                            onRestartCourse: () =>
-                                _openCourse(selectedCourse.course.id),
+                            onRestartCourse: () => _openCourse(
+                              selectedCourse.course.id,
+                              isPremium: selectedCourse.course.isPremium,
+                            ),
+                            onUnlockPremium: () => showPaywall(context),
                           ),
                         ),
                     ],

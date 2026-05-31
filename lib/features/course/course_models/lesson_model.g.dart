@@ -32,13 +32,14 @@ class LessonModelAdapter extends TypeAdapter<LessonModel> {
       category: fields[12] as String?,
       level: fields[13] as String?,
       description: fields[14] as String?,
+      isPremium: fields[15] == null ? false : fields[15] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, LessonModel obj) {
     writer
-      ..writeByte(15)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -68,7 +69,9 @@ class LessonModelAdapter extends TypeAdapter<LessonModel> {
       ..writeByte(13)
       ..write(obj.level)
       ..writeByte(14)
-      ..write(obj.description);
+      ..write(obj.description)
+      ..writeByte(15)
+      ..write(obj.isPremium);
   }
 
   @override

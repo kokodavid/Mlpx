@@ -108,6 +108,7 @@ class _CourseScreenState extends ConsumerState<CourseScreen>
                 totalLessons: progress.totalLessons,
                 eligible: true,
                 locked: course.locked,
+                isPremium: course.isPremium,
                 isCompleted: progress.totalModules > 0 &&
                     progress.completedModules >= progress.totalModules,
                 completedLessons: progress.completedLessons,

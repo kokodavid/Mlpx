@@ -26,6 +26,8 @@ class CourseModel {
   final int level;
   @HiveField(10)
   final String? type;
+  @HiveField(11)
+  final bool isPremium;
 
   CourseModel({
     required this.id,
@@ -39,6 +41,7 @@ class CourseModel {
     required this.locked,
     required this.level,
     this.type,
+    this.isPremium = false,
   });
 
   factory CourseModel.fromJson(Map<String, dynamic> json) => CourseModel(
@@ -53,6 +56,7 @@ class CourseModel {
         locked: json['locked'] as bool,
         level: json['level'] as int,
         type: json['type'] as String?,
+        isPremium: (json['is_premium'] as bool?) ?? false,
       );
 
   Map<String, dynamic> toJson() => {
@@ -67,5 +71,6 @@ class CourseModel {
         'locked': locked,
         'level': level,
         'type': type,
+        'is_premium': isPremium,
       };
 }
