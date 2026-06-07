@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:milpress/features/lessons_v2/widgets/lesson_asset_image.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_step_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../../models/lesson_models.dart';
@@ -252,12 +253,12 @@ class _PromptImage extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(20),
-          child: Image.network(
-            imageUrl,
+          child: LessonAssetImage(
+            source: imageUrl,
             fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => const Center(
+            placeholder: const Center(
               child: Icon(
-                Icons.broken_image_outlined,
+                Icons.image_outlined,
                 color: AppColors.textColor,
                 size: 40,
               ),
@@ -354,25 +355,17 @@ class _ImageOptionRow extends StatelessWidget {
                       aspectRatio: 1,
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: opt.imageUrl.isEmpty
-                            ? const Center(
-                                child: Icon(
-                                  Icons.image_outlined,
-                                  color: AppColors.textColor,
-                                  size: 36,
-                                ),
-                              )
-                            : Image.network(
-                                opt.imageUrl,
-                                fit: BoxFit.contain,
-                                errorBuilder: (_, __, ___) => const Center(
-                                  child: Icon(
-                                    Icons.broken_image_outlined,
-                                    color: AppColors.textColor,
-                                    size: 36,
-                                  ),
-                                ),
-                              ),
+                        child: LessonAssetImage(
+                          source: opt.imageUrl,
+                          fit: BoxFit.contain,
+                          placeholder: const Center(
+                            child: Icon(
+                              Icons.image_outlined,
+                              color: AppColors.textColor,
+                              size: 36,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
