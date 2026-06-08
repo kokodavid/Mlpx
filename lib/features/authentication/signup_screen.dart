@@ -79,7 +79,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   bool _isValidEmail(String email) {
-    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+\u0000?');
+    final emailRegex = RegExp(r'^[\w\-.\+]+@([\w\-]+.)+[\w\-]{2,}$');
     return emailRegex.hasMatch(email);
   }
 

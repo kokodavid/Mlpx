@@ -50,13 +50,22 @@ class AuthState {
 
 final authStateProvider =
 StateNotifierProvider<AuthStateNotifier, AuthState>((ref) {
-  return AuthStateNotifier();
+  return AuthStateNotifier(ref);
 });
 
 class AuthStateNotifier extends StateNotifier<AuthState> {
-  AuthStateNotifier() : super(AuthState()) {
+  final Ref _ref;
+  RealtimeChannel? _profileChannel;
+
+  AuthStateNotifier(this._ref) : super(AuthState()) {
     _initializeGuestMode();
     _listenToAuthChanges();
+  }
+
+  @override
+  void dispose() {
+    _profileChannel?.unsubscribe();
+    super.dispose();
   }
 
   Future<void> _initializeGuestMode() async {
@@ -83,7 +92,14 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
           isEmailVerified: isEmailVerified,
           isGuestUser: false,
         );
+        // Force profileProvider to re-fetch so it reflects the latest
+        // plan_type (e.g. after an org invite is redeemed on sign-in).
+        _ref.read(profileRefreshProvider.notifier).state++;
+        // Start listening for real-time plan_type changes (org removal etc.)
+        _subscribeToProfileChanges(user.id);
       } else {
+        _profileChannel?.unsubscribe();
+        _profileChannel = null;
         state = state.copyWith(
           user: null,
           profile: null,
@@ -99,7 +115,7 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
     try {
       final data = await SupabaseConfig.client
           .from('profiles')
-          .select('id, email, full_name, avatar_url, plan_type, org_id, sponsored_by, created_at, updated_at')
+          .select('*')
           .eq('id', userId)
           .maybeSingle();
       if (data == null) return null;
@@ -111,34 +127,20 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
   }
 
   /// Links any pending org_members / sponsored_grants rows whose invite_email
-  /// matches this user's email.  The DB triggers then update profiles.plan_type
-  /// automatically, so a subsequent _fetchProfile call reflects the new plan.
+  /// matches this user's email, then recomputes plan_type — all via a
+  /// SECURITY DEFINER RPC that bypasses RLS (direct table updates are blocked
+  /// by admin-only policies on org_members and sponsored_grants).
   Future<void> _redeemPendingInvites(User user) async {
     final email = user.email;
     if (email == null) return;
     try {
-      // Redeem org member invite
-      await SupabaseConfig.client
-          .from('org_members')
-          .update({
-            'user_id':   user.id,
-            'status':    'active',
-            'joined_at': DateTime.now().toIso8601String(),
-          })
-          .eq('invite_email', email)
-          .eq('status', 'pending')
-          .isFilter('user_id', null);
-
-      // Redeem sponsored grant
-      await SupabaseConfig.client
-          .from('sponsored_grants')
-          .update({
-            'learner_id':   user.id,
-            'redeemed_at':  DateTime.now().toIso8601String(),
-          })
-          .eq('invite_email', email)
-          .eq('status', 'active')
-          .isFilter('learner_id', null);
+      await SupabaseConfig.client.rpc(
+        'redeem_pending_invites',
+        params: {
+          'p_user_id': user.id,
+          'p_email':   email.toLowerCase(),
+        },
+      );
     } catch (e) {
       // Non-fatal — user still signs in; plan just stays free until next load
       log('_redeemPendingInvites error: $e');
@@ -151,6 +153,44 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
     if (userId == null) return;
     final profile = await _fetchProfile(userId);
     if (profile != null) state = state.copyWith(profile: profile);
+  }
+
+  /// Subscribes to Realtime changes on this user's profiles row.
+  /// When plan_type changes remotely (org removal, grant revocation),
+  /// the app reflects the new plan immediately without requiring sign-out.
+  void _subscribeToProfileChanges(String userId) {
+    // Cancel any existing subscription first
+    _profileChannel?.unsubscribe();
+
+    _profileChannel = SupabaseConfig.client
+        .channel('profile:$userId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'profiles',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: userId,
+          ),
+          callback: (payload) async {
+            final newPlanType = PlanType.fromString(
+              payload.newRecord['plan_type'] as String?,
+            );
+            final currentPlanType = state.profile?.planType ?? PlanType.free;
+
+            // Only act if plan_type actually changed
+            if (newPlanType != currentPlanType) {
+              log('Plan type changed remotely: $currentPlanType → $newPlanType');
+              final profile = await _fetchProfile(userId);
+              if (profile != null && mounted) {
+                state = state.copyWith(profile: profile);
+                _ref.read(profileRefreshProvider.notifier).state++;
+              }
+            }
+          },
+        )
+        .subscribe();
   }
 
   Future<void> _clearGuestMode() async {
@@ -496,3 +536,7 @@ final currentPlanProvider = Provider<PlanType>((ref) {
 final hasPremiumAccessProvider = Provider<bool>((ref) {
   return ref.watch(currentPlanProvider).hasPremiumAccess;
 });
+
+/// Incremented by AuthStateNotifier after _redeemPendingInvites completes.
+/// profileProvider watches this to know when to force-refresh.
+final profileRefreshProvider = StateProvider<int>((_) => 0);

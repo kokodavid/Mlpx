@@ -40,9 +40,10 @@ class ProfileNotifier extends StateNotifier<AsyncValue<ProfileModel?>> {
     if (_hasListenerSetup) return;
     _hasListenerSetup = true;
 
+    // Reload when the Supabase user changes (sign in / sign out)
     _ref.listen<AsyncValue<User?>>(
       authProvider,
-          (previous, next) {
+      (previous, next) {
         next.when(
           data: (user) {
             final previousUser = previous?.value;
@@ -61,6 +62,17 @@ class ProfileNotifier extends StateNotifier<AsyncValue<ProfileModel?>> {
             if (_mounted) state = const AsyncValue.data(null);
           },
         );
+      },
+    );
+
+    // Force-reload when authStateNotifier signals a plan change
+    // (fired after org invite redemption updates plan_type in the DB)
+    _ref.listen<int>(
+      profileRefreshProvider,
+      (previous, next) {
+        if (next != previous && next > 0) {
+          Future.microtask(() => forceRefresh());
+        }
       },
     );
   }

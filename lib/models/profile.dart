@@ -1,5 +1,9 @@
 import '../features/subscription/plan_type.dart';
 
+extension _StringNullIfEmpty on String {
+  String? nullIfEmpty() => isEmpty ? null : this;
+}
+
 class Profile {
   final String id;
   final String email;
@@ -37,13 +41,21 @@ class Profile {
   bool get isFree           => planType.isFree;
 
   factory Profile.fromJson(Map<String, dynamic> json) {
+    // Support both full_name (legacy) and first_name/last_name columns
+    final fullName = json['full_name'] as String? ??
+        [json['first_name'], json['last_name']]
+            .whereType<String>()
+            .where((s) => s.isNotEmpty)
+            .join(' ')
+            .nullIfEmpty();
+
     return Profile(
       id:          json['id'] as String,
-      email:       json['email'] as String,
-      fullName:    json['full_name'] as String?,
+      email:       (json['email'] as String?) ?? '',
+      fullName:    fullName,
       avatarUrl:   json['avatar_url'] as String?,
-      createdAt:   DateTime.parse(json['created_at'] as String),
-      updatedAt:   DateTime.parse(json['updated_at'] as String),
+      createdAt:   DateTime.tryParse(json['created_at'] as String? ?? '') ?? DateTime.now(),
+      updatedAt:   DateTime.tryParse(json['updated_at'] as String? ?? '') ?? DateTime.now(),
       planType:    PlanType.fromString(json['plan_type'] as String?),
       orgId:       json['org_id'] as String?,
       sponsoredBy: json['sponsored_by'] as String?,
