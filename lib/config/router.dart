@@ -28,6 +28,8 @@ import 'package:milpress/features/profile/profile_page.dart';
 import 'package:milpress/features/profile/screens/about_screen.dart';
 import 'package:milpress/features/profile/screens/edit_profile_screen.dart';
 import 'package:milpress/features/profile/screens/change_password_screen.dart';
+import 'package:milpress/features/weekly_goal/screens/streak_goal_prompt_screen.dart';
+import 'package:milpress/features/weekly_goal/screens/streak_page.dart';
 import 'package:milpress/features/weekly_goal/screens/weekly_goal_screen.dart';
 import 'package:milpress/features/course_assessment/screens/assessment_play_screen.dart';
 import '../features/authentication/email_verification_screen.dart';
@@ -56,6 +58,8 @@ enum AppRoute {
   about,
   lessonHistory,
   weeklyGoal,
+  streakGoalPrompt,
+  streakPage,
   courseAssessment,
   editProfile,
   changePassword,
@@ -327,6 +331,25 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: AppRoute.weeklyGoal.name,
         builder: AuthGuard.requireAuthenticatedUser(
           builder: (context, state) => const WeeklyGoalScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/streak-goal-prompt',
+        name: AppRoute.streakGoalPrompt.name,
+        builder: AuthGuard.requireAuthenticatedUser(
+          builder: (context, state) {
+            final extra = state.extra as Map<String, dynamic>? ?? {};
+            return StreakGoalPromptScreen(
+              nextLessonId: extra['nextLessonId'] as String? ?? '',
+            );
+          },
+        ),
+      ),
+      GoRoute(
+        path: '/streak-page',
+        name: AppRoute.streakPage.name,
+        builder: AuthGuard.requireAuthenticatedUser(
+          builder: (context, state) => const StreakPage(),
         ),
       ),
       // Course assessment route - requires authenticated user

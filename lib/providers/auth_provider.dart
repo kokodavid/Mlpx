@@ -9,6 +9,8 @@ import '../utils/supabase_config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../features/user_progress/providers/course_progress_providers.dart';
 import '../features/user_progress/providers/user_progress_providers.dart';
+import '../features/weekly_goal/providers/user_goal_providers.dart';
+import '../features/weekly_goal/providers/weekly_goal_progress_providers.dart';
 
 class AuthState {
   final User? user;
@@ -259,6 +261,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     _initializeAuthState();
     SupabaseConfig.client.auth.onAuthStateChange.listen((data) async {
       final user = data.session?.user;
+      final previousUserId = state.value?.id;
 
       if (user != null) {
         final wasGuest = ref.read(authStateProvider).isGuestUser;
@@ -269,6 +272,9 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       }
 
       state = AsyncValue.data(user);
+      if (user?.id != previousUserId) {
+        _invalidateUserProviders();
+      }
 
       if (user != null && user.emailConfirmedAt == null) {
         _showEmailVerificationMessage();
@@ -505,6 +511,8 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     ref.invalidate(activeCourseWithDetailsProvider);
     ref.invalidate(upcomingCoursesWithDetailsProvider);
     ref.invalidate(completedCoursesWithDetailsProvider);
+    ref.invalidate(weeklyGoalProgressProvider);
+    ref.invalidate(activeWeeklyGoalProvider);
   }
 }
 

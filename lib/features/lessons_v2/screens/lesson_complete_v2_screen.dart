@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:milpress/features/weekly_goal/providers/user_goal_providers.dart';
 import 'package:milpress/utils/app_colors.dart';
 import 'package:milpress/utils/confirm_go_home.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_audio_buttons.dart';
@@ -39,6 +40,9 @@ class LessonCompleteV2Screen extends ConsumerWidget {
     final hasNext = nextLesson != null;
     final moduleAsync = ref.watch(moduleFromSupabaseProvider(moduleId));
     final courseId = moduleAsync.value?.module.courseId ?? '';
+    final activeGoalAsync = ref.watch(activeWeeklyGoalProvider);
+    final shouldShowStreakPrompt =
+        hasNext && activeGoalAsync.hasValue && activeGoalAsync.value == null;
 
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
@@ -188,10 +192,15 @@ class LessonCompleteV2Screen extends ConsumerWidget {
              
               GestureDetector(
                 onTap: hasNext
-                    ? () => context.push(
-                          '/lesson-attempt',
-                          extra: {'lessonId': nextLesson!.id},
-                        )
+                    ? () => shouldShowStreakPrompt
+                        ? context.push(
+                            '/streak-goal-prompt',
+                            extra: {'nextLessonId': nextLesson!.id},
+                          )
+                        : context.push(
+                            '/lesson-attempt',
+                            extra: {'lessonId': nextLesson!.id},
+                          )
                     : courseId.isEmpty
                         ? null
                         : () => context.go('/course/$courseId'),
