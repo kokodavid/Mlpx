@@ -38,7 +38,7 @@ class _StreakPageState extends ConsumerState<StreakPage> {
         elevation: 0,
         backgroundColor: Colors.white,
         leading: IconButton(
-          icon: const Icon(Icons.chevron_left, color: Color(0xFF1D1D1D)),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF1D1D1D)),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
@@ -120,9 +120,10 @@ class _StreakPageState extends ConsumerState<StreakPage> {
                                 ],
                               ),
                             ),
-                            const Text(
-                              '🔥',
-                              style: TextStyle(fontSize: 96, height: 1),
+                            const Icon(
+                              Icons.local_fire_department,
+                              color: AppColors.primaryColor,
+                              size: 96,
                             ),
                           ],
                         ),
@@ -303,7 +304,11 @@ class _SetGoalTile extends StatelessWidget {
                   color: Color(0xFFEEEEEE),
                 ),
                 alignment: Alignment.center,
-                child: const Text('🔥', style: TextStyle(fontSize: 20)),
+                child: const Icon(
+                  Icons.local_fire_department,
+                  color: AppColors.primaryColor,
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 10),
               const Expanded(
@@ -492,12 +497,10 @@ class _CalendarMarker extends StatelessWidget {
   Widget build(BuildContext context) {
     if (isCompleted) {
       return const Center(
-        child: Text(
-          '🔥',
-          style: TextStyle(
-            fontSize: 16,
-            height: 1,
-          ),
+        child: Icon(
+          Icons.local_fire_department,
+          color: AppColors.primaryColor,
+          size: 18,
         ),
       );
     }
@@ -541,7 +544,11 @@ class _RecordTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Text('🔥', style: TextStyle(fontSize: 34)),
+          const Icon(
+            Icons.local_fire_department,
+            color: AppColors.primaryColor,
+            size: 38,
+          ),
           const SizedBox(width: 14),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,

@@ -13,6 +13,7 @@ import '../models/lesson_models.dart';
 import '../models/lesson_attempt_request.dart';
 import '../providers/lesson_audio_providers.dart';
 import '../providers/lesson_providers.dart';
+import '../providers/lesson_v2_offline_progress_provider.dart';
 import '../widgets/bottom_action_bar.dart';
 import '../widgets/lesson_progress_header.dart';
 import '../widgets/lesson_step_renderer.dart';
@@ -54,6 +55,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
   ProviderSubscription<AsyncValue<LessonDefinition?>>? _lessonSubscription;
   late final LessonAudioController _audioController;
   bool _isFinishing = false;
+  bool _accessCheckStarted = false;
 
   LessonDefinition get _lessonDefinition =>
       _loadedLesson ?? widget.lessonDefinition!;
@@ -65,6 +67,9 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
   void initState() {
     super.initState();
     _audioController = ref.read(lessonAudioControllerProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkLessonAccess();
+    });
     if (widget.lessonDefinition != null) {
       _loadedLesson = widget.lessonDefinition;
       _currentStepIndex = widget.initialStepIndex.clamp(
@@ -93,6 +98,35 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
           });
         },
       );
+    }
+  }
+
+  Future<void> _checkLessonAccess() async {
+    if (_accessCheckStarted) {
+      return;
+    }
+    _accessCheckStarted = true;
+
+    final lessonId = widget.lessonId ?? widget.lessonDefinition?.id ?? '';
+    if (lessonId.isEmpty) {
+      return;
+    }
+
+    try {
+      final canAttempt =
+          await ref.read(canAttemptLessonProvider(lessonId).future);
+      if (!mounted || canAttempt) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Complete the previous lesson first')),
+      );
+      if (context.canPop()) {
+        context.pop();
+      }
+    } catch (e) {
+      debugPrint('LessonAttemptScreen: failed to check lesson access: $e');
     }
   }
 
@@ -223,6 +257,13 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
       await _updateCourseProgress(lessonId, moduleId);
     } catch (e) {
       debugPrint('LessonAttemptScreen: failed to record attempt: $e');
+      await ref
+          .read(lessonV2OfflineProgressProvider(lessonId).notifier)
+          .markCompleted();
+      final moduleId = _lessonDefinition.moduleId;
+      if (moduleId.isNotEmpty) {
+        ref.invalidate(completedLessonIdsV2Provider(moduleId));
+      }
     }
   }
 

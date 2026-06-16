@@ -14,6 +14,14 @@ import 'package:milpress/features/course_assessment/providers/course_assessment_
 import 'package:milpress/features/lessons_v2/models/lesson_models.dart';
 import 'package:milpress/features/lessons_v2/providers/lesson_providers.dart'
     as lessons_v2;
+import 'package:milpress/providers/connectivity_provider.dart';
+
+class CoursesOfflineException implements Exception {
+  const CoursesOfflineException();
+
+  @override
+  String toString() => 'No internet connection';
+}
 
 final courseServiceProvider = Provider<CourseService>((ref) {
   final supabase = Supabase.instance.client;
@@ -83,6 +91,12 @@ Future<int> _fetchTotalLessonsV2(
 // Provider for courses with their module and lesson counts
 final coursesWithDetailsProvider =
     FutureProvider<List<CourseWithDetails>>((ref) async {
+  final connectivity = ref.watch(connectivityCheckProvider);
+  final connectivityResult = await connectivity.checkConnectivity();
+  if (isOfflineResult(connectivityResult)) {
+    throw const CoursesOfflineException();
+  }
+
   final courseService = ref.watch(courseServiceProvider);
   final courses = await courseService.getCourses();
 
@@ -182,6 +196,7 @@ class CourseAccessState {
   final bool debugOverrideEnabled;
   final bool isActiveCourse;
   final bool isCompletedCourse;
+
   /// True when the course is premium and the user lacks premium access.
   /// Distinct from [canAccess] so the UI can show the paywall instead of the
   /// generic "locked" message.

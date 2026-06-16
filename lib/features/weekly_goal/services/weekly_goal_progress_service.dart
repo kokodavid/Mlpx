@@ -14,7 +14,12 @@ class WeeklyGoalProgressService {
     final startOfDay = DateTime(now.year, now.month, now.day);
     final activeGoal = await _fetchActiveGoal(userId: userId);
     final weekStartDay = activeGoal?['week_start'] as int? ?? 1;
-    final weekStartLocal = _startOfWeek(startOfDay, weekStartDay);
+    final activeFrom = _parseDateTime(activeGoal?['active_from']);
+    final weekStartLocal = _startOfGoalWindow(
+      date: startOfDay,
+      weekStart: weekStartDay,
+      activeFrom: activeFrom,
+    );
     final weekEndLocal = weekStartLocal.add(const Duration(days: 7));
 
     final completedLessonsById =
@@ -54,7 +59,7 @@ class WeeklyGoalProgressService {
   }) async {
     final response = await _supabase
         .from('user_goals')
-        .select('week_start')
+        .select('week_start, active_from')
         .eq('user_id', userId)
         .eq('goal_type', 'lessons_per_week')
         .filter('active_until', 'is', null)
@@ -111,6 +116,26 @@ class WeeklyGoalProgressService {
         (date.weekday - normalizedWeekStart + DateTime.daysPerWeek) %
             DateTime.daysPerWeek;
     return date.subtract(Duration(days: daysSinceWeekStart));
+  }
+
+  DateTime _startOfGoalWindow({
+    required DateTime date,
+    required int weekStart,
+    required DateTime? activeFrom,
+  }) {
+    if (activeFrom == null) return _startOfWeek(date, weekStart);
+
+    final localActiveFrom = activeFrom.toLocal();
+    final anchor = DateTime(
+      localActiveFrom.year,
+      localActiveFrom.month,
+      localActiveFrom.day,
+    );
+    final elapsedDays = date.difference(anchor).inDays;
+    if (elapsedDays < 0) return anchor;
+
+    final elapsedWeeks = elapsedDays ~/ DateTime.daysPerWeek;
+    return anchor.add(Duration(days: elapsedWeeks * DateTime.daysPerWeek));
   }
 
   DateTime? _parseDateTime(dynamic value) {

@@ -4,6 +4,8 @@ import 'package:milpress/features/widgets/audio_play_button.dart';
 import 'package:milpress/features/course/course_widgets/all_modules_widget.dart';
 import 'package:milpress/features/course/course_widgets/course_progress_card.dart';
 import 'package:milpress/features/course/course_widgets/ongoing_module_card.dart';
+import 'package:milpress/features/course/providers/course_download_provider.dart';
+import 'package:milpress/features/course/widgets/course_download_bottom_sheet.dart';
 import 'package:milpress/utils/app_colors.dart';
 import 'package:milpress/features/course_assessment/providers/course_assessment_providers.dart';
 import '../providers/course_provider.dart';
@@ -130,6 +132,8 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
         ref.watch(ongoingModuleProvider(widget.courseId));
     final courseDetailsProgressAsync =
         ref.watch(courseDetailsProgressProvider(widget.courseId));
+    final courseDownloadState =
+        ref.watch(courseV2DownloadProvider(widget.courseId));
     final isActiveCourse =
         activeCourseAsync.valueOrNull?.course.id == widget.courseId;
     final providerSaysCompleted = courseCompletionAsync.valueOrNull ?? false;
@@ -175,8 +179,8 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
             icon: const Icon(Icons.arrow_back, color: Colors.black),
             onPressed: () => context.pop(),
           ),
-          actions: const [
-            Padding(
+          actions: [
+            const Padding(
               padding: EdgeInsets.all(10.0),
               child: AudioPlayButton(
                 screenId: 'course_details_screen',
@@ -186,6 +190,34 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
                 height: 32,
               ),
             ),
+          Padding(
+  padding: const EdgeInsets.only(right: 10),
+  child: GestureDetector(
+    onTap: () => showCourseDownloadBottomSheet(context: context, courseId: widget.courseId),
+    child: Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.primaryColor.withOpacity(0.1),
+        border: Border.all(color: AppColors.primaryColor.withOpacity(0.2)),
+      ),
+      child: Center(
+        child: courseDownloadState.isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryColor),
+              )
+            : Icon(
+                courseDownloadState.isDownloaded ? Icons.download_done : Icons.download_rounded,
+                color: AppColors.primaryColor,
+                size: 24,
+              ),
+      ),
+    ),
+  ),
+),
           ],
           centerTitle: true,
           title: const SizedBox.shrink(),
@@ -247,8 +279,7 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primaryColor,
                               foregroundColor: Colors.white,
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 14),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),

@@ -3,6 +3,7 @@ import 'package:milpress/utils/supabase_config.dart';
 import '../models/lesson_models.dart';
 import '../repositories/lesson_repository.dart';
 import '../models/lesson_attempt_request.dart';
+import 'lesson_v2_offline_progress_provider.dart';
 import 'lesson_v2_download_provider.dart';
 
 final lessonRepositoryProvider = Provider<LessonRepository>((ref) {
@@ -59,11 +60,14 @@ final completedLessonIdsV2Provider =
       return <String>{};
     }
 
-    return response
+    final remoteIds = response
         .map((row) => row['lesson_id'] as String?)
         .whereType<String>()
         .toSet();
+    final offlineIds = await ref.watch(offlineCompletedLessonIdsProvider.future);
+    return {...remoteIds, ...offlineIds.intersection(lessonIds.toSet())};
   } catch (e) {
-    return <String>{};
+    final offlineIds = await ref.watch(offlineCompletedLessonIdsProvider.future);
+    return offlineIds.intersection(lessonIds.toSet());
   }
 });
