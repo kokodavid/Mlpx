@@ -256,12 +256,12 @@ class _DownloadedCourseCard extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: _courseAvatarColor(title),
+                color: const Color(0xFFFFE7E7),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
-                _courseAvatarIcon(title),
-                color:AppColors.primaryColor,
+                Icons.school,
+                color: AppColors.primaryColor,
                 size: 22,
               ),
             ),
@@ -329,28 +329,6 @@ class _DownloadedCourseCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Color _courseAvatarColor(String title) {
-    const colors = [
-      Color(0xFFFFE7E7),
-      Color(0xFFE8FFF4),
-      Color(0xFFEAF4FF),
-      Color(0xFFFFF5D8),
-      Color(0xFFF3E8FF),
-    ];
-    return colors[title.hashCode.abs() % colors.length];
-  }
-
-  IconData _courseAvatarIcon(String title) {
-    const icons = [
-      Icons.school,
-      Icons.menu_book,
-      Icons.edit,
-      Icons.savings,
-      Icons.schedule,
-    ];
-    return icons[title.hashCode.abs() % icons.length];
   }
 
   String _formatBytes(int bytes) {
