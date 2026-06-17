@@ -10,6 +10,7 @@ const _assetDirectoryName = 'assets';
 const _assetFilePrefix = 'asset';
 const _downloadErrorPrefix = 'LessonV2DownloadRepository: failed to download';
 const _lessonNotFoundMessage = 'Lesson not found';
+const _maxConcurrentAssetDownloads = 4;
 
 class LessonV2DownloadRepository {
   LessonV2DownloadRepository({
@@ -93,19 +94,47 @@ class LessonV2DownloadRepository {
     );
     final localAssetPaths = <String, String>{};
 
-    for (var index = 0; index < assetUrls.length; index++) {
-      final url = assetUrls[index];
-      try {
-        localAssetPaths[url] = await _assetDownloadService.downloadUrl(
-          url: url,
+    var nextIndex = 0;
+    final workerCount = assetUrls.length < _maxConcurrentAssetDownloads
+        ? assetUrls.length
+        : _maxConcurrentAssetDownloads;
+
+    Future<void> downloadNextAsset() async {
+      while (nextIndex < assetUrls.length) {
+        final index = nextIndex++;
+        final result = await _downloadAsset(
+          url: assetUrls[index],
+          index: index,
           directory: assetDirectory,
-          fileName: _fileNameForUrl(url, index),
         );
-      } catch (e) {
-        debugPrint('$_downloadErrorPrefix $url: $e');
+        if (result != null) {
+          localAssetPaths[result.url] = result.localPath;
+        }
       }
     }
+
+    await Future.wait(
+      List.generate(workerCount, (_) => downloadNextAsset()),
+    );
     return localAssetPaths;
+  }
+
+  Future<_DownloadedAsset?> _downloadAsset({
+    required String url,
+    required int index,
+    required Directory directory,
+  }) async {
+    try {
+      final localPath = await _assetDownloadService.downloadUrl(
+        url: url,
+        directory: directory,
+        fileName: _fileNameForUrl(url, index),
+      );
+      return _DownloadedAsset(url, localPath);
+    } catch (e) {
+      debugPrint('$_downloadErrorPrefix $url: $e');
+      return null;
+    }
   }
 
   Set<String> _collectAssetUrls(LessonDefinition lesson) {
@@ -175,4 +204,11 @@ class LessonV2DownloadRepository {
         extensionIndex == -1 ? '' : pathSegment.substring(extensionIndex);
     return '${_assetFilePrefix}_${index.toString().padLeft(3, '0')}$extension';
   }
+}
+
+class _DownloadedAsset {
+  const _DownloadedAsset(this.url, this.localPath);
+
+  final String url;
+  final String localPath;
 }

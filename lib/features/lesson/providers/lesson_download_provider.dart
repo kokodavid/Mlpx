@@ -5,6 +5,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:dio/dio.dart';
 import 'package:milpress/features/course/course_models/lesson_model.dart';
 
+const _maxConcurrentQuizAudioDownloads = 4;
+
 class LessonDownloadState {
   final bool isDownloaded;
   final bool isLoading;
@@ -67,25 +69,29 @@ class LessonDownloadNotifier extends StateNotifier<LessonDownloadState> {
       // Save lesson data
       await _saveLessonData(lesson, lessonDir);
 
+      final downloads = <Future<void>>[];
+
       // Download video if available
       if (lesson.videoUrl != null && lesson.videoUrl!.isNotEmpty) {
-        await _downloadVideo(lesson.videoUrl!, lessonDir);
+        downloads.add(_downloadVideo(lesson.videoUrl!, lessonDir));
       }
 
       // Download audio if available
       if (lesson.audioUrl != null && lesson.audioUrl!.isNotEmpty) {
-        await _downloadAudio(lesson.audioUrl!, lessonDir);
+        downloads.add(_downloadAudio(lesson.audioUrl!, lessonDir));
       }
 
       // Download PDF content if available
       if (lesson.content.isNotEmpty) {
-        await _downloadPDF(lesson.content, lessonDir);
+        downloads.add(_downloadPDF(lesson.content, lessonDir));
       }
 
       // Download thumbnail if available
       if (lesson.thumbnailUrl != null && lesson.thumbnailUrl!.isNotEmpty) {
-        await _downloadThumbnail(lesson.thumbnailUrl!, lessonDir);
+        downloads.add(_downloadThumbnail(lesson.thumbnailUrl!, lessonDir));
       }
+
+      await Future.wait(downloads);
 
       // Download quiz audio files if available
       await _downloadQuizAudioFiles(lesson, lessonDir);
@@ -160,16 +166,29 @@ class LessonDownloadNotifier extends StateNotifier<LessonDownloadState> {
         await quizAudioDir.create();
       }
 
-      for (final quiz in lesson.quizzes) {
-        if (quiz.soundFileUrl != null && quiz.soundFileUrl!.isNotEmpty) {
-          final fileName = quiz.soundFileUrl!.split('/').last;
-          final audioFile = File('${quizAudioDir.path}/$fileName');
-          
-          if (!await audioFile.exists()) {
-            await _dio.download(quiz.soundFileUrl!, audioFile.path);
+      var nextIndex = 0;
+      final workerCount =
+          lesson.quizzes.length < _maxConcurrentQuizAudioDownloads
+          ? lesson.quizzes.length
+          : _maxConcurrentQuizAudioDownloads;
+
+      Future<void> downloadNextQuizAudio() async {
+        while (nextIndex < lesson.quizzes.length) {
+          final quiz = lesson.quizzes[nextIndex++];
+          if (quiz.soundFileUrl != null && quiz.soundFileUrl!.isNotEmpty) {
+            final fileName = quiz.soundFileUrl!.split('/').last;
+            final audioFile = File('${quizAudioDir.path}/$fileName');
+
+            if (!await audioFile.exists()) {
+              await _dio.download(quiz.soundFileUrl!, audioFile.path);
+            }
           }
         }
       }
+
+      await Future.wait(
+        List.generate(workerCount, (_) => downloadNextQuizAudio()),
+      );
     } catch (e) {
       // Quiz audio download is optional, don't fail the entire download
       print('Failed to download quiz audio files: $e');

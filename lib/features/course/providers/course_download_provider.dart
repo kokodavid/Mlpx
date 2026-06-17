@@ -10,6 +10,7 @@ import 'package:milpress/features/lessons_v2/services/lesson_v2_offline_storage_
 
 const _checkCourseDownloadStatusError = 'Error checking course download status';
 const _courseDownloadFailedError = 'Course download failed';
+const _maxConcurrentLessonDownloads = 2;
 
 class CourseV2DownloadState {
   final bool isDownloaded;
@@ -123,23 +124,36 @@ class CourseV2DownloadNotifier extends StateNotifier<CourseV2DownloadState> {
         totalLessons: lessons.length,
       );
 
-      for (final lesson in lessons) {
-        if (_cancelRequested) {
-          _cancelDownloadState(downloadedBytes, downloadedLessons);
-          return;
+      var nextIndex = 0;
+      final workerCount = lessons.length < _maxConcurrentLessonDownloads
+          ? lessons.length
+          : _maxConcurrentLessonDownloads;
+
+      Future<void> downloadNextLesson() async {
+        while (!_cancelRequested && nextIndex < lessons.length) {
+          final lesson = lessons[nextIndex++];
+          await repository.downloadLesson(lesson);
+          if (_cancelRequested) {
+            return;
+          }
+
+          downloadedBytes += await _lessonDirectorySize(lesson.id);
+          downloadedLessons++;
+          state = state.copyWith(
+            downloadedBytes: downloadedBytes,
+            downloadedLessons: downloadedLessons,
+          );
+          _invalidateLessonDownloadProviders(lesson.id);
         }
-        await repository.downloadLesson(lesson);
-        if (_cancelRequested) {
-          _cancelDownloadState(downloadedBytes, downloadedLessons);
-          return;
-        }
-        downloadedBytes += await _lessonDirectorySize(lesson.id);
-        downloadedLessons++;
-        state = state.copyWith(
-          downloadedBytes: downloadedBytes,
-          downloadedLessons: downloadedLessons,
-        );
-        _invalidateLessonDownloadProviders(lesson.id);
+      }
+
+      await Future.wait(
+        List.generate(workerCount, (_) => downloadNextLesson()),
+      );
+
+      if (_cancelRequested) {
+        _cancelDownloadState(downloadedBytes, downloadedLessons);
+        return;
       }
 
       state = state.copyWith(
