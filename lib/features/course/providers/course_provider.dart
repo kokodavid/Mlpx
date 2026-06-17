@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../course_models/course_model.dart';
 import '../course_models/complete_course_model.dart';
 import '../services/course_service.dart';
+import '../services/course_offline_storage_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:milpress/features/user_progress/providers/course_progress_providers.dart';
 import 'package:milpress/providers/auth_provider.dart';
@@ -26,6 +27,11 @@ class CoursesOfflineException implements Exception {
 final courseServiceProvider = Provider<CourseService>((ref) {
   final supabase = Supabase.instance.client;
   return CourseService(supabase);
+});
+
+final courseOfflineStorageServiceProvider =
+    Provider<CourseOfflineStorageService>((ref) {
+  return CourseOfflineStorageService();
 });
 
 final hasAttemptedAnyCourseProvider = FutureProvider<bool>((ref) async {
@@ -252,20 +258,48 @@ final courseAccessProvider =
 
 final courseByIdProvider =
     FutureProvider.family<CourseModel, String>((ref, id) async {
+  final offlineStorage = ref.watch(courseOfflineStorageServiceProvider);
+  final cachedCourse = await offlineStorage.readCompleteCourse(id);
+  if (cachedCourse != null) {
+    return cachedCourse.course;
+  }
+
   final courseService = ref.watch(courseServiceProvider);
   return courseService.getCourseById(id);
 });
 
 final completeCourseProvider =
     FutureProvider.family<CompleteCourseModel, String>((ref, courseId) async {
-  final courseService = ref.watch(courseServiceProvider);
-  final completeCourse = await courseService.getCompleteCourse(courseId);
+  final offlineStorage = ref.watch(courseOfflineStorageServiceProvider);
+  final cachedCourse = await offlineStorage.readCompleteCourse(courseId);
+  if (cachedCourse != null) {
+    return _sortCompleteCourse(cachedCourse);
+  }
 
-  // Ensure modules are sorted by position when retrieved from Supabase
+  final courseService = ref.watch(courseServiceProvider);
+  final completeCourse = _sortCompleteCourse(
+    await courseService.getCompleteCourse(courseId),
+  );
+  if (_shouldSaveCompleteCourse(cachedCourse, completeCourse)) {
+    await offlineStorage.saveCompleteCourse(completeCourse);
+  }
+
+  return completeCourse;
+});
+
+bool _shouldSaveCompleteCourse(
+  CompleteCourseModel? cachedCourse,
+  CompleteCourseModel nextCourse,
+) {
+  if (cachedCourse == null) {
+    return true;
+  }
+  return cachedCourse.toJson().toString() != nextCourse.toJson().toString();
+}
+
+CompleteCourseModel _sortCompleteCourse(CompleteCourseModel completeCourse) {
   final sortedModules = List<ModuleWithLessons>.from(completeCourse.modules)
     ..sort((a, b) => a.module.position.compareTo(b.module.position));
-
-  // Ensure lessons within each module are also sorted by position
   for (final module in sortedModules) {
     module.lessons.sort((a, b) => a.position.compareTo(b.position));
   }
@@ -275,7 +309,7 @@ final completeCourseProvider =
     modules: sortedModules,
     lastUpdated: completeCourse.lastUpdated,
   );
-});
+}
 
 final courseRefreshProvider =
     Provider.family<void Function(), String>((ref, courseId) {

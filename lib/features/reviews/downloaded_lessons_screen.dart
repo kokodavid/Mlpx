@@ -2,12 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milpress/features/course/providers/course_download_provider.dart';
-import 'package:milpress/features/lessons_v2/models/lesson_models.dart';
 import 'package:milpress/features/lessons_v2/providers/lesson_v2_download_provider.dart';
 import 'package:milpress/features/reviews/providers/downloaded_courses_provider.dart';
 import 'package:milpress/utils/app_colors.dart';
-
-enum _DownloadedLessonsTab { all, course }
 
 class DownloadedLessonsScreen extends ConsumerStatefulWidget {
   const DownloadedLessonsScreen({Key? key}) : super(key: key);
@@ -20,7 +17,6 @@ class DownloadedLessonsScreen extends ConsumerStatefulWidget {
 class _DownloadedLessonsScreenState
     extends ConsumerState<DownloadedLessonsScreen> {
   final TextEditingController _searchController = TextEditingController();
-  _DownloadedLessonsTab _selectedTab = _DownloadedLessonsTab.all;
 
   @override
   void dispose() {
@@ -30,7 +26,6 @@ class _DownloadedLessonsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final downloadedLessonsAsync = ref.watch(downloadedLessonsV2Provider);
     final downloadedCoursesAsync = ref.watch(downloadedCoursesProvider);
     final query = _searchController.text.trim().toLowerCase();
 
@@ -45,69 +40,18 @@ class _DownloadedLessonsScreenState
               const SizedBox(height: 18),
               _DownloadedLessonsHeader(onBack: () => context.pop()),
               const SizedBox(height: 20),
-              _DownloadedTabs(
-                selectedTab: _selectedTab,
-                onChanged: (tab) => setState(() => _selectedTab = tab),
-              ),
-              const SizedBox(height: 16),
               _SearchLessonField(
                 controller: _searchController,
                 onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 8),
               Expanded(
-                child: _selectedTab == _DownloadedLessonsTab.all
-                    ? _buildAllTab(downloadedLessonsAsync, query)
-                    : _buildCourseTab(downloadedCoursesAsync, query),
+                child: _buildCourseTab(downloadedCoursesAsync, query),
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildAllTab(
-    AsyncValue<List<LessonDefinition>> downloadedLessonsAsync,
-    String query,
-  ) {
-    return downloadedLessonsAsync.when(
-      data: (lessons) {
-        final items = lessons
-            .where((lesson) => lesson.title.toLowerCase().contains(query))
-            .map(
-              (lesson) => _DownloadedLessonUiItem(
-                id: lesson.id,
-                type: 'Lesson',
-                title: lesson.title,
-                downloadedAt: _formatDownloadedAt(
-                  ref
-                      .watch(
-                        downloadedLessonV2TimeProvider(lesson.id),
-                      )
-                      .valueOrNull,
-                ),
-              ),
-            )
-            .toList(growable: false);
-
-        if (items.isEmpty) {
-          return const _EmptyDownloadsState();
-        }
-
-        return _DownloadedLessonsList(
-          items: items,
-          onRemove: (lessonId) => _removeDownload(
-            context,
-            ref,
-            lessonId,
-          ),
-        );
-      },
-      loading: () => const Center(
-        child: CircularProgressIndicator(),
-      ),
-      error: (_, __) => const _EmptyDownloadsState(),
     );
   }
 
@@ -139,51 +83,6 @@ class _DownloadedLessonsScreenState
     );
   }
 
-  String _formatDownloadedAt(DateTime? value) {
-    if (value == null) {
-      return 'Time: Unknown';
-    }
-
-    const months = <String>[
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    final hour = value.hour == 0
-        ? 12
-        : value.hour > 12
-            ? value.hour - 12
-            : value.hour;
-    final minute = value.minute.toString().padLeft(2, '0');
-    final period = value.hour >= 12 ? 'PM' : 'AM';
-    final month = months[value.month - 1];
-    return 'Time: $month ${value.day}, ${value.year} . $hour:$minute $period';
-  }
-
-  Future<void> _removeDownload(
-    BuildContext context,
-    WidgetRef ref,
-    String lessonId,
-  ) async {
-    await ref
-        .read(lessonV2DownloadProvider(lessonId).notifier)
-        .removeDownload();
-    if (context.mounted) {
-      ref.invalidate(downloadedLessonsV2Provider);
-      ref.invalidate(downloadedLessonsV2CountProvider);
-      ref.invalidate(downloadedCoursesProvider);
-    }
-  }
-
   Future<void> _downloadCourse(String courseId) async {
     await ref.read(courseV2DownloadProvider(courseId).notifier).downloadCourse();
     if (!mounted) return;
@@ -200,20 +99,6 @@ class _DownloadedLessonsScreenState
     ref.invalidate(downloadedLessonsV2Provider);
     ref.invalidate(downloadedLessonsV2CountProvider);
   }
-}
-
-class _DownloadedLessonUiItem {
-  final String id;
-  final String type;
-  final String title;
-  final String downloadedAt;
-
-  const _DownloadedLessonUiItem({
-    required this.id,
-    required this.type,
-    required this.title,
-    required this.downloadedAt,
-  });
 }
 
 class _DownloadedLessonsHeader extends StatelessWidget {
@@ -255,72 +140,6 @@ class _DownloadedLessonsHeader extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _DownloadedTabs extends StatelessWidget {
-  final _DownloadedLessonsTab selectedTab;
-  final ValueChanged<_DownloadedLessonsTab> onChanged;
-
-  const _DownloadedTabs({
-    required this.selectedTab,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _DownloadedTabButton(
-          label: 'All',
-          isSelected: selectedTab == _DownloadedLessonsTab.all,
-          onTap: () => onChanged(_DownloadedLessonsTab.all),
-        ),
-        const SizedBox(width: 12),
-        _DownloadedTabButton(
-          label: 'Course',
-          isSelected: selectedTab == _DownloadedLessonsTab.course,
-          onTap: () => onChanged(_DownloadedLessonsTab.course),
-        ),
-      ],
-    );
-  }
-}
-
-class _DownloadedTabButton extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _DownloadedTabButton({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: onTap,
-      child: Container(
-        height: 32,
-        padding: const EdgeInsets.symmetric(horizontal: 18),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : AppColors.greyText,
-            fontSize: 14,
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
-          ),
-        ),
-      ),
     );
   }
 }
@@ -595,133 +414,6 @@ class _EmptyDownloadsState extends StatelessWidget {
                 height: 1.25,
                 fontWeight: FontWeight.w400,
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DownloadedLessonsList extends StatelessWidget {
-  final List<_DownloadedLessonUiItem> items;
-  final ValueChanged<String> onRemove;
-
-  const _DownloadedLessonsList({
-    required this.items,
-    required this.onRemove,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.separated(
-      padding: const EdgeInsets.only(top: 8, bottom: 24),
-      itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, index) {
-        return _DownloadedLessonCard(
-          item: items[index],
-          onRemove: () => onRemove(items[index].id),
-          onTap: () {
-            context.push(
-              '/lesson-attempt',
-              extra: {
-                'lessonId': items[index].id,
-                'isReattempt': true,
-              },
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-class _DownloadedLessonCard extends StatelessWidget {
-  final _DownloadedLessonUiItem item;
-  final VoidCallback onRemove;
-  final VoidCallback onTap;
-
-  const _DownloadedLessonCard({
-    required this.item,
-    required this.onRemove,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8F8F8),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE7E7E7)),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 13,
-                        height: 13,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF88C678).withOpacity(0.18),
-                          borderRadius: BorderRadius.circular(7),
-                        ),
-                        child: const Icon(
-                          Icons.check_circle,
-                          color: Color(0xFF6BB255),
-                          size: 11,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        item.type,
-                        style: const TextStyle(
-                          color: Color(0xFF6D6D6D),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Downloaded: ${item.title}',
-                    style: const TextStyle(
-                      color: Color(0xFF5EAB45),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    item.downloadedAt,
-                    style: const TextStyle(
-                      color: Color(0xFF7A7A7A),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              onPressed: onRemove,
-              icon: const Icon(
-                Icons.delete_outline,
-                color: AppColors.errorColor,
-                size: 20,
-              ),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
             ),
           ],
         ),

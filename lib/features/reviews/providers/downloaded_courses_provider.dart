@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milpress/features/course/course_models/complete_course_model.dart';
 import 'package:milpress/features/course/providers/course_provider.dart';
+import 'package:milpress/features/lessons_v2/models/lesson_models.dart';
 import 'package:milpress/features/lessons_v2/providers/lesson_providers.dart'
     as lessons_v2;
 import 'package:milpress/features/lessons_v2/providers/lesson_v2_download_provider.dart';
@@ -26,28 +27,32 @@ class DownloadedCourseItem {
 
 final downloadedCoursesProvider =
     FutureProvider<List<DownloadedCourseItem>>((ref) async {
-  final courses = await ref.watch(coursesWithDetailsProvider.future);
   final downloadedIds =
       (await ref.watch(downloadedLessonV2IdsProvider.future)).toSet();
-  final storageService = LessonV2OfflineStorageService();
+  if (downloadedIds.isEmpty) {
+    return <DownloadedCourseItem>[];
+  }
+
+  final lessonStorageService = LessonV2OfflineStorageService();
+  final courseStorageService = ref.watch(courseOfflineStorageServiceProvider);
+  final downloadedLessons = await _readDownloadedLessons(ref, downloadedIds);
+  final courses = await courseStorageService.listCachedCourses();
 
   final items = <DownloadedCourseItem>[];
-  for (final courseWithDetails in courses) {
-    final completeCourse = await ref.watch(
-      completeCourseProvider(courseWithDetails.course.id).future,
-    );
-    final lessonGroups = await Future.wait(
-      completeCourse.modules.map(
-        (module) => ref.watch(
-          lessons_v2.moduleLessonsProvider(module.module.id).future,
-        ),
-      ),
-    );
-    final lessonIds = lessonGroups
-        .expand((lessons) => lessons)
+  for (final completeCourse in courses) {
+    final moduleIds = completeCourse.modules
+        .map((module) => module.module.id)
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    final localLessonIds = downloadedLessons
+        .where((lesson) => moduleIds.contains(lesson.moduleId))
         .map((lesson) => lesson.id)
         .where((id) => id.isNotEmpty)
         .toList(growable: false);
+    var lessonIds = localLessonIds;
+    if (lessonIds.isEmpty) {
+      lessonIds = await _courseLessonIds(ref, completeCourse);
+    }
 
     if (lessonIds.isEmpty) {
       continue;
@@ -61,7 +66,7 @@ final downloadedCoursesProvider =
     final isStored = lessonIds.every(downloadedIds.contains);
     var storedBytes = 0;
     for (final lessonId in lessonIds.where(downloadedIds.contains)) {
-      storedBytes += await _lessonDirectorySize(storageService, lessonId);
+      storedBytes += await _lessonDirectorySize(lessonStorageService, lessonId);
     }
 
     items.add(
@@ -78,6 +83,34 @@ final downloadedCoursesProvider =
 
   return items;
 });
+
+Future<List<String>> _courseLessonIds(
+  Ref ref,
+  CompleteCourseModel course,
+) async {
+  final lessonGroups = await Future.wait(
+    course.modules.map(
+      (module) => ref.watch(
+        lessons_v2.moduleLessonsProvider(module.module.id).future,
+      ),
+    ),
+  );
+  return lessonGroups
+      .expand((lessons) => lessons)
+      .map((lesson) => lesson.id)
+      .where((id) => id.isNotEmpty)
+      .toList(growable: false);
+}
+
+Future<List<LessonDefinition>> _readDownloadedLessons(
+  Ref ref,
+  Set<String> downloadedIds,
+) async {
+  final lessons = await Future.wait(
+    downloadedIds.map((id) => ref.read(offlineLessonV2Provider(id).future)),
+  );
+  return lessons.whereType<LessonDefinition>().toList(growable: false);
+}
 
 Future<int> _lessonDirectorySize(
   LessonV2OfflineStorageService storageService,

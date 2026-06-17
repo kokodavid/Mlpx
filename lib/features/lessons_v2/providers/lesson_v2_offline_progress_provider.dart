@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milpress/features/lessons_v2/providers/lesson_providers.dart';
+import 'package:milpress/features/lessons_v2/services/lesson_v2_completion_cache_service.dart';
 import 'package:milpress/features/lessons_v2/services/lesson_v2_offline_progress_service.dart';
 import 'package:milpress/features/lessons_v2/services/lesson_v2_progress_sync_service.dart';
 
@@ -46,6 +47,11 @@ class LessonV2OfflineProgressNotifier
 final lessonV2OfflineProgressServiceProvider =
     Provider<LessonV2OfflineProgressService>((ref) {
   return LessonV2OfflineProgressService();
+});
+
+final lessonV2CompletionCacheServiceProvider =
+    Provider<LessonV2CompletionCacheService>((ref) {
+  return LessonV2CompletionCacheService();
 });
 
 final lessonV2ProgressSyncServiceProvider =
