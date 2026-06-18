@@ -10,6 +10,7 @@ class AudioSessionState {
   final String? currentAudioPath;
   final bool isPlaying;
   final bool isLoading;
+  final bool isPaused;
   final Map<String, String> screenAudioMap; // screenId -> audioPath
   final String? error;
 
@@ -18,6 +19,7 @@ class AudioSessionState {
     this.currentAudioPath,
     this.isPlaying = false,
     this.isLoading = false,
+    this.isPaused = false,
     this.screenAudioMap = const {},
     this.error,
   });
@@ -27,6 +29,7 @@ class AudioSessionState {
     String? currentAudioPath,
     bool? isPlaying,
     bool? isLoading,
+    bool? isPaused,
     Map<String, String>? screenAudioMap,
     String? error,
   }) {
@@ -35,6 +38,7 @@ class AudioSessionState {
       currentAudioPath: currentAudioPath ?? this.currentAudioPath,
       isPlaying: isPlaying ?? this.isPlaying,
       isLoading: isLoading ?? this.isLoading,
+      isPaused: isPaused ?? this.isPaused,
       screenAudioMap: screenAudioMap ?? this.screenAudioMap,
       error: error ?? this.error,
     );
@@ -127,6 +131,7 @@ class AudioSessionNotifier extends StateNotifier<AudioSessionState> {
         activeScreenId: screenId,
         currentAudioPath: audioPath,
         isLoading: true,
+        isPaused: false,
       );
 
       print('AudioSession: Playing audio for screen $screenId: $audioPath');
@@ -162,6 +167,7 @@ class AudioSessionNotifier extends StateNotifier<AudioSessionState> {
         currentAudioPath: null,
         isPlaying: false,
         isLoading: false,
+        isPaused: false,
       );
     } catch (e) {
       print('AudioSession: Error stopping session: $e');
@@ -176,6 +182,7 @@ class AudioSessionNotifier extends StateNotifier<AudioSessionState> {
     }
 
     try {
+      state = state.copyWith(isPaused: false);
       await ref.read(audioServiceProvider.notifier).playAudio(state.currentAudioPath!);
     } catch (e) {
       state = state.copyWith(error: 'Failed to play audio: $e');
@@ -191,8 +198,26 @@ class AudioSessionNotifier extends StateNotifier<AudioSessionState> {
 
     try {
       await ref.read(audioServiceProvider.notifier).pauseAudio();
+      state = state.copyWith(isPaused: true);
     } catch (e) {
       state = state.copyWith(error: 'Failed to pause audio: $e');
+    }
+  }
+
+  // Resume audio (only if screen is active)
+  Future<void> resumeAudio(String screenId) async {
+    if (!state.isScreenActive(screenId)) {
+      print(
+        'AudioSession: Cannot resume audio - screen $screenId is not active',
+      );
+      return;
+    }
+
+    try {
+      state = state.copyWith(isPaused: false);
+      await ref.read(audioServiceProvider.notifier).resumeAudio();
+    } catch (e) {
+      state = state.copyWith(error: 'Failed to resume audio: $e');
     }
   }
 
@@ -204,6 +229,7 @@ class AudioSessionNotifier extends StateNotifier<AudioSessionState> {
     }
 
     try {
+      state = state.copyWith(isPaused: false);
       await ref.read(audioServiceProvider.notifier).replayAudio();
     } catch (e) {
       state = state.copyWith(error: 'Failed to replay audio: $e');
@@ -221,12 +247,14 @@ class AudioSessionNotifier extends StateNotifier<AudioSessionState> {
   AudioState getScreenAudioState(String screenId) {
     final audioPath = state.getScreenAudioPath(screenId);
     final isActive = state.isScreenActive(screenId);
-    final isCached = audioPath != null && ref.read(audioCacheProvider).isCached(audioPath);
+    final isCached =
+        audioPath != null && ref.read(audioCacheProvider).isCached(audioPath);
     
     return AudioState(
       isCached: isCached,
       isPlaying: isActive && state.isPlaying,
       isLoading: isActive && state.isLoading,
+      isPaused: isActive && state.isPaused,
       error: state.error,
     );
   }
@@ -242,19 +270,20 @@ class AudioState {
   final bool isCached;
   final bool isPlaying;
   final bool isLoading;
+  final bool isPaused;
   final String? error;
 
   const AudioState({
     this.isCached = false,
     this.isPlaying = false,
     this.isLoading = false,
+    this.isPaused = false,
     this.error,
   });
 }
 
 // Provider
-final audioSessionProvider = StateNotifierProvider<AudioSessionNotifier, AudioSessionState>((ref) {
+final audioSessionProvider =
+    StateNotifierProvider<AudioSessionNotifier, AudioSessionState>((ref) {
   return AudioSessionNotifier(ref);
 });
-
- 

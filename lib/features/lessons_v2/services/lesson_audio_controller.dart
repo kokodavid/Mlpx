@@ -7,6 +7,7 @@ enum LessonAudioStatus {
   idle,
   loading,
   playing,
+  paused,
   error,
 }
 
@@ -25,10 +26,11 @@ class LessonAudioState {
     LessonAudioStatus? status,
     String? sourceId,
     String? errorMessage,
+    bool clearSourceId = false,
   }) {
     return LessonAudioState(
       status: status ?? this.status,
-      sourceId: sourceId ?? this.sourceId,
+      sourceId: clearSourceId ? null : sourceId ?? this.sourceId,
       errorMessage: errorMessage,
     );
   }
@@ -73,13 +75,15 @@ class LessonAudioController {
         _currentUrl = null;
         state.value = state.value.copyWith(
           status: LessonAudioStatus.idle,
-          sourceId: null,
+          clearSourceId: true,
         );
         return;
       }
 
       state.value = state.value.copyWith(
-        status: LessonAudioStatus.idle,
+        status: _activeSourceId == null
+            ? LessonAudioStatus.idle
+            : LessonAudioStatus.paused,
         sourceId: _activeSourceId,
       );
     });
@@ -91,7 +95,25 @@ class LessonAudioController {
           'LessonAudioController: empty url for sourceId=$sourceId, skipping');
       return;
     }
-    _currentUrl = url;
+    if (_activeSourceId == sourceId && _currentUrl == url) {
+      if (state.value.status == LessonAudioStatus.loading) return;
+      if (state.value.status == LessonAudioStatus.playing) {
+        await _player.pause();
+        state.value = state.value.copyWith(
+          status: LessonAudioStatus.paused,
+          sourceId: sourceId,
+        );
+        return;
+      }
+      if (state.value.status == LessonAudioStatus.paused) {
+        await _player.play();
+        state.value = state.value.copyWith(
+          status: LessonAudioStatus.playing,
+          sourceId: sourceId,
+        );
+        return;
+      }
+    }
     _activeSourceId = sourceId;
     state.value = state.value.copyWith(
       status: LessonAudioStatus.loading,
@@ -125,8 +147,10 @@ class LessonAudioController {
     await _player.stop();
     _currentUrl = null;
     _activeSourceId = null;
-    state.value =
-        state.value.copyWith(status: LessonAudioStatus.idle, sourceId: null);
+    state.value = state.value.copyWith(
+      status: LessonAudioStatus.idle,
+      clearSourceId: true,
+    );
     debugPrint('LessonAudioController: stopped');
   }
 

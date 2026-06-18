@@ -98,12 +98,6 @@ class _LessonWaveformPlayerState extends ConsumerState<LessonWaveformPlayer>
   }
 
   Future<void> _handleTap(LessonAudioController controller) async {
-    final state = controller.state.value;
-    if (state.sourceId == widget.sourceId &&
-        state.status == LessonAudioStatus.playing) {
-      await controller.stop();
-      return;
-    }
     await controller.playUrl(widget.audioUrl, sourceId: widget.sourceId);
   }
 
