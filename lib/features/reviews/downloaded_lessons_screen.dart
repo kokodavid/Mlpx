@@ -364,7 +364,7 @@ class _EmptyDownloadsState extends StatelessWidget {
                     borderRadius: BorderRadius.circular(22),
                   ),
                   child: const Icon(
-                    Icons.shopping_bag,
+                    Icons.school,
                     color: Color(0xFFD96C1F),
                     size: 23,
                   ),
