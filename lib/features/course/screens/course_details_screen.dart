@@ -177,7 +177,7 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.black),
-            onPressed: () => context.pop(),
+            onPressed: () => context.go('/'),
           ),
           actions: [
             const Padding(
@@ -296,7 +296,7 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
                         ),
                         const SizedBox(height: 12),
                         TextButton(
-                          onPressed: () => context.go('/course'),
+                          onPressed: () => context.go('/'),
                           child: const Text('Back to Courses'),
                         ),
                       ],
@@ -340,7 +340,7 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () => context.go('/course'),
+                          onPressed: () => context.go('/'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primaryColor,
                             foregroundColor: Colors.white,

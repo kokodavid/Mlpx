@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:milpress/features/course/screens/course_screen.dart';
 import 'package:milpress/features/course/screens/course_details_screen.dart';
 import 'package:milpress/features/home/home_screen.dart';
 import 'package:milpress/features/assessment/assessment_screen.dart';
@@ -44,7 +43,6 @@ enum AppRoute {
   accountCreated,
   main,
   home,
-  course,
   courseDetails,
   review,
   lesson,
@@ -138,25 +136,16 @@ final routerProvider = Provider<GoRouter>((ref) {
           builder: (context, state) => const HomeScreen(),
         ),
       ),
-      // Course routes - allow guest access
+      // Course detail route - allows guest access
       GoRoute(
-        path: '/course',
-        name: AppRoute.course.name,
+        path: '/course/:courseId',
+        name: AppRoute.courseDetails.name,
         builder: AuthGuard.allowGuest(
-          builder: (context, state) => const CourseScreen(),
+          builder: (context, state) {
+            final courseId = state.pathParameters['courseId']!;
+            return CourseDetailsScreen(courseId: courseId);
+          },
         ),
-        routes: [
-          GoRoute(
-            path: ':courseId',
-            name: AppRoute.courseDetails.name,
-            builder: AuthGuard.allowGuest(
-              builder: (context, state) {
-                final courseId = state.pathParameters['courseId']!;
-                return CourseDetailsScreen(courseId: courseId);
-              },
-            ),
-          ),
-        ],
       ),
       // Review route - allows guest access
       // GoRoute(
