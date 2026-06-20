@@ -12,61 +12,34 @@ class WeeklyGoalProgressService {
   }) async {
     final now = nowLocal ?? DateTime.now();
     final startOfDay = DateTime(now.year, now.month, now.day);
-    final activeGoal = await _fetchActiveGoal(userId: userId);
-    final weekStartDay = activeGoal?['week_start'] as int? ?? 1;
-    final activeFrom = _parseDateTime(activeGoal?['active_from']);
-    final weekStartLocal = _startOfGoalWindow(
-      date: startOfDay,
-      weekStart: weekStartDay,
-      activeFrom: activeFrom,
-    );
-    final weekEndLocal = weekStartLocal.add(const Duration(days: 7));
-
     final completedLessonsById =
         await _fetchCompletedLessonsById(userId: userId);
     final completedAtValues = completedLessonsById.values.toList()
       ..sort();
-
-    final completedLessons = completedAtValues.where((date) {
-      return !date.isBefore(weekStartLocal) && date.isBefore(weekEndLocal);
-    }).length;
-
     final completedDates = completedAtValues
         .map((date) => DateTime(date.year, date.month, date.day))
         .toSet();
+    final weekStartLocal = _startOfWeek(startOfDay, 1);
+    final weekEndLocal = weekStartLocal.add(const Duration(days: 7));
     final brokenDates = _calculateBrokenDates(
+      completedDates: completedDates,
+      today: startOfDay,
+    );
+    final currentStreakDays = _calculateCurrentStreak(
       completedDates: completedDates,
       today: startOfDay,
     );
 
     return WeeklyGoalProgress(
-      completedLessons: completedLessons,
+      completedStreakDays: currentStreakDays,
       weekStart: weekStartLocal,
       weekEnd: weekEndLocal,
-      currentStreakDays: _calculateCurrentStreak(
-        completedDates: completedDates,
-        today: startOfDay,
-      ),
+      currentStreakDays: currentStreakDays,
       completedDates: completedDates,
       brokenDates: brokenDates,
       longestDailyStreak: _calculateLongestDailyStreak(completedDates),
       longestWeeklyStreak: _calculateLongestWeeklyStreak(completedDates),
     );
-  }
-
-  Future<Map<String, dynamic>?> _fetchActiveGoal({
-    required String userId,
-  }) async {
-    final response = await _supabase
-        .from('user_goals')
-        .select('week_start, active_from')
-        .eq('user_id', userId)
-        .eq('goal_type', 'lessons_per_week')
-        .filter('active_until', 'is', null)
-        .order('active_from', ascending: false)
-        .maybeSingle();
-
-    return response;
   }
 
   Future<Map<String, DateTime>> _fetchCompletedLessonsById({
@@ -116,26 +89,6 @@ class WeeklyGoalProgressService {
         (date.weekday - normalizedWeekStart + DateTime.daysPerWeek) %
             DateTime.daysPerWeek;
     return date.subtract(Duration(days: daysSinceWeekStart));
-  }
-
-  DateTime _startOfGoalWindow({
-    required DateTime date,
-    required int weekStart,
-    required DateTime? activeFrom,
-  }) {
-    if (activeFrom == null) return _startOfWeek(date, weekStart);
-
-    final localActiveFrom = activeFrom.toLocal();
-    final anchor = DateTime(
-      localActiveFrom.year,
-      localActiveFrom.month,
-      localActiveFrom.day,
-    );
-    final elapsedDays = date.difference(anchor).inDays;
-    if (elapsedDays < 0) return anchor;
-
-    final elapsedWeeks = elapsedDays ~/ DateTime.daysPerWeek;
-    return anchor.add(Duration(days: elapsedWeeks * DateTime.daysPerWeek));
   }
 
   DateTime? _parseDateTime(dynamic value) {

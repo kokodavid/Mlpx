@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:milpress/utils/app_colors.dart';
 
 class StreakGoalPillButton extends StatelessWidget {
-  final int completedLessons;
+  final int completedStreakDays;
   final int goalValue;
   final VoidCallback? onTap;
 
   const StreakGoalPillButton({
     super.key,
-    required this.completedLessons,
+    required this.completedStreakDays,
     required this.goalValue,
     this.onTap,
   });
@@ -37,7 +37,7 @@ class StreakGoalPillButton extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               Text(
-                '$completedLessons/$goalValue',
+                '$completedStreakDays/$goalValue',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 13,

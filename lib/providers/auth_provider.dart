@@ -512,7 +512,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     ref.invalidate(upcomingCoursesWithDetailsProvider);
     ref.invalidate(completedCoursesWithDetailsProvider);
     ref.invalidate(weeklyGoalProgressProvider);
-    ref.invalidate(activeWeeklyGoalProvider);
+    ref.invalidate(activeStreakGoalProvider);
   }
 }
 

@@ -40,7 +40,7 @@ class LessonCompleteV2Screen extends ConsumerWidget {
     final hasNext = nextLesson != null;
     final moduleAsync = ref.watch(moduleFromSupabaseProvider(moduleId));
     final courseId = moduleAsync.value?.module.courseId ?? '';
-    final activeGoalAsync = ref.watch(activeWeeklyGoalProvider);
+    final activeGoalAsync = ref.watch(activeStreakGoalProvider);
     final shouldShowStreakPrompt =
         hasNext && activeGoalAsync.hasValue && activeGoalAsync.value == null;
 

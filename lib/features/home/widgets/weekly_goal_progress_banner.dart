@@ -10,13 +10,14 @@ class WeeklyGoalProgressBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final goalAsync = ref.watch(activeWeeklyGoalProvider);
+    final goalAsync = ref.watch(activeStreakGoalProvider);
     final progressAsync = ref.watch(weeklyGoalProgressProvider);
     final goal = goalAsync.valueOrNull;
 
     if (goal == null) return const SizedBox.shrink();
 
-    final completedLessons = progressAsync.valueOrNull?.completedLessons ?? 0;
+    final completedStreakDays =
+        progressAsync.valueOrNull?.completedStreakDays ?? 0;
     final goalValue = goal.goalValue;
 
     return Padding(
@@ -53,7 +54,7 @@ class WeeklyGoalProgressBanner extends ConsumerWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        '$completedLessons/$goalValue this week.',
+                        '$completedStreakDays/$goalValue streak days.',
                         style: const TextStyle(
                           color: AppColors.primaryColor,
                           fontSize: 13,

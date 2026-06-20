@@ -33,9 +33,9 @@ class HomeHeader extends ConsumerWidget {
     final greeting = _greetingForHour(now.hour);
     final avatarTap = isGuestUser ? null : () => context.push('/profile');
     final streakTap = () => context.push('/streak-page');
-    final activeGoal = ref.watch(activeWeeklyGoalProvider).valueOrNull;
-    final completedLessons =
-        ref.watch(weeklyGoalProgressProvider).valueOrNull?.completedLessons ??
+    final activeGoal = ref.watch(activeStreakGoalProvider).valueOrNull;
+    final completedStreakDays =
+        ref.watch(weeklyGoalProgressProvider).valueOrNull?.completedStreakDays ??
             0;
     final disabledOpacity = isGuestUser ? 0.55 : 1.0;
 
@@ -97,7 +97,7 @@ class HomeHeader extends ConsumerWidget {
                 child: activeGoal != null
                     ? StreakGoalPillButton(
                         key: const Key('home_header_streak_button'),
-                        completedLessons: completedLessons,
+                        completedStreakDays: completedStreakDays,
                         goalValue: activeGoal.goalValue,
                         onTap: streakTap,
                       )

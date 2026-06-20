@@ -23,15 +23,15 @@ class UserGoalService {
     return UserGoalModel.fromJson(response);
   }
 
-  Future<UserGoalModel> setWeeklyGoal({
+  Future<UserGoalModel> setStreakGoal({
     required String userId,
-    required int lessonsPerWeek,
+    required int streakDays,
     required String timezone,
     int weekStart = 1,
   }) async {
-    _validateWeeklyGoalInput(
+    _validateStreakGoalInput(
       userId: userId,
-      lessonsPerWeek: lessonsPerWeek,
+      streakDays: streakDays,
       timezone: timezone,
       weekStart: weekStart,
     );
@@ -41,13 +41,13 @@ class UserGoalService {
         .from('user_goals')
         .update({'active_until': now.toIso8601String()})
         .eq('user_id', userId)
-        .eq('goal_type', UserGoalModel.lessonsPerWeekGoalType)
+        .eq('goal_type', UserGoalModel.streakDaysGoalType)
         .filter('active_until', 'is', null);
 
     final insertPayload = {
       'user_id': userId,
-      'goal_type': UserGoalModel.lessonsPerWeekGoalType,
-      'goal_value': lessonsPerWeek,
+      'goal_type': UserGoalModel.streakDaysGoalType,
+      'goal_value': streakDays,
       'timezone': timezone,
       'week_start': weekStart,
       'active_from': now.toIso8601String(),
@@ -62,17 +62,17 @@ class UserGoalService {
     return UserGoalModel.fromJson(response);
   }
 
-  void _validateWeeklyGoalInput({
+  void _validateStreakGoalInput({
     required String userId,
-    required int lessonsPerWeek,
+    required int streakDays,
     required String timezone,
     required int weekStart,
   }) {
     if (userId.trim().isEmpty) {
       throw ArgumentError('User id is required.');
     }
-    if (lessonsPerWeek <= 0) {
-      throw ArgumentError('Weekly goal must be greater than 0.');
+    if (streakDays <= 0) {
+      throw ArgumentError('Streak goal must be greater than 0.');
     }
     if (timezone.trim().isEmpty) {
       throw ArgumentError('Timezone is required.');

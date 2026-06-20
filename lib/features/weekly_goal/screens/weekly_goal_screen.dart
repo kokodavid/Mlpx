@@ -14,7 +14,7 @@ class WeeklyGoalScreen extends ConsumerStatefulWidget {
 
 class _WeeklyGoalScreenState extends ConsumerState<WeeklyGoalScreen> {
   static const int customValueKey = -1;
-  static const List<int> presetValues = [5, 10, 15];
+  static const List<int> presetValues = [3, 7, 14];
 
   int? _selectedValue;
   bool _isSaving = false;
@@ -30,7 +30,7 @@ class _WeeklyGoalScreenState extends ConsumerState<WeeklyGoalScreen> {
   Future<void> _saveGoal() async {
     final selected = _selectedValue;
     if (selected == null) {
-      _showMessage('Select a weekly goal to continue.');
+      _showMessage('Select a streak goal to continue.');
       return;
     }
 
@@ -38,7 +38,7 @@ class _WeeklyGoalScreenState extends ConsumerState<WeeklyGoalScreen> {
     if (selected == customValueKey) {
       goalValue = int.tryParse(_customController.text.trim());
       if (goalValue == null || goalValue <= 0) {
-        _showMessage('Enter a valid custom goal.');
+        _showMessage('Enter a valid custom streak goal.');
         return;
       }
     } else {
@@ -51,8 +51,8 @@ class _WeeklyGoalScreenState extends ConsumerState<WeeklyGoalScreen> {
 
     try {
       final timezone = DateTime.now().timeZoneName;
-      await ref.read(setWeeklyGoalProvider({
-        'lessonsPerWeek': goalValue,
+      await ref.read(setStreakGoalProvider({
+        'streakDays': goalValue,
         'timezone': timezone,
         'weekStart': 1,
       }).future);
@@ -81,10 +81,10 @@ class _WeeklyGoalScreenState extends ConsumerState<WeeklyGoalScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final goalAsync = ref.watch(activeWeeklyGoalProvider);
+    final goalAsync = ref.watch(activeStreakGoalProvider);
     final selected = _selectedValue;
 
-    ref.listen<AsyncValue>(activeWeeklyGoalProvider, (previous, next) {
+    ref.listen<AsyncValue>(activeStreakGoalProvider, (previous, next) {
       if (_didInitSelection) return;
       final goal = next.asData?.value;
       if (goal == null) return;
@@ -110,7 +110,7 @@ class _WeeklyGoalScreenState extends ConsumerState<WeeklyGoalScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
-          'Weekly goal',
+          'Set streak goal',
           style: TextStyle(
             color: AppColors.copBlue,
             fontWeight: FontWeight.w600,
@@ -132,7 +132,7 @@ class _WeeklyGoalScreenState extends ConsumerState<WeeklyGoalScreen> {
               ),
               const SizedBox(height: 20),
               const Text(
-                'Set your weekly goal, make a committed plan',
+                'Set your streak goal, make a committed plan',
                 style: TextStyle(
                   color: AppColors.copBlue,
                   fontSize: 20,
@@ -141,7 +141,7 @@ class _WeeklyGoalScreenState extends ConsumerState<WeeklyGoalScreen> {
               ),
               const SizedBox(height: 6),
               const Text(
-                'Choose how many lessons you want to complete each week.',
+                'Choose how many days you want to keep your streak.',
                 style: TextStyle(
                   color: AppColors.textColor,
                   fontSize: 14,
@@ -149,33 +149,34 @@ class _WeeklyGoalScreenState extends ConsumerState<WeeklyGoalScreen> {
               ),
               const SizedBox(height: 18),
               _GoalOptionTile(
-                title: '5 lessons a week',
+                title: '3 days',
                 subtitle: 'Baby step',
-                isSelected: selected == 5,
-                onTap: () => setState(() => _selectedValue = 5),
+                isSelected: selected == 3,
+                onTap: () => setState(() => _selectedValue = 3),
               ),
               const SizedBox(height: 10),
               _GoalOptionTile(
-                title: '10 lessons a week',
+                title: '7 days',
                 subtitle: 'Strong start',
-                isSelected: selected == 10,
-                onTap: () => setState(() => _selectedValue = 10),
+                isSelected: selected == 7,
+                onTap: () => setState(() => _selectedValue = 7),
               ),
               const SizedBox(height: 10),
               _GoalOptionTile(
-                title: '15 lessons a week',
+                title: '14 days',
                 subtitle: 'Committed',
-                isSelected: selected == 15,
-                onTap: () => setState(() => _selectedValue = 15),
+                isSelected: selected == 14,
+                onTap: () => setState(() => _selectedValue = 14),
               ),
               const SizedBox(height: 10),
               _GoalOptionTile(
                 title: 'Custom goal',
-                subtitle: 'Set your own number',
+                subtitle: 'Set streak days',
                 isSelected: selected == customValueKey,
                 onTap: () => setState(() => _selectedValue = customValueKey),
                 trailing: SizedBox(
                   width: 92,
+                  height: 24,
                   child: TextField(
                     controller: _customController,
                     keyboardType: TextInputType.number,
@@ -184,6 +185,8 @@ class _WeeklyGoalScreenState extends ConsumerState<WeeklyGoalScreen> {
                     decoration: const InputDecoration(
                       hintText: '0',
                       border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
                     ),
                     onTap: () => setState(() => _selectedValue = customValueKey),
                   ),
@@ -194,9 +197,10 @@ class _WeeklyGoalScreenState extends ConsumerState<WeeklyGoalScreen> {
                 child: Text(
                   goalAsync.maybeWhen(
                     data: (goal) => goal == null
-                        ? 'You will be more likely to complete lessons'
-                        : 'Current goal: ${goal.goalValue} lessons this week',
-                    orElse: () => 'You will be more likely to complete lessons',
+                        ? 'Streak goals helps you stay committed and build a habit'
+                        : 'Current goal: ${goal.goalValue} days',
+                    orElse: () =>
+                        'Streak goals helps you stay committed and build a habit',
                   ),
                   style: const TextStyle(
                     color: AppColors.copBlue,

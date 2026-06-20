@@ -1,5 +1,5 @@
 class WeeklyGoalProgress {
-  final int completedLessons;
+  final int completedStreakDays;
   final DateTime weekStart;
   final DateTime weekEnd;
   final int currentStreakDays;
@@ -9,7 +9,7 @@ class WeeklyGoalProgress {
   final int longestWeeklyStreak;
 
   WeeklyGoalProgress({
-    required this.completedLessons,
+    required this.completedStreakDays,
     required this.weekStart,
     required this.weekEnd,
     required this.currentStreakDays,
@@ -25,7 +25,7 @@ class WeeklyGoalProgress {
         startOfDay.subtract(Duration(days: startOfDay.weekday - 1));
     final weekEnd = weekStart.add(const Duration(days: 7));
     return WeeklyGoalProgress(
-      completedLessons: 0,
+      completedStreakDays: 0,
       weekStart: weekStart,
       weekEnd: weekEnd,
       currentStreakDays: 0,
@@ -38,7 +38,9 @@ class WeeklyGoalProgress {
 
   factory WeeklyGoalProgress.fromJson(Map<String, dynamic> json) {
     return WeeklyGoalProgress(
-      completedLessons: json['completedLessons'] as int? ?? 0,
+      completedStreakDays: (json['completedStreakDays'] as int?) ??
+          (json['completedLessons'] as int?) ??
+          0,
       weekStart: DateTime.parse(json['weekStart'] as String),
       weekEnd: DateTime.parse(json['weekEnd'] as String),
       currentStreakDays: json['currentStreakDays'] as int? ?? 0,
@@ -51,7 +53,7 @@ class WeeklyGoalProgress {
 
   Map<String, dynamic> toJson() {
     return {
-      'completedLessons': completedLessons,
+      'completedStreakDays': completedStreakDays,
       'weekStart': weekStart.toIso8601String(),
       'weekEnd': weekEnd.toIso8601String(),
       'currentStreakDays': currentStreakDays,

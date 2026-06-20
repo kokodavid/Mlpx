@@ -7,18 +7,18 @@ final userGoalServiceProvider = Provider<UserGoalService>((ref) {
   return UserGoalService(SupabaseConfig.client);
 });
 
-final activeWeeklyGoalProvider = FutureProvider<UserGoalModel?>((ref) async {
+final activeStreakGoalProvider = FutureProvider<UserGoalModel?>((ref) async {
   final user = SupabaseConfig.currentUser;
   if (user == null) return null;
 
   final service = ref.read(userGoalServiceProvider);
   return service.fetchActiveGoal(
     userId: user.id,
-    goalType: UserGoalModel.lessonsPerWeekGoalType,
+    goalType: UserGoalModel.streakDaysGoalType,
   );
 });
 
-final setWeeklyGoalProvider =
+final setStreakGoalProvider =
     FutureProvider.family<UserGoalModel, Map<String, dynamic>>((ref, params) async {
   final user = SupabaseConfig.currentUser;
   if (user == null) {
@@ -26,13 +26,13 @@ final setWeeklyGoalProvider =
   }
 
   final service = ref.read(userGoalServiceProvider);
-  final result = await service.setWeeklyGoal(
+  final result = await service.setStreakGoal(
     userId: user.id,
-    lessonsPerWeek: params['lessonsPerWeek'] as int,
+    streakDays: params['streakDays'] as int,
     timezone: params['timezone'] as String,
     weekStart: (params['weekStart'] as int?) ?? 1,
   );
 
-  ref.invalidate(activeWeeklyGoalProvider);
+  ref.invalidate(activeStreakGoalProvider);
   return result;
 });
