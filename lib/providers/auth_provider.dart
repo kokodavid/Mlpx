@@ -13,6 +13,8 @@ import '../features/weekly_goal/providers/user_goal_providers.dart';
 import '../features/weekly_goal/providers/weekly_goal_progress_providers.dart';
 
 class AuthState {
+  static const Object _unset = Object();
+
   final User? user;
   final Profile? profile;
   final String? message;
@@ -32,17 +34,17 @@ class AuthState {
   PlanType get planType => profile?.planType ?? PlanType.free;
 
   AuthState copyWith({
-    User? user,
-    Profile? profile,
-    String? message,
+    Object? user = _unset,
+    Object? profile = _unset,
+    Object? message = _unset,
     bool? isLoading,
     bool? isEmailVerified,
     bool? isGuestUser,
   }) {
     return AuthState(
-      user:            user            ?? this.user,
-      profile:         profile         ?? this.profile,
-      message:         message         ?? this.message,
+      user:            identical(user, _unset) ? this.user : user as User?,
+      profile:         identical(profile, _unset) ? this.profile : profile as Profile?,
+      message:         identical(message, _unset) ? this.message : message as String?,
       isLoading:       isLoading       ?? this.isLoading,
       isEmailVerified: isEmailVerified ?? this.isEmailVerified,
       isGuestUser:     isGuestUser     ?? this.isGuestUser,
@@ -61,6 +63,7 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
 
   AuthStateNotifier(this._ref) : super(AuthState()) {
     _initializeGuestMode();
+    syncWithCurrentSession();
     _listenToAuthChanges();
   }
 
@@ -81,35 +84,48 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
   void _listenToAuthChanges() {
     SupabaseConfig.client.auth.onAuthStateChange.listen((data) async {
       final user = data.session?.user;
-      final isEmailVerified = user?.emailConfirmedAt != null;
-
-      if (user != null) {
-        await _clearGuestMode();
-        // Redeem any pending invites/grants for this email, then load profile
-        await _redeemPendingInvites(user);
-        final profile = await _fetchProfile(user.id);
-        state = state.copyWith(
-          user: user,
-          profile: profile,
-          isEmailVerified: isEmailVerified,
-          isGuestUser: false,
-        );
-        // Force profileProvider to re-fetch so it reflects the latest
-        // plan_type (e.g. after an org invite is redeemed on sign-in).
-        _ref.read(profileRefreshProvider.notifier).state++;
-        // Start listening for real-time plan_type changes (org removal etc.)
-        _subscribeToProfileChanges(user.id);
-      } else {
-        _profileChannel?.unsubscribe();
-        _profileChannel = null;
-        state = state.copyWith(
-          user: null,
-          profile: null,
-          isEmailVerified: false,
-          isGuestUser: state.isGuestUser,
-        );
-      }
+      await _setAuthenticatedUser(user);
     });
+  }
+
+  Future<void> syncWithCurrentSession() async {
+    await _setAuthenticatedUser(SupabaseConfig.client.auth.currentSession?.user);
+  }
+
+  Future<void> _setAuthenticatedUser(User? user) async {
+    final isEmailVerified = user?.emailConfirmedAt != null;
+
+    if (user != null) {
+      await _clearGuestMode();
+      if (!mounted) return;
+      state = state.copyWith(
+        user: user,
+        isEmailVerified: isEmailVerified,
+        isGuestUser: false,
+      );
+
+      // Redeem any pending invites/grants for this email, then load profile
+      await _redeemPendingInvites(user);
+      final profile = await _fetchProfile(user.id);
+      if (!mounted || state.user?.id != user.id) return;
+      state = state.copyWith(
+        profile: profile,
+      );
+      // Force profileProvider to re-fetch so it reflects the latest
+      // plan_type (e.g. after an org invite is redeemed on sign-in).
+      _ref.read(profileRefreshProvider.notifier).state++;
+      // Start listening for real-time plan_type changes (org removal etc.)
+      _subscribeToProfileChanges(user.id);
+    } else {
+      _profileChannel?.unsubscribe();
+      _profileChannel = null;
+      state = state.copyWith(
+        user: null,
+        profile: null,
+        isEmailVerified: false,
+        isGuestUser: state.isGuestUser,
+      );
+    }
   }
 
   /// Fetches the profile row for [userId], returns null on error.

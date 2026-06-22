@@ -111,11 +111,10 @@ class LoginScreenNotifier extends StateNotifier<LoginScreenState> {
         // NEW: Fetch user data from Supabase after successful sign-in
         final userId = response.user!.id;
 
-        await ref.read(fetchAndCacheCourseProgressProvider(userId).future);
-        await ref.read(fetchAndCacheModuleProgressProvider(userId).future);
-        await ref.read(fetchAndCacheLessonProgressProvider(userId).future);
-
         // Invalidate providers to refresh UI
+        ref.invalidate(fetchAndCacheCourseProgressProvider(userId));
+        ref.invalidate(fetchAndCacheModuleProgressProvider(userId));
+        ref.invalidate(fetchAndCacheLessonProgressProvider(userId));
         ref.invalidate(activeCourseWithDetailsProvider);
         ref.invalidate(upcomingCoursesWithDetailsProvider);
         ref.invalidate(completedCoursesWithDetailsProvider);
