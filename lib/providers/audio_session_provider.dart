@@ -32,15 +32,21 @@ class AudioSessionState {
     bool? isPaused,
     Map<String, String>? screenAudioMap,
     String? error,
+    bool clearActiveScreenId = false,
+    bool clearCurrentAudioPath = false,
+    bool clearError = false,
   }) {
     return AudioSessionState(
-      activeScreenId: activeScreenId ?? this.activeScreenId,
-      currentAudioPath: currentAudioPath ?? this.currentAudioPath,
+      activeScreenId:
+          clearActiveScreenId ? null : activeScreenId ?? this.activeScreenId,
+      currentAudioPath: clearCurrentAudioPath
+          ? null
+          : currentAudioPath ?? this.currentAudioPath,
       isPlaying: isPlaying ?? this.isPlaying,
       isLoading: isLoading ?? this.isLoading,
       isPaused: isPaused ?? this.isPaused,
       screenAudioMap: screenAudioMap ?? this.screenAudioMap,
-      error: error ?? this.error,
+      error: clearError ? null : error ?? this.error,
     );
   }
 
@@ -153,18 +159,26 @@ class AudioSessionNotifier extends StateNotifier<AudioSessionState> {
   // Stop current session
   Future<void> _stopCurrentSession() async {
     try {
-      if (state.activeScreenId != null && state.isPlaying) {
-        print('AudioSession: Stopping session for screen ${state.activeScreenId}');
-        
+      final hasActiveSession = state.activeScreenId != null ||
+          state.currentAudioPath != null ||
+          state.isPlaying ||
+          state.isLoading ||
+          state.isPaused;
+
+      if (hasActiveSession) {
+        print(
+          'AudioSession: Stopping session for screen ${state.activeScreenId}',
+        );
+
         await ref.read(audioServiceProvider.notifier).stopAudio();
-        
+
         // Don't remove cached files - keep them for reuse
         print('AudioSession: Keeping cached audio files for reuse');
       }
 
       state = state.copyWith(
-        activeScreenId: null,
-        currentAudioPath: null,
+        clearActiveScreenId: true,
+        clearCurrentAudioPath: true,
         isPlaying: false,
         isLoading: false,
         isPaused: false,
@@ -243,6 +257,10 @@ class AudioSessionNotifier extends StateNotifier<AudioSessionState> {
     }
   }
 
+  Future<void> stopActiveSession() async {
+    await _stopCurrentSession();
+  }
+
   // Get audio state for a specific screen
   AudioState getScreenAudioState(String screenId) {
     final audioPath = state.getScreenAudioPath(screenId);
@@ -261,7 +279,7 @@ class AudioSessionNotifier extends StateNotifier<AudioSessionState> {
 
   // Clear error
   void clearError() {
-    state = state.copyWith(error: null);
+    state = state.copyWith(clearError: true);
   }
 }
 

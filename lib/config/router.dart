@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +15,8 @@ import 'package:milpress/features/lesson/lesson_screen.dart';
 import 'package:milpress/features/lessons_v2/screens/lesson_attempt_screen.dart';
 import 'package:milpress/features/lessons_v2/models/lesson_models.dart';
 import 'package:milpress/features/lessons_v2/screens/lesson_complete_v2_screen.dart';
+import 'package:milpress/features/lessons_v2/providers/lesson_audio_providers.dart';
+import 'package:milpress/providers/audio_session_provider.dart';
 import 'package:milpress/splash_screen.dart';
 import 'package:milpress/features/authentication/login_screen.dart';
 import 'package:milpress/features/authentication/signup_screen.dart';
@@ -67,6 +71,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/splash',
     debugLogDiagnostics: true,
+    observers: [_AudioNavigationObserver(ref)],
     redirect: (context, state) {
       final uri = state.uri;
 
@@ -387,3 +392,40 @@ final routerProvider = Provider<GoRouter>((ref) {
     ),
   );
 });
+
+class _AudioNavigationObserver extends NavigatorObserver {
+  final Ref ref;
+
+  _AudioNavigationObserver(this.ref);
+
+  void _stopAudio() {
+    unawaited(ref.read(audioSessionProvider.notifier).stopActiveSession());
+    unawaited(ref.read(lessonAudioControllerProvider).stop());
+  }
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPush(route, previousRoute);
+    if (previousRoute != null) {
+      _stopAudio();
+    }
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPop(route, previousRoute);
+    _stopAudio();
+  }
+
+  @override
+  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didRemove(route, previousRoute);
+    _stopAudio();
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+    _stopAudio();
+  }
+}
