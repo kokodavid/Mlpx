@@ -399,8 +399,10 @@ class _AudioNavigationObserver extends NavigatorObserver {
   _AudioNavigationObserver(this.ref);
 
   void _stopAudio() {
-    unawaited(ref.read(audioSessionProvider.notifier).stopActiveSession());
-    unawaited(ref.read(lessonAudioControllerProvider).stop());
+    Future.microtask(() {
+      unawaited(ref.read(audioSessionProvider.notifier).stopActiveSession());
+      unawaited(ref.read(lessonAudioControllerProvider).stop());
+    });
   }
 
   @override
