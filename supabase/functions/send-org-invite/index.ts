@@ -91,6 +91,14 @@ async function handleOrgMemberInvite(
     throw new Error('Missing invite_email or org_id on org_members record');
   }
 
+  // Admin invites are handled by the invite-org-admin edge function which
+  // sends the org portal login email (with temp password) directly.
+  // Skip here to avoid sending the wrong (app download) email.
+  if (role === 'admin') {
+    console.log(`Skipping webhook email for admin ${inviteEmail} — handled by invite-org-admin`);
+    return;
+  }
+
   const orgName = await fetchOrgName(orgId);
   const { subject, html } = orgInviteTemplate({
     orgName,

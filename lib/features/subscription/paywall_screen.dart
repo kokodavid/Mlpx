@@ -4,6 +4,7 @@ import 'package:milpress/utils/app_colors.dart';
 
 import 'subscription_plan_model.dart';
 import 'subscription_plan_service.dart';
+import 'stripe_service.dart';
 
 // =============================================================================
 // PaywallScreen
@@ -357,7 +358,7 @@ class _PlanCard extends StatelessWidget {
 // =============================================================================
 // CTA button
 // =============================================================================
-class _CtaButton extends StatelessWidget {
+class _CtaButton extends ConsumerStatefulWidget {
   final List<SubscriptionPlan> plans;
   final String selectedPlanId;
 
@@ -367,9 +368,18 @@ class _CtaButton extends StatelessWidget {
   });
 
   @override
+  ConsumerState<_CtaButton> createState() => _CtaButtonState();
+}
+
+class _CtaButtonState extends ConsumerState<_CtaButton> {
+  bool _isLoading = false;
+
+  @override
   Widget build(BuildContext context) {
-    final selected =
-        plans.firstWhere((p) => p.id == selectedPlanId, orElse: () => plans.first);
+    final selected = widget.plans.firstWhere(
+      (p) => p.id == widget.selectedPlanId,
+      orElse: () => widget.plans.first,
+    );
 
     if (selected.isFree) {
       return OutlinedButton(
@@ -401,34 +411,53 @@ class _CtaButton extends StatelessWidget {
         ),
         elevation: 0,
       ),
-      onPressed: () => _handleUpgrade(context, selected),
-      child: Text(
-        'Get ${selected.name}',
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-      ),
+      onPressed: _isLoading ? null : () => _handleUpgrade(selected),
+      child: _isLoading
+          ? const SizedBox(
+              height: 22,
+              width: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: Colors.white,
+              ),
+            )
+          : Text(
+              'Get ${selected.name}',
+              style:
+                  const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
     );
   }
 
-  void _handleUpgrade(BuildContext context, SubscriptionPlan plan) {
-    // TODO: Hand off to payment provider (RevenueCat / Stripe).
-    // Use plan.rcProductId or plan.stripePriceId to identify the product.
-    //
-    // Example with RevenueCat:
-    //   final offerings = await Purchases.getOfferings();
-    //   final package = offerings.current?.availablePackages
-    //       .firstWhere((p) => p.storeProduct.identifier == plan.rcProductId);
-    //   await Purchases.purchasePackage(package);
-    //
-    // After a successful purchase the payment provider webhook updates the
-    // subscriptions table, the DB trigger flips profiles.plan_type to premium,
-    // and calling ref.read(authStateProvider.notifier).refreshProfile() will
-    // update the UI immediately.
+  Future<void> _handleUpgrade(SubscriptionPlan plan) async {
+    if (plan.stripePriceId == null) {
+      _showError('This plan is not yet available for purchase. Please try again later.');
+      return;
+    }
 
+    setState(() => _isLoading = true);
+
+    final result = await ref
+        .read(stripeServiceProvider)
+        .startIndividualCheckout(plan.stripePriceId!);
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (!result.success) {
+      _showError(result.error ?? 'Could not open payment page. Please try again.');
+    }
+    // On success: Stripe Checkout opens in external browser.
+    // The webhook will update profiles.plan_type when payment completes.
+    // When the user returns to the app, they can refresh their profile.
+  }
+
+  void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          'Payment integration coming soon — selected: ${plan.name}',
-        ),
+        content: Text(message),
+        backgroundColor: Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }

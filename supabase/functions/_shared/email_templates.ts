@@ -277,6 +277,96 @@ export function memberRemovedTemplate(opts: {
 }
 
 // -----------------------------------------------------------------------------
+// Org admin invite email (org portal access with temp password)
+// -----------------------------------------------------------------------------
+export function orgAdminInviteTemplate(opts: {
+  orgName: string;
+  inviteEmail: string;
+  tempPassword: string;
+  orgPortalUrl: string;
+}): { subject: string; html: string } {
+  const subject = `You've been added as an admin for ${opts.orgName} on Milpress`;
+
+  const content = `
+    <!-- Title -->
+    <tr>
+      <td style="padding:0 32px;">
+        <h2 style="margin:0; font-size:22px; color:#111827; text-align:center;">
+          Your admin access is ready
+        </h2>
+      </td>
+    </tr>
+
+    <!-- Body -->
+    <tr>
+      <td style="padding:16px 32px 24px; color:#374151; font-size:15px; line-height:1.6;">
+        <p style="margin:0 0 12px;">
+          You've been added as an <strong>Admin</strong> for
+          <strong>${opts.orgName}</strong> on the Milpress Organization Portal.
+        </p>
+        <p style="margin:0;">
+          Use the credentials below to sign in. You can update your password anytime after logging in.
+        </p>
+      </td>
+    </tr>
+
+    <!-- Credentials box -->
+    <tr>
+      <td style="padding:0 32px 24px;">
+        <table width="100%" cellpadding="0" cellspacing="0"
+          style="background-color:#f0f9ff; border:1px solid #bae6fd; border-radius:8px;">
+          <tr>
+            <td style="padding:20px 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="font-size:13px; color:#0369a1; font-weight:600; padding-bottom:6px;">
+                    Email
+                  </td>
+                </tr>
+                <tr>
+                  <td style="font-size:15px; color:#111827; font-family:monospace; padding-bottom:16px;">
+                    ${opts.inviteEmail}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="font-size:13px; color:#0369a1; font-weight:600; padding-bottom:6px;">
+                    Temporary Password
+                  </td>
+                </tr>
+                <tr>
+                  <td style="font-size:15px; color:#111827; font-family:monospace; letter-spacing:1px;">
+                    ${opts.tempPassword}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- CTA -->
+    <tr>
+      <td align="center" style="padding:0 32px 24px;">
+        ${ctaButton('Sign in to the Org Portal', opts.orgPortalUrl)}
+      </td>
+    </tr>
+
+    ${warningBox(`For security, please change your password after your first login.
+      Your account is linked to <strong>${opts.inviteEmail}</strong> — use this exact email to sign in.`)}
+
+    <!-- Disclaimer -->
+    <tr>
+      <td style="padding:16px 32px 24px; font-size:12px; color:#9ca3af; text-align:center;">
+        This invitation was sent to ${opts.inviteEmail} on behalf of ${opts.orgName}.<br>
+        If you weren't expecting this, please contact Milpress support.
+      </td>
+    </tr>`;
+
+  return { subject, html: emailWrapper(content) };
+}
+
+// -----------------------------------------------------------------------------
 // Grant revoked email
 // -----------------------------------------------------------------------------
 export function grantRevokedTemplate(opts: {
