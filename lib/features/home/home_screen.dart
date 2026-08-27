@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:milpress/providers/audio_stop_helper.dart';
 import 'package:milpress/utils/app_colors.dart';
 import 'package:milpress/utils/dev_flags.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
@@ -290,6 +291,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       controller: _pageController!,
                                       itemCount: sortedCourses.length + 1,
                                       onPageChanged: (index) {
+                                        stopAllAudio(ref);
                                         setState(() {
                                           _selectedIndex = index;
                                         });

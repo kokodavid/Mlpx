@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milpress/features/lessons_v2/services/lesson_audio_controller.dart';
+import 'package:milpress/providers/audio_stop_helper.dart';
 import 'package:milpress/features/course/providers/course_provider.dart';
 import 'package:milpress/features/course/providers/module_provider.dart';
 import 'package:milpress/features/reviews/providers/bookmark_provider.dart';
@@ -172,7 +173,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
   }
 
   void _goBack() {
-    _audioController.stop();
+    stopAllAudio(ref);
     if (_currentStepIndex <= 0) {
       return;
     }
@@ -183,7 +184,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
   }
 
   Future<void> _goForward() async {
-    _audioController.stop();
+    stopAllAudio(ref);
     if (!_isLastStep) {
       setState(() {
         _currentStepIndex += 1;

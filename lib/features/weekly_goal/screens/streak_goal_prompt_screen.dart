@@ -48,9 +48,12 @@ class StreakGoalPromptScreen extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              const Text(
-                '🔥',
-                style: TextStyle(fontSize: 92, height: 1),
+              const Center(
+                child: Icon(
+                  Icons.local_fire_department,
+                  color: AppColors.primaryColor,
+                  size: 88,
+                ),
               ),
               const SizedBox(height: 10),
               const Text(
