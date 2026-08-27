@@ -4,6 +4,7 @@ class SoundDiscriminationConfig {
   final String targetSound;
   final String referenceWord;
   final String tipText;
+  final String instructionText;
   final List<SoundDiscriminationItem> items;
 
   const SoundDiscriminationConfig({
@@ -12,6 +13,7 @@ class SoundDiscriminationConfig {
     required this.targetSound,
     required this.referenceWord,
     required this.tipText,
+    required this.instructionText,
     required this.items,
   });
 
@@ -29,6 +31,7 @@ class SoundDiscriminationConfig {
       targetSound: config['target_sound'] as String? ?? '',
       referenceWord: config['reference_word'] as String? ?? '',
       tipText: config['tip_text'] as String? ?? '',
+      instructionText: config['instruction_text'] as String? ?? '',
       items: items.isEmpty
           ? const [
               SoundDiscriminationItem(
@@ -43,7 +46,10 @@ class SoundDiscriminationConfig {
     );
   }
 
-  String get displayTargetSound => '/$targetSound/';
+  String get displayTargetSound {
+    final normalized = targetSound.replaceAll(RegExp(r'^/+|/+$'), '');
+    return '/$normalized/';
+  }
 }
 
 class SoundDiscriminationItem {

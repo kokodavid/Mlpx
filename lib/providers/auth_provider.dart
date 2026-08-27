@@ -3,13 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../features/course/providers/course_provider.dart';
+import '../features/subscription/plan_type.dart';
+import '../models/profile.dart';
 import '../utils/supabase_config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../features/user_progress/providers/course_progress_providers.dart';
 import '../features/user_progress/providers/user_progress_providers.dart';
+import '../features/weekly_goal/providers/user_goal_providers.dart';
+import '../features/weekly_goal/providers/weekly_goal_progress_providers.dart';
 
 class AuthState {
+  static const Object _unset = Object();
+
   final User? user;
+  final Profile? profile;
   final String? message;
   final bool isLoading;
   final bool isEmailVerified;
@@ -17,38 +24,53 @@ class AuthState {
 
   AuthState({
     this.user,
+    this.profile,
     this.message,
     this.isLoading = false,
     this.isEmailVerified = false,
     this.isGuestUser = false,
   });
 
+  PlanType get planType => profile?.planType ?? PlanType.free;
+
   AuthState copyWith({
-    User? user,
-    String? message,
+    Object? user = _unset,
+    Object? profile = _unset,
+    Object? message = _unset,
     bool? isLoading,
     bool? isEmailVerified,
     bool? isGuestUser,
   }) {
     return AuthState(
-      user: user ?? this.user,
-      message: message ?? this.message,
-      isLoading: isLoading ?? this.isLoading,
+      user:            identical(user, _unset) ? this.user : user as User?,
+      profile:         identical(profile, _unset) ? this.profile : profile as Profile?,
+      message:         identical(message, _unset) ? this.message : message as String?,
+      isLoading:       isLoading       ?? this.isLoading,
       isEmailVerified: isEmailVerified ?? this.isEmailVerified,
-      isGuestUser: isGuestUser ?? this.isGuestUser,
+      isGuestUser:     isGuestUser     ?? this.isGuestUser,
     );
   }
 }
 
 final authStateProvider =
 StateNotifierProvider<AuthStateNotifier, AuthState>((ref) {
-  return AuthStateNotifier();
+  return AuthStateNotifier(ref);
 });
 
 class AuthStateNotifier extends StateNotifier<AuthState> {
-  AuthStateNotifier() : super(AuthState()) {
+  final Ref _ref;
+  RealtimeChannel? _profileChannel;
+
+  AuthStateNotifier(this._ref) : super(AuthState()) {
     _initializeGuestMode();
+    syncWithCurrentSession();
     _listenToAuthChanges();
+  }
+
+  @override
+  void dispose() {
+    _profileChannel?.unsubscribe();
+    super.dispose();
   }
 
   Future<void> _initializeGuestMode() async {
@@ -62,18 +84,131 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
   void _listenToAuthChanges() {
     SupabaseConfig.client.auth.onAuthStateChange.listen((data) async {
       final user = data.session?.user;
-      final isEmailVerified = user?.emailConfirmedAt != null;
+      await _setAuthenticatedUser(user);
+    });
+  }
 
-      if (user != null) {
-        await _clearGuestMode();
-      }
+  Future<void> syncWithCurrentSession() async {
+    await _setAuthenticatedUser(SupabaseConfig.client.auth.currentSession?.user);
+  }
 
+  Future<void> _setAuthenticatedUser(User? user) async {
+    final isEmailVerified = user?.emailConfirmedAt != null;
+
+    if (user != null) {
+      await _clearGuestMode();
+      if (!mounted) return;
       state = state.copyWith(
         user: user,
         isEmailVerified: isEmailVerified,
-        isGuestUser: user == null ? state.isGuestUser : false,
+        isGuestUser: false,
       );
-    });
+
+      // Redeem any pending invites/grants for this email, then load profile
+      await _redeemPendingInvites(user);
+      final profile = await _fetchProfile(user.id);
+      if (!mounted || state.user?.id != user.id) return;
+      state = state.copyWith(
+        profile: profile,
+      );
+      // Force profileProvider to re-fetch so it reflects the latest
+      // plan_type (e.g. after an org invite is redeemed on sign-in).
+      _ref.read(profileRefreshProvider.notifier).state++;
+      // Start listening for real-time plan_type changes (org removal etc.)
+      _subscribeToProfileChanges(user.id);
+    } else {
+      _profileChannel?.unsubscribe();
+      _profileChannel = null;
+      state = state.copyWith(
+        user: null,
+        profile: null,
+        isEmailVerified: false,
+        isGuestUser: state.isGuestUser,
+      );
+    }
+  }
+
+  /// Fetches the profile row for [userId], returns null on error.
+  Future<Profile?> _fetchProfile(String userId) async {
+    try {
+      final data = await SupabaseConfig.client
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
+      if (data == null) return null;
+      return Profile.fromJson(Map<String, dynamic>.from(data));
+    } catch (e) {
+      log('_fetchProfile error: $e');
+      return null;
+    }
+  }
+
+  /// Links any pending org_members / sponsored_grants rows whose invite_email
+  /// matches this user's email, then recomputes plan_type — all via a
+  /// SECURITY DEFINER RPC that bypasses RLS (direct table updates are blocked
+  /// by admin-only policies on org_members and sponsored_grants).
+  Future<void> _redeemPendingInvites(User user) async {
+    final email = user.email;
+    if (email == null) return;
+    try {
+      await SupabaseConfig.client.rpc(
+        'redeem_pending_invites',
+        params: {
+          'p_user_id': user.id,
+          'p_email':   email.toLowerCase(),
+        },
+      );
+    } catch (e) {
+      // Non-fatal — user still signs in; plan just stays free until next load
+      log('_redeemPendingInvites error: $e');
+    }
+  }
+
+  /// Refreshes the stored profile (e.g. after a plan change).
+  Future<void> refreshProfile() async {
+    final userId = state.user?.id;
+    if (userId == null) return;
+    final profile = await _fetchProfile(userId);
+    if (profile != null) state = state.copyWith(profile: profile);
+  }
+
+  /// Subscribes to Realtime changes on this user's profiles row.
+  /// When plan_type changes remotely (org removal, grant revocation),
+  /// the app reflects the new plan immediately without requiring sign-out.
+  void _subscribeToProfileChanges(String userId) {
+    // Cancel any existing subscription first
+    _profileChannel?.unsubscribe();
+
+    _profileChannel = SupabaseConfig.client
+        .channel('profile:$userId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'profiles',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: userId,
+          ),
+          callback: (payload) async {
+            final newPlanType = PlanType.fromString(
+              payload.newRecord['plan_type'] as String?,
+            );
+            final currentPlanType = state.profile?.planType ?? PlanType.free;
+
+            // Only act if plan_type actually changed
+            if (newPlanType != currentPlanType) {
+              log('Plan type changed remotely: $currentPlanType → $newPlanType');
+              final profile = await _fetchProfile(userId);
+              if (profile != null && mounted) {
+                state = state.copyWith(profile: profile);
+                _ref.read(profileRefreshProvider.notifier).state++;
+              }
+            }
+          },
+        )
+        .subscribe();
   }
 
   Future<void> _clearGuestMode() async {
@@ -142,6 +277,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     _initializeAuthState();
     SupabaseConfig.client.auth.onAuthStateChange.listen((data) async {
       final user = data.session?.user;
+      final previousUserId = state.value?.id;
 
       if (user != null) {
         final wasGuest = ref.read(authStateProvider).isGuestUser;
@@ -152,6 +288,9 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       }
 
       state = AsyncValue.data(user);
+      if (user?.id != previousUserId) {
+        _invalidateUserProviders();
+      }
 
       if (user != null && user.emailConfirmedAt == null) {
         _showEmailVerificationMessage();
@@ -226,6 +365,11 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
 
         state = AsyncValue.data(response.user);
 
+        // Redeem invites then refresh profile in AuthState
+        await ref.read(authStateProvider.notifier)
+            ._redeemPendingInvites(response.user!);
+        await ref.read(authStateProvider.notifier).refreshProfile();
+
         // Invalidate all user-dependent providers
         _invalidateUserProviders();
       }
@@ -277,6 +421,11 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
         }
 
         state = AsyncValue.data(response.user);
+
+        // Redeem invites then refresh profile in AuthState
+        await ref.read(authStateProvider.notifier)
+            ._redeemPendingInvites(response.user!);
+        await ref.read(authStateProvider.notifier).refreshProfile();
 
         // Invalidate all user-dependent providers
         _invalidateUserProviders();
@@ -378,6 +527,8 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     ref.invalidate(activeCourseWithDetailsProvider);
     ref.invalidate(upcomingCoursesWithDetailsProvider);
     ref.invalidate(completedCoursesWithDetailsProvider);
+    ref.invalidate(weeklyGoalProgressProvider);
+    ref.invalidate(activeStreakGoalProvider);
   }
 }
 
@@ -391,3 +542,25 @@ final isAuthenticatedOrGuestProvider = Provider<bool>((ref) {
   final authState = ref.watch(authStateProvider);
   return authState.user != null || authState.isGuestUser;
 });
+
+// ── Subscription helpers ───────────────────────────────────────────────────
+
+/// The current user's loaded Profile, or null if not signed in.
+final currentProfileProvider = Provider<Profile?>((ref) {
+  return ref.watch(authStateProvider).profile;
+});
+
+/// The current user's effective plan type. Defaults to free for guests /
+/// unauthenticated users. Any widget can watch this to gate premium content.
+final currentPlanProvider = Provider<PlanType>((ref) {
+  return ref.watch(authStateProvider).planType;
+});
+
+/// True when the current user has premium or sponsored access.
+final hasPremiumAccessProvider = Provider<bool>((ref) {
+  return ref.watch(currentPlanProvider).hasPremiumAccess;
+});
+
+/// Incremented by AuthStateNotifier after _redeemPendingInvites completes.
+/// profileProvider watches this to know when to force-refresh.
+final profileRefreshProvider = StateProvider<int>((_) => 0);

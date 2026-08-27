@@ -2,14 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milpress/features/lessons_v2/services/lesson_audio_controller.dart';
+import 'package:milpress/providers/audio_stop_helper.dart';
 import 'package:milpress/features/course/providers/course_provider.dart';
 import 'package:milpress/features/course/providers/module_provider.dart';
 import 'package:milpress/features/reviews/providers/bookmark_provider.dart';
+import 'package:milpress/features/user_progress/models/course_progress_model.dart';
+import 'package:milpress/features/user_progress/providers/course_progress_providers.dart';
+import 'package:milpress/features/user_progress/providers/user_progress_providers.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../models/lesson_models.dart';
 import '../models/lesson_attempt_request.dart';
 import '../providers/lesson_audio_providers.dart';
 import '../providers/lesson_providers.dart';
+import '../providers/lesson_v2_offline_progress_provider.dart';
 import '../widgets/bottom_action_bar.dart';
 import '../widgets/lesson_progress_header.dart';
 import '../widgets/lesson_step_renderer.dart';
@@ -20,6 +25,7 @@ class LessonAttemptScreen extends ConsumerStatefulWidget {
   final int initialStepIndex;
   final VoidCallback? onFinish;
   final bool isReattempt;
+  final bool embedInParent;
 
   LessonAttemptScreen({
     super.key,
@@ -28,6 +34,7 @@ class LessonAttemptScreen extends ConsumerStatefulWidget {
     this.initialStepIndex = 0,
     this.onFinish,
     this.isReattempt = false,
+    this.embedInParent = false,
   })  : assert(
           lessonDefinition != null || lessonId != null,
           'Provide either lessonDefinition or lessonId.',
@@ -49,6 +56,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
   ProviderSubscription<AsyncValue<LessonDefinition?>>? _lessonSubscription;
   late final LessonAudioController _audioController;
   bool _isFinishing = false;
+  bool _accessCheckStarted = false;
 
   LessonDefinition get _lessonDefinition =>
       _loadedLesson ?? widget.lessonDefinition!;
@@ -60,6 +68,9 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
   void initState() {
     super.initState();
     _audioController = ref.read(lessonAudioControllerProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkLessonAccess();
+    });
     if (widget.lessonDefinition != null) {
       _loadedLesson = widget.lessonDefinition;
       _currentStepIndex = widget.initialStepIndex.clamp(
@@ -88,6 +99,35 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
           });
         },
       );
+    }
+  }
+
+  Future<void> _checkLessonAccess() async {
+    if (_accessCheckStarted) {
+      return;
+    }
+    _accessCheckStarted = true;
+
+    final lessonId = widget.lessonId ?? widget.lessonDefinition?.id ?? '';
+    if (lessonId.isEmpty) {
+      return;
+    }
+
+    try {
+      final canAttempt =
+          await ref.read(canAttemptLessonProvider(lessonId).future);
+      if (!mounted || canAttempt) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Complete the previous lesson first')),
+      );
+      if (context.canPop()) {
+        context.pop();
+      }
+    } catch (e) {
+      debugPrint('LessonAttemptScreen: failed to check lesson access: $e');
     }
   }
 
@@ -133,7 +173,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
   }
 
   void _goBack() {
-    _audioController.stop();
+    stopAllAudio(ref);
     if (_currentStepIndex <= 0) {
       return;
     }
@@ -144,7 +184,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
   }
 
   Future<void> _goForward() async {
-    _audioController.stop();
+    stopAllAudio(ref);
     if (!_isLastStep) {
       setState(() {
         _currentStepIndex += 1;
@@ -215,8 +255,72 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
       if (moduleId.isNotEmpty) {
         ref.invalidate(completedLessonIdsV2Provider(moduleId));
       }
+      await _updateCourseProgress(lessonId, moduleId);
     } catch (e) {
       debugPrint('LessonAttemptScreen: failed to record attempt: $e');
+      await ref
+          .read(lessonV2OfflineProgressProvider(lessonId).notifier)
+          .markCompleted();
+      final moduleId = _lessonDefinition.moduleId;
+      if (moduleId.isNotEmpty) {
+        ref.invalidate(completedLessonIdsV2Provider(moduleId));
+      }
+    }
+  }
+
+  Future<void> _updateCourseProgress(String lessonId, String moduleId) async {
+    if (moduleId.isEmpty) return;
+    try {
+      final module = await ref.read(moduleFromSupabaseProvider(moduleId).future);
+      if (module == null) return;
+
+      final courseId = module.module.courseId;
+      if (courseId.isEmpty) return;
+
+      final courseProgressId =
+          await ref.read(getOrCreateCourseProgressProvider(courseId).future);
+      if (courseProgressId.isEmpty) return;
+
+      final courseProgress =
+          await ref.read(courseProgressByIdProvider(courseProgressId).future);
+      if (courseProgress == null) return;
+
+      // Invalidate stale module/course completion providers so the check below is fresh
+      ref.invalidate(completedModulesProvider(courseId));
+      ref.invalidate(courseCompletionProvider(courseId));
+
+      final isNowComplete =
+          await ref.read(courseCompletionProvider(courseId).future);
+
+      final now = DateTime.now();
+      final updated = CourseProgressModel(
+        id: courseProgress.id,
+        userId: courseProgress.userId,
+        courseId: courseProgress.courseId,
+        startedAt: courseProgress.startedAt,
+        completedAt: isNowComplete
+            ? (courseProgress.completedAt ?? now)
+            : courseProgress.completedAt,
+        currentModuleId: moduleId,
+        currentLessonId: lessonId,
+        isCompleted: isNowComplete,
+        createdAt: courseProgress.createdAt,
+        updatedAt: now,
+        needsSync: false,
+      );
+
+      final service = ref.read(courseProgressServiceProvider);
+      await service.updateCourseProgress(updated);
+
+      ref.invalidate(courseCompletedLessonsProvider(courseId));
+      ref.invalidate(courseLessonProgressValueProvider(courseId));
+      ref.invalidate(courseCompletedModulesProvider(courseId));
+      if (isNowComplete) {
+        ref.invalidate(activeCourseWithDetailsProvider);
+        ref.invalidate(completedCoursesWithDetailsProvider);
+      }
+    } catch (e) {
+      debugPrint('LessonAttemptScreen: failed to update course progress: $e');
     }
   }
 
@@ -345,6 +449,20 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
     final primaryColor =
         primaryLabel == 'Finish' ? AppColors.correctAnswerColor : null;
 
+    final content = _buildContent(
+      canAdvance: canAdvance,
+      isPrimaryEnabled: isPrimaryEnabled,
+      primaryLabel: primaryLabel,
+      primaryIcon: primaryIcon,
+      primaryColor: primaryColor,
+      showBack: showBack,
+      showBottomActionBar: showBottomActionBar,
+    );
+
+    if (widget.embedInParent) {
+      return content;
+    }
+
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
@@ -367,15 +485,7 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
           ),
         ),
       ),
-      body: _buildContent(
-        canAdvance: canAdvance,
-        isPrimaryEnabled: isPrimaryEnabled,
-        primaryLabel: primaryLabel,
-        primaryIcon: primaryIcon,
-        primaryColor: primaryColor,
-        showBack: showBack,
-        showBottomActionBar: showBottomActionBar,
-      ),
+      body: content,
     );
   }
 
@@ -403,6 +513,15 @@ class _LessonAttemptScreenState extends ConsumerState<LessonAttemptScreen> {
               duration: const Duration(milliseconds: 250),
               switchInCurve: Curves.easeOut,
               switchOutCurve: Curves.easeIn,
+              layoutBuilder: (currentChild, previousChildren) {
+                return Stack(
+                  alignment: Alignment.topCenter,
+                  children: [
+                    ...previousChildren,
+                    if (currentChild != null) currentChild,
+                  ],
+                );
+              },
               child: KeyedSubtree(
                 key: ValueKey(_currentStep.key),
                 child: LessonStepRenderer(

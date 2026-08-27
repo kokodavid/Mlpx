@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_audio_buttons.dart';
+import 'package:milpress/features/lessons_v2/widgets/lesson_step_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../../models/lesson_models.dart';
 import '../../providers/lesson_audio_providers.dart';
@@ -37,9 +38,7 @@ class _GuidedReadingStepState extends State<GuidedReadingStep> {
   void initState() {
     super.initState();
     _config = GuidedReadingConfig.fromMap(widget.step.config);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _publishUiState();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _publishUiState());
   }
 
   void _publishUiState() {
@@ -58,9 +57,7 @@ class _GuidedReadingStepState extends State<GuidedReadingStep> {
       widget.onAdvanceRequested();
       return;
     }
-    setState(() {
-      _currentActivityIndex += 1;
-    });
+    setState(() => _currentActivityIndex += 1);
     _publishUiState();
   }
 
@@ -73,25 +70,22 @@ class _GuidedReadingStepState extends State<GuidedReadingStep> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _Header(title: _config.title),
+          LessonStepTitle(title: _config.title),
           const SizedBox(height: 14),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(18, 18, 18, 22),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: const Color(0xFFF2ECE4)),
-            ),
+          LessonStepCard(
+            color: const Color(0xFFF6F6F6),
+            elevation: 3,
+            borderRadius: 24,
+            padding: const EdgeInsets.fromLTRB(18, 22, 18, 22),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                LessonAudioInlineButton(
+                _InstructionPlayButton(
                   sourceId:
                       '${widget.step.key}-instruction-$_currentActivityIndex',
                   url: activity.instructionAudioUrl,
-                  backgroundColor: const Color(0xFFF8F8F8),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 16),
                 Text(
                   activity.instructionText,
                   textAlign: TextAlign.center,
@@ -99,7 +93,7 @@ class _GuidedReadingStepState extends State<GuidedReadingStep> {
                     fontSize: 19,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF171B22),
-                    height: 1.25,
+                    height: 1.30,
                   ),
                 ),
                 const SizedBox(height: 18),
@@ -114,15 +108,16 @@ class _GuidedReadingStepState extends State<GuidedReadingStep> {
                   segments: activity.segments,
                 ),
                 const SizedBox(height: 10),
-                const Icon(
-                  Icons.keyboard_double_arrow_down_rounded,
-                  color: AppColors.copBlue,
+                const LessonStepChevronDown(
+                  color: AppColors.textColor,
                   size: 28,
                 ),
                 const SizedBox(height: 14),
-                _WordAudioCard(
+                LessonWaveformPlayer(
                   sourceId: '${widget.step.key}-word-$_currentActivityIndex',
                   audioUrl: activity.wordAudioUrl,
+                  borderColor: const Color(0xFFE8E8E8),
+                  backgroundColor: const Color(0xFFFAFAFA),
                 ),
               ],
             ),
@@ -133,20 +128,51 @@ class _GuidedReadingStepState extends State<GuidedReadingStep> {
   }
 }
 
-class _Header extends StatelessWidget {
-  final String title;
+class _InstructionPlayButton extends ConsumerWidget {
+  final String sourceId;
+  final String url;
 
-  const _Header({required this.title});
+  const _InstructionPlayButton({
+    required this.sourceId,
+    required this.url,
+  });
 
   @override
-  Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.w700,
-        color: Color(0xFFC08BF8),
-      ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final controller = ref.watch(lessonAudioControllerProvider);
+
+    return ValueListenableBuilder<LessonAudioState>(
+      valueListenable: controller.state,
+      builder: (context, state, _) {
+        final isPlaying = state.sourceId == sourceId &&
+            state.status == LessonAudioStatus.playing;
+
+        return GestureDetector(
+          onTap: url.isEmpty
+              ? null
+              : () => controller.playUrl(url, sourceId: sourceId),
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.primaryColor,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primaryColor.withValues(alpha: 0.25),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Icon(
+              isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+              color: Colors.white,
+              size: 22,
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -164,6 +190,9 @@ class _SegmentRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasExplicitFocus = segments.any((s) => s.isFocus);
+    final fallbackIndex = segments.length ~/ 2;
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -175,11 +204,13 @@ class _SegmentRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           for (var index = 0; index < segments.length; index++) ...[
-            _SegmentChip(
-              stepKey: stepKey,
-              activityIndex: activityIndex,
-              segmentIndex: index,
-              segment: segments[index],
+            PhonemeButton.segment(
+              sourceId: '$stepKey-segment-$activityIndex-$index',
+              label: segments[index].phonemeLabel,
+              audioUrl: segments[index].audioUrl,
+              highlighted: hasExplicitFocus
+                  ? segments[index].isFocus
+                  : index == fallbackIndex,
             ),
             if (index < segments.length - 1) const SizedBox(width: 12),
           ],
@@ -189,190 +220,54 @@ class _SegmentRow extends StatelessWidget {
   }
 }
 
-class _SegmentChip extends ConsumerWidget {
-  final String stepKey;
-  final int activityIndex;
-  final int segmentIndex;
-  final GuidedReadingSegment segment;
-
-  const _SegmentChip({
-    required this.stepKey,
-    required this.activityIndex,
-    required this.segmentIndex,
-    required this.segment,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final controller = ref.watch(lessonAudioControllerProvider);
-
-    return ValueListenableBuilder<LessonAudioState>(
-      valueListenable: controller.state,
-      builder: (context, state, _) {
-        final sourceId = '$stepKey-segment-$activityIndex-$segmentIndex';
-        final isPlaying = state.sourceId == sourceId &&
-            state.status == LessonAudioStatus.playing;
-
-        return GestureDetector(
-          onTap: segment.audioUrl.isEmpty
-              ? null
-              : () => controller.playUrl(segment.audioUrl, sourceId: sourceId),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            width: 58,
-            height: 58,
-            decoration: BoxDecoration(
-              color: isPlaying
-                  ? AppColors.primaryColor.withValues(alpha: 0.12)
-                  : const Color(0xFFF8F8F8),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: segment.isFocus
-                    ? AppColors.primaryColor
-                    : const Color(0xFFF2ECE4),
-                width: segment.isFocus ? 1.4 : 1,
-              ),
-            ),
-            child: Center(
-              child: Text(
-                segment.phonemeLabel,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: segment.isFocus
-                      ? AppColors.primaryColor
-                      : AppColors.copBlue,
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
 class _WordText extends StatelessWidget {
   final String word;
   final List<GuidedReadingSegment> segments;
 
-  const _WordText({
-    required this.word,
-    required this.segments,
-  });
+  const _WordText({required this.word, required this.segments});
 
   @override
   Widget build(BuildContext context) {
-    final focusSegment = segments.cast<GuidedReadingSegment?>().firstWhere(
-          (segment) => segment?.isFocus == true,
-          orElse: () => null,
-        );
+    final focusSegment =
+        segments.cast<GuidedReadingSegment?>().firstWhere(
+              (s) => s?.isFocus == true,
+              orElse: () => null,
+            ) ??
+        (segments.isNotEmpty ? segments[segments.length ~/ 2] : null);
+
+    const baseStyle = TextStyle(
+      fontSize: 28,
+      fontWeight: FontWeight.w800,
+      color: Color(0xFF171B22),
+    );
+
     if (focusSegment == null || focusSegment.grapheme.isEmpty) {
-      return Text(
-        word,
-        style: const TextStyle(
-          fontSize: 28,
-          fontWeight: FontWeight.w800,
-          color: Color(0xFF171B22),
-        ),
-      );
+      return Text(word, style: baseStyle);
     }
 
     final lowerWord = word.toLowerCase();
     final lowerGrapheme = focusSegment.grapheme.toLowerCase();
     final matchIndex = lowerWord.indexOf(lowerGrapheme);
-    if (matchIndex < 0) {
-      return Text(
-        word,
-        style: const TextStyle(
-          fontSize: 28,
-          fontWeight: FontWeight.w800,
-          color: Color(0xFF171B22),
-        ),
-      );
-    }
 
-    final start = word.substring(0, matchIndex);
+    if (matchIndex < 0) return Text(word, style: baseStyle);
+
+    final before = word.substring(0, matchIndex);
     final match =
         word.substring(matchIndex, matchIndex + focusSegment.grapheme.length);
-    final end = word.substring(matchIndex + focusSegment.grapheme.length);
+    final after = word.substring(matchIndex + focusSegment.grapheme.length);
 
     return Text.rich(
       TextSpan(
-        style: const TextStyle(
-          fontSize: 28,
-          fontWeight: FontWeight.w800,
-          color: Color(0xFF171B22),
-        ),
+        style: baseStyle,
         children: [
-          TextSpan(text: start),
+          TextSpan(text: before),
           TextSpan(
             text: match,
             style: const TextStyle(color: AppColors.primaryColor),
           ),
-          TextSpan(text: end),
+          TextSpan(text: after),
         ],
       ),
-    );
-  }
-}
-
-class _WordAudioCard extends StatelessWidget {
-  final String sourceId;
-  final String audioUrl;
-
-  const _WordAudioCard({
-    required this.sourceId,
-    required this.audioUrl,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFCFCFC),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE7DDD0)),
-      ),
-      child: Row(
-        children: [
-          LessonAudioInlineButton(
-            sourceId: sourceId,
-            url: audioUrl,
-            backgroundColor: AppColors.primaryColor,
-          ),
-          const SizedBox(width: 16),
-          const Expanded(
-            child: _WaveformPlaceholder(),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _WaveformPlaceholder extends StatelessWidget {
-  const _WaveformPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    const heights = [8.0, 12.0, 18.0, 10.0, 22.0, 14.0, 26.0, 16.0, 20.0];
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        for (final height in heights)
-          Container(
-            width: 4,
-            height: height,
-            decoration: BoxDecoration(
-              color: AppColors.primaryColor.withValues(alpha: 0.65),
-              borderRadius: BorderRadius.circular(999),
-            ),
-          ),
-      ],
     );
   }
 }

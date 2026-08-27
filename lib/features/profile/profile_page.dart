@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../providers/auth_provider.dart';
 import '../../utils/app_colors.dart';
 import 'providers/profile_provider.dart';
 import 'widgets/profile_header_widget.dart';
@@ -62,6 +63,8 @@ class ProfilePage extends ConsumerWidget {
   }
 
   Widget _buildBody(BuildContext context, WidgetRef ref, profile) {
+    final planType = ref.watch(currentPlanProvider);
+
     return Column(
       children: [
         Expanded(
@@ -72,8 +75,8 @@ class ProfilePage extends ConsumerWidget {
                 children: [
                   const SizedBox(height: 16),
 
-                  // Profile header (avatar + name + email)
-                  ProfileHeaderWidget(profile: profile),
+                  // Profile header (avatar + name + email + plan badge)
+                  ProfileHeaderWidget(profile: profile, planType: planType),
 
                   const SizedBox(height: 24),
 

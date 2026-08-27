@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:milpress/features/lessons_v2/providers/lesson_v2_offline_progress_provider.dart';
 import 'package:milpress/features/widgets/network_offline_sheet.dart';
 import 'package:milpress/providers/connectivity_provider.dart';
 
@@ -44,8 +45,11 @@ class _ConnectivitySheetListenerState
       final isOffline = isOfflineResult(result);
       if (isOffline && !_isSheetVisible) {
         _showOfflineSheet();
-      } else if (!isOffline && _isSheetVisible) {
-        _hideOfflineSheet();
+      } else if (!isOffline) {
+        ref.read(syncOfflineProgressProvider.future);
+        if (_isSheetVisible) {
+          _hideOfflineSheet();
+        }
       }
     });
   }

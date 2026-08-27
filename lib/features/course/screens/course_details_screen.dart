@@ -4,12 +4,15 @@ import 'package:milpress/features/widgets/audio_play_button.dart';
 import 'package:milpress/features/course/course_widgets/all_modules_widget.dart';
 import 'package:milpress/features/course/course_widgets/course_progress_card.dart';
 import 'package:milpress/features/course/course_widgets/ongoing_module_card.dart';
+import 'package:milpress/features/course/providers/course_download_provider.dart';
+import 'package:milpress/features/course/widgets/course_download_bottom_sheet.dart';
 import 'package:milpress/utils/app_colors.dart';
 import 'package:milpress/features/course_assessment/providers/course_assessment_providers.dart';
 import '../providers/course_provider.dart';
 import '../providers/module_provider.dart';
 import '../course_widgets/course_detail_header.dart';
 import 'package:go_router/go_router.dart';
+import 'package:milpress/features/subscription/paywall_screen.dart';
 import 'package:milpress/features/lessons_v2/models/lesson_models.dart';
 import 'package:milpress/features/lessons_v2/providers/lesson_providers.dart'
     as lessons_v2;
@@ -129,6 +132,8 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
         ref.watch(ongoingModuleProvider(widget.courseId));
     final courseDetailsProgressAsync =
         ref.watch(courseDetailsProgressProvider(widget.courseId));
+    final courseDownloadState =
+        ref.watch(courseV2DownloadProvider(widget.courseId));
     final isActiveCourse =
         activeCourseAsync.valueOrNull?.course.id == widget.courseId;
     final providerSaysCompleted = courseCompletionAsync.valueOrNull ?? false;
@@ -174,8 +179,8 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
             icon: const Icon(Icons.arrow_back, color: Colors.black),
             onPressed: () => context.go('/'),
           ),
-          actions: const [
-            Padding(
+          actions: [
+            const Padding(
               padding: EdgeInsets.all(10.0),
               child: AudioPlayButton(
                 screenId: 'course_details_screen',
@@ -185,6 +190,34 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
                 height: 32,
               ),
             ),
+          Padding(
+  padding: const EdgeInsets.only(right: 10),
+  child: GestureDetector(
+    onTap: () => showCourseDownloadBottomSheet(context: context, courseId: widget.courseId),
+    child: Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.primaryColor.withOpacity(0.1),
+        border: Border.all(color: AppColors.primaryColor.withOpacity(0.2)),
+      ),
+      child: Center(
+        child: courseDownloadState.isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryColor),
+              )
+            : Icon(
+                courseDownloadState.isDownloaded ? Icons.download_done : Icons.download_rounded,
+                color: AppColors.primaryColor,
+                size: 24,
+              ),
+      ),
+    ),
+  ),
+),
           ],
           centerTitle: true,
           title: const SizedBox.shrink(),
@@ -199,6 +232,80 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
 
             final accessState = courseAccessAsync.valueOrNull;
             if (accessState != null && !accessState.canAccess) {
+              // Premium gate — show paywall UI
+              if (accessState.isPremiumLocked) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryColor.withOpacity(0.08),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.lock_rounded,
+                            size: 48,
+                            color: AppColors.primaryColor,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        const Text(
+                          'Premium Course',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.copBlue,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Upgrade to a premium plan to access this course.',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 28),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () => showPaywall(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              'View Plans',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextButton(
+                          onPressed: () => context.go('/'),
+                          child: const Text('Back to Courses'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              // Level-lock gate — existing message
               return Center(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -233,7 +340,7 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen>
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () => context.go('/course'),
+                          onPressed: () => context.go('/'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primaryColor,
                             foregroundColor: Colors.white,

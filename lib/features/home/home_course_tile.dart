@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:milpress/features/home/course_preview_tile.dart';
 import 'package:milpress/utils/app_colors.dart';
 
+const _kPremiumColor = Color(0xFFE85D04);
+
 class HomeCourseTile extends StatelessWidget {
   final String title;
   final String courseLabel;
@@ -10,6 +12,7 @@ class HomeCourseTile extends StatelessWidget {
   final String previewText;
   final bool allLessonsComplete;
   final bool allAssessmentsComplete;
+  final bool isPremium;
   final VoidCallback? onTap;
   final String previewUrl;
   final String previewSourceId;
@@ -26,6 +29,7 @@ class HomeCourseTile extends StatelessWidget {
     this.previewText = 'Tap to preview this course',
     this.allLessonsComplete = false,
     this.allAssessmentsComplete = false,
+    this.isPremium = false,
     this.onTap,
     this.margin = const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
   });
@@ -43,9 +47,11 @@ class HomeCourseTile extends StatelessWidget {
           width: 1.2,
         ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+      child: SingleChildScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
           Text(
             title,
             textAlign: TextAlign.center,
@@ -73,6 +79,13 @@ class HomeCourseTile extends StatelessWidget {
                 borderColor: const Color(0xFFDCD7CF),
                 foregroundColor: const Color(0xFF7B7B7B),
               ),
+              if (isPremium)
+                _MetaPill(
+                  icon: Icons.lock_rounded,
+                  text: 'Premium',
+                  borderColor: _kPremiumColor.withOpacity(0.4),
+                  foregroundColor: _kPremiumColor,
+                ),
             ],
           ),
           const SizedBox(height: 18),
@@ -104,6 +117,7 @@ class HomeCourseTile extends StatelessWidget {
             ),
           ),
         ],
+        ),
       ),
     );
   }

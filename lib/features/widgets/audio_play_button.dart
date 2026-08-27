@@ -82,70 +82,16 @@ class _AudioPlayButtonState extends ConsumerState<AudioPlayButton> {
       onTap: _handleTap,
       onLongPress: widget.showClearCacheButton ? _showClearCacheDialog : null,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 25),
-        decoration: BoxDecoration(
-          color: audioState.isPlaying ? widget.backgroundColor : AppColors.sandColor,
-          borderRadius: BorderRadius.circular(widget.borderRadius),
+        width: 45,
+        height: 45,
+        decoration: const BoxDecoration(
+          color: AppColors.copBlue,
+          shape: BoxShape.circle,
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Show Lottie animation ONLY when audio is actively playing
-            if (audioState.isPlaying && !audioState.isLoading)
-              Lottie.asset(
-                widget.lottieAsset,
-                height: widget.height,
-                repeat: true,
-                onLoaded: (composition) {
-                  print('AudioPlayButton: Lottie loaded successfully - duration: ${composition.duration}');
-                },
-                errorBuilder: (context, error, stackTrace) {
-                  print('AudioPlayButton: Lottie error for asset ${widget.lottieAsset}: $error');
-                  print('AudioPlayButton: Falling back to static speaker icon');
-                  return SvgPicture.asset(
-                    'assets/speaker_icon.svg',
-                    height: widget.height,
-                    color: AppColors.primaryColor,
-                  );
-                },
-              )
-            else
-              SvgPicture.asset(
-                'assets/speaker_icon.svg',
-                height: widget.height,
-                color: AppColors.primaryColor,
-              ),
-            const SizedBox(width: 12),
-            Icon(
-              audioState.isPlaying ? Icons.pause : Icons.play_arrow,
-              size: 26,
-              color: audioState.isPlaying ? Colors.white : AppColors.primaryColor,
-            ),
-            if (audioState.isLoading)
-              const Padding(
-                padding: EdgeInsets.only(left: 8.0),
-                child: SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                ),
-              ),
-            if (widget.showReplayButton && audioState.isCached && !audioState.isPlaying)
-              Padding(
-                padding: const EdgeInsets.only(left: 8.0),
-                child: GestureDetector(
-                  onTap: _handleReplay,
-                  child: const Icon(
-                    Icons.replay,
-                    size: 20,
-                    color: AppColors.primaryColor,
-                  ),
-                ),
-              ),
-          ],
+        child: Icon(
+          audioState.isPlaying ? Icons.pause : Icons.play_arrow,
+          size: 30,
+          color: Colors.white,
         ),
       ),
     );
@@ -161,6 +107,9 @@ class _AudioPlayButtonState extends ConsumerState<AudioPlayButton> {
       if (audioState.isPlaying) {
         // If playing, pause it
         await ref.read(audioSessionProvider.notifier).pauseAudio(widget.screenId);
+      } else if (audioState.isPaused) {
+        // If paused, resume it
+        await ref.read(audioSessionProvider.notifier).resumeAudio(widget.screenId);
       } else {
         // If not playing, start session and play
         await ref.read(audioSessionProvider.notifier).startSession(widget.screenId);

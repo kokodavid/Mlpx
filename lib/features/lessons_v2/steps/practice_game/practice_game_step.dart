@@ -1,12 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:milpress/features/lessons_v2/providers/lesson_audio_providers.dart';
+import 'package:milpress/features/lessons_v2/widgets/lesson_asset_image.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_audio_buttons.dart';
+import 'package:milpress/features/lessons_v2/widgets/lesson_step_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../../models/lesson_models.dart';
 import 'model.dart';
 
-class PracticeGameStep extends StatefulWidget {
+class PracticeGameStep extends ConsumerStatefulWidget {
   final LessonStepDefinition step;
   final ValueChanged<LessonStepUiState> onStepStateChanged;
   final VoidCallback onAdvanceRequested;
@@ -19,23 +23,23 @@ class PracticeGameStep extends StatefulWidget {
   });
 
   @override
-  State<PracticeGameStep> createState() => _PracticeGameStepState();
+  ConsumerState<PracticeGameStep> createState() => _PracticeGameStepState();
 }
 
-class _PracticeGameStepState extends State<PracticeGameStep> {
+class _PracticeGameStepState extends ConsumerState<PracticeGameStep> {
   late final PracticeGameConfig _config;
-  final Set<int> _selectedCorrect = <int>{};
-  final Set<int> _selectedIncorrect = <int>{};
+  final Set<int> _selected = <int>{};
   Timer? _timer;
   late int _secondsRemaining;
   bool _isFinished = false;
 
-  int get _score => _selectedCorrect.length;
+  int get _score =>
+      _selected.where((i) => _config.options[i].isCorrect).length;
 
   bool get _passed => _score >= _config.passingScore;
 
   int get _correctOptionCount =>
-      _config.options.where((option) => option.isCorrect).length;
+      _config.options.where((o) => o.isCorrect).length;
 
   @override
   void initState() {
@@ -70,42 +74,30 @@ class _PracticeGameStepState extends State<PracticeGameStep> {
       _finishGame();
       return;
     }
-
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted || _isFinished) {
         timer.cancel();
         return;
       }
-
       if (_secondsRemaining <= 1) {
-        setState(() {
-          _secondsRemaining = 0;
-        });
+        setState(() => _secondsRemaining = 0);
         _finishGame();
         return;
       }
-
-      setState(() {
-        _secondsRemaining -= 1;
-      });
+      setState(() => _secondsRemaining -= 1);
     });
   }
 
   void _finishGame() {
     _timer?.cancel();
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _isFinished = true;
-    });
+    if (!mounted) return;
+    setState(() => _isFinished = true);
   }
 
   void _resetGame() {
     _timer?.cancel();
     setState(() {
-      _selectedCorrect.clear();
-      _selectedIncorrect.clear();
+      _selected.clear();
       _secondsRemaining = _config.durationSeconds;
       _isFinished = false;
     });
@@ -114,27 +106,15 @@ class _PracticeGameStepState extends State<PracticeGameStep> {
   }
 
   void _handleOptionTap(int index) {
-    if (_isFinished) {
-      return;
-    }
-
-    final option = _config.options[index];
-    if (_selectedCorrect.contains(index) ||
-        _selectedIncorrect.contains(index)) {
-      return;
-    }
-
+    if (_isFinished) return;
     setState(() {
-      if (option.isCorrect) {
-        _selectedCorrect.add(index);
+      if (_selected.contains(index)) {
+        _selected.remove(index);
       } else {
-        _selectedIncorrect.add(index);
+        _selected.add(index);
       }
     });
-
-    if (_selectedCorrect.length >= _correctOptionCount) {
-      _finishGame();
-    }
+    if (_score >= _correctOptionCount) _finishGame();
   }
 
   @override
@@ -144,15 +124,10 @@ class _PracticeGameStepState extends State<PracticeGameStep> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            _config.title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF171B22),
-            ),
-          ),
-          const SizedBox(height: 14),
+          if (widget.step.key.isNotEmpty) ...[
+            LessonStepTitle(title: widget.step.key),
+            const SizedBox(height: 14),
+          ],
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
@@ -166,7 +141,10 @@ class _PracticeGameStepState extends State<PracticeGameStep> {
                 LessonAudioInlineButton(
                   sourceId: '${widget.step.key}-instruction',
                   url: _config.instructionAudioUrl,
-                  backgroundColor: const Color(0xFFF8F8F8),
+                  backgroundColor: AppColors.primaryColor,
+                  iconColor: Colors.white,
+                  isCircular: true,
+                  defaultIcon: Icons.play_arrow,
                 ),
                 const SizedBox(height: 18),
                 _HighlightedInstruction(
@@ -214,17 +192,29 @@ class _PracticeGameStepState extends State<PracticeGameStep> {
                 option: option,
                 state: state,
                 sourceId: '${widget.step.key}-option-$index',
-                onTap: () => _handleOptionTap(index),
+                onTap: () {
+                  final controller = ref.read(lessonAudioControllerProvider);
+                  if (option.audioUrl.isNotEmpty) {
+                    controller.playUrl(
+                      option.audioUrl,
+                      sourceId: '${widget.step.key}-option-$index',
+                    );
+                  }
+                  _handleOptionTap(index);
+                },
               );
             },
           ),
           const SizedBox(height: 16),
           if (_isFinished)
-            _GameResultBar(
-              passed: _passed,
-              score: _score,
-              passingScore: _config.passingScore,
-              onActionPressed: _passed ? widget.onAdvanceRequested : _resetGame,
+            LessonFeedbackBar(
+              isCorrect: _passed,
+              message: _passed
+                  ? 'Score $_score. You passed this game.'
+                  : 'Score $_score. Reach ${_config.passingScore} to pass.',
+              actionLabel: _passed ? 'Continue' : 'Review',
+              onActionPressed:
+                  _passed ? widget.onAdvanceRequested : _resetGame,
             ),
         ],
       ),
@@ -232,13 +222,10 @@ class _PracticeGameStepState extends State<PracticeGameStep> {
   }
 
   _GameCardState _cardState(int index) {
-    if (_selectedCorrect.contains(index)) {
-      return _GameCardState.correct;
-    }
-    if (_selectedIncorrect.contains(index)) {
-      return _GameCardState.incorrect;
-    }
-    return _GameCardState.idle;
+    if (!_selected.contains(index)) return _GameCardState.idle;
+    return _config.options[index].isCorrect
+        ? _GameCardState.correct
+        : _GameCardState.incorrect;
   }
 }
 
@@ -396,29 +383,21 @@ class _GameOptionCard extends StatelessWidget {
                 child: Container(
                   width: double.infinity,
                   color: const Color(0xFFF7F7F7),
-                  child: option.imageUrl.isEmpty
-                      ? const Center(
-                          child: Icon(
-                            Icons.image_outlined,
-                            color: AppColors.textColor,
-                            size: 32,
-                          ),
-                        )
-                      : Image.network(
-                          option.imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Center(
-                            child: Icon(
-                              Icons.broken_image_outlined,
-                              color: AppColors.textColor,
-                              size: 32,
-                            ),
-                          ),
-                        ),
+                  child: LessonAssetImage(
+                    source: option.imageUrl,
+                    fit: BoxFit.cover,
+                    placeholder: const Center(
+                      child: Icon(
+                        Icons.image_outlined,
+                        color: AppColors.textColor,
+                        size: 32,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Text(
               option.title,
               maxLines: 1,
@@ -429,80 +408,17 @@ class _GameOptionCard extends StatelessWidget {
                 color: Color(0xFF171B22),
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 2),
             IgnorePointer(
               child: LessonAudioInlineButton(
                 sourceId: sourceId,
                 url: option.audioUrl,
                 backgroundColor: const Color(0xFFF8F8F8),
+                buttonSize: 25,
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _GameResultBar extends StatelessWidget {
-  final bool passed;
-  final int score;
-  final int passingScore;
-  final VoidCallback onActionPressed;
-
-  const _GameResultBar({
-    required this.passed,
-    required this.score,
-    required this.passingScore,
-    required this.onActionPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final borderColor = passed ? AppColors.successColor : AppColors.errorColor;
-    final backgroundColor =
-        passed ? const Color(0xFFF2F8EE) : const Color(0xFFFFF1F0);
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            passed ? Icons.check_circle_outline : Icons.refresh,
-            color: borderColor,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              passed
-                  ? 'Score $score. You passed this game.'
-                  : 'Score $score. Reach $passingScore to pass.',
-              style: TextStyle(
-                color: borderColor,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          ElevatedButton(
-            onPressed: onActionPressed,
-            style: ElevatedButton.styleFrom(
-              elevation: 0,
-              backgroundColor: borderColor,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            child: Text(passed ? 'Continue' : 'Review'),
-          ),
-        ],
       ),
     );
   }

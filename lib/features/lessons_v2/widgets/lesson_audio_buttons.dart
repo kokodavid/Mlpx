@@ -8,14 +8,22 @@ class LessonAudioInlineButton extends ConsumerWidget {
   final String sourceId;
   final String url;
   final String? label;
-  final Color? backgroundColor;  // New parameter for custom background color
+  final Color? backgroundColor;
+  final Color? iconColor; // Optional custom icon color
+  final bool isCircular;
+  final double? buttonSize;
+  final IconData? defaultIcon;
 
   const LessonAudioInlineButton({
     super.key,
     required this.sourceId,
     required this.url,
     this.label,
-    this.backgroundColor,  // Optional custom color
+    this.backgroundColor,
+    this.iconColor,
+    this.isCircular = false,
+    this.buttonSize,
+    this.defaultIcon,
   });
 
   @override
@@ -29,43 +37,52 @@ class LessonAudioInlineButton extends ConsumerWidget {
             isActive && state.status == LessonAudioStatus.loading;
         final isPlaying =
             isActive && state.status == LessonAudioStatus.playing;
+        final iconData = isPlaying
+            ? Icons.pause
+            : (defaultIcon ?? Icons.volume_up);
+
+        final controlSize = buttonSize ?? (isCircular ? 52.0 : 50.0);
 
         return GestureDetector(
           onTap: url.isEmpty
               ? () {
-            debugPrint(
-                'LessonAudioInlineButton: empty url for $sourceId');
-          }
+                  debugPrint(
+                      'LessonAudioInlineButton: empty url for $sourceId');
+                }
               : () => controller.playUrl(url, sourceId: sourceId),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 50,
-                height: 40,
+                width: controlSize,
+                height: controlSize,
                 decoration: BoxDecoration(
                   color: isPlaying
                       ? AppColors.primaryColor
-                      : (backgroundColor ?? Colors.grey[200]),  // Use custom color or default grey
-                  borderRadius: BorderRadius.circular(10),
+                      : (backgroundColor ?? Colors.grey[200]),
+                  borderRadius: BorderRadius.circular(isCircular ? 999 : 10),
                 ),
                 child: Center(
                   child: isLoading
                       ? SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        isPlaying ? Colors.white : AppColors.primaryColor,
-                      ),
-                    ),
-                  )
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              isPlaying
+                                  ? Colors.white
+                                  : (iconColor ?? AppColors.primaryColor),
+                            ),
+                          ),
+                        )
                       : Icon(
-                    isPlaying ? Icons.pause : Icons.volume_up,
-                    color: isPlaying ? Colors.white : AppColors.primaryColor,
-                    size: 24,
-                  ),
+                          iconData,
+                          color: isPlaying
+                              ? Colors.white
+                              : (iconColor ?? AppColors.primaryColor),
+                          size: 24,
+                        ),
                 ),
               ),
               if (label != null) ...[
@@ -146,13 +163,14 @@ class _LessonAudioCardButtonState
             isActive && state.status == LessonAudioStatus.playing;
 
         return Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: AppColors.borderColor),
           ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               GestureDetector(
                 onTap: _selectedUrl.isEmpty
@@ -165,8 +183,8 @@ class _LessonAudioCardButtonState
                   sourceId: widget.sourceId,
                 ),
                 child: Container(
-                  width: 56,
-                  height: 56,
+                  width: 50,
+                  height: 50,
                   decoration: const BoxDecoration(
                     color: AppColors.primaryColor,
                     shape: BoxShape.circle,
@@ -188,19 +206,20 @@ class _LessonAudioCardButtonState
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
-              Text(
-                widget.label,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textColor,
+              if (widget.label.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  widget.label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textColor,
+                  ),
                 ),
-              ),
-              // Inside the build method, replace the speed buttons section with:
+              ],
               if (widget.speedUrls != null &&
                   widget.speedUrls!.isNotEmpty) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: ['0.5x', '1x', '1.5x']
@@ -208,7 +227,7 @@ class _LessonAudioCardButtonState
                       .map((speed) {
                     final isSelected = speed == _selectedSpeed;
                     return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
                       child: GestureDetector(
                         onTap: () {
                           setState(() {
@@ -218,8 +237,8 @@ class _LessonAudioCardButtonState
                         child: Column(
                           children: [
                             Container(
-                              width: 12,
-                              height: 12,
+                              width: 10,
+                              height: 10,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: isSelected
@@ -227,7 +246,7 @@ class _LessonAudioCardButtonState
                                     : AppColors.borderColor,
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 6),
                             Text(
                               speed,
                               style: TextStyle(

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:milpress/features/lessons_v2/widgets/lesson_asset_image.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_audio_buttons.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../../models/lesson_models.dart';
@@ -28,6 +28,21 @@ class _IntroductionStepState extends State<IntroductionStep> {
     });
   }
 
+  /// Returns resolved speed variant URLs, falling back to [baseAudioUrl]
+  /// when the variant is a remote URL but the base is a local file path.
+  Map<String, String> _resolveSpeedVariants(
+    Map<String, dynamic> speedVariants,
+    String baseAudioUrl,
+  ) {
+    final baseIsLocal =
+        baseAudioUrl.isNotEmpty && !baseAudioUrl.startsWith('http');
+    return speedVariants.map((key, value) {
+      final url = value?.toString() ?? '';
+      final isRemote = url.startsWith('http');
+      return MapEntry(key, (isRemote && baseIsLocal) ? baseAudioUrl : url);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final title = widget.step.config['title'] as String? ?? 'Introduction';
@@ -47,6 +62,9 @@ class _IntroductionStepState extends State<IntroductionStep> {
         'Practice: Say the sound out loud.';
     final practiceTipAudioUrl = practiceTipMap['audio_url'] as String? ?? '';
     final howToSvgUrl = widget.step.config['how_to_svg_url'] as String? ?? '';
+    final exampleWord = widget.step.config['example_word'] as String?;
+    final resolvedSpeedVariants =
+        _resolveSpeedVariants(speedVariants, baseAudioUrl);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
@@ -68,16 +86,63 @@ class _IntroductionStepState extends State<IntroductionStep> {
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          // Example word widget (shown for vowel sounds)
+          if (exampleWord != null)
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.borderColor),
+                ),
+                child: RichText(
+                  text: TextSpan(
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.black,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: displayText,
+                        style: const TextStyle(
+                          color: AppColors.primaryColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      TextSpan(
+                        text: ' as in "',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      TextSpan(
+                        text: exampleWord,
+                        style: const TextStyle(
+                          color: AppColors.primaryColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      TextSpan(
+                        text: '"',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           const SizedBox(height: 20),
           LessonAudioCardButton(
             sourceId: '${widget.step.key}-main',
             url: baseAudioUrl,
-            speedUrls: speedVariants.map(
-              (key, value) => MapEntry(
-                key,
-                value?.toString() ?? '',
-              ),
-            ),
+            speedUrls: resolvedSpeedVariants,
           ),
           const SizedBox(height: 16),
           Container(
@@ -109,9 +174,10 @@ class _IntroductionStepState extends State<IntroductionStep> {
                         horizontal: 24,
                         vertical: 16,
                       ),
-                      child: SvgPicture.network(
-                        howToSvgUrl,
+                      child: LessonAssetImage(
+                        source: howToSvgUrl,
                         fit: BoxFit.contain,
+                        placeholder: const Icon(Icons.image_not_supported),
                       ),
                     ),
                   ),

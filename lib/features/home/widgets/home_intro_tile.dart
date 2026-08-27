@@ -286,6 +286,8 @@ class _ResourceRowState extends ConsumerState<_ResourceRow> {
     if (audioState.isLoading) return;
     if (audioState.isPlaying) {
       await ref.read(audioSessionProvider.notifier).pauseAudio(_screenId);
+    } else if (audioState.isPaused) {
+      await ref.read(audioSessionProvider.notifier).resumeAudio(_screenId);
     } else {
       await ref.read(audioSessionProvider.notifier).startSession(_screenId);
     }

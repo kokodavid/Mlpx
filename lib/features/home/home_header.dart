@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milpress/features/home/providers/app_content_provider.dart';
 import 'package:milpress/features/home/widgets/help_video_dialog.dart';
+import 'package:milpress/features/home/widgets/streak_goal_pill_button.dart';
+import 'package:milpress/features/weekly_goal/providers/user_goal_providers.dart';
+import 'package:milpress/features/weekly_goal/providers/weekly_goal_progress_providers.dart';
 import 'package:milpress/utils/app_colors.dart';
 
 class HomeHeader extends ConsumerWidget {
@@ -29,7 +32,11 @@ class HomeHeader extends ConsumerWidget {
     final dateText = _formatHeaderDate(now);
     final greeting = _greetingForHour(now.hour);
     final avatarTap = isGuestUser ? null : () => context.push('/profile');
-    final streakTap = isGuestUser ? null : () => context.push('/weekly-goal');
+    final streakTap = () => context.push('/streak-page');
+    final activeGoal = ref.watch(activeStreakGoalProvider).valueOrNull;
+    final completedStreakDays =
+        ref.watch(weeklyGoalProgressProvider).valueOrNull?.completedStreakDays ??
+            0;
     final disabledOpacity = isGuestUser ? 0.55 : 1.0;
 
     return Container(
@@ -87,31 +94,39 @@ class HomeHeader extends ConsumerWidget {
               const SizedBox(width: 10),
               Opacity(
                 opacity: disabledOpacity,
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    key: const Key('home_header_streak_button'),
-                    onTap: streakTap,
-                    customBorder: const CircleBorder(),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.sandyLight,
-                        border: Border.all(
-                          color: AppColors.sandColor.withValues(alpha: 0.6),
+                child: activeGoal != null
+                    ? StreakGoalPillButton(
+                        key: const Key('home_header_streak_button'),
+                        completedStreakDays: completedStreakDays,
+                        goalValue: activeGoal.goalValue,
+                        onTap: streakTap,
+                      )
+                    : Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          key: const Key('home_header_streak_button'),
+                          onTap: () => context.push('/weekly-goal'),
+                          customBorder: const CircleBorder(),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppColors.sandyLight,
+                              border: Border.all(
+                                color: AppColors.sandColor
+                                    .withValues(alpha: 0.6),
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: const Icon(
+                              Icons.local_fire_department,
+                              color: AppColors.primaryColor,
+                              size: 25,
+                            ),
+                          ),
                         ),
                       ),
-                      alignment: Alignment.center,
-                      child: const Icon(
-                        Icons.local_fire_department,
-                        color: AppColors.primaryColor,
-                        size: 25,
-                      ),
-                    ),
-                  ),
-                ),
               ),
             ],
           ),

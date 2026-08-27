@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:milpress/providers/audio_stop_helper.dart';
 import 'package:milpress/utils/app_colors.dart';
 import 'package:milpress/utils/dev_flags.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import '../../providers/auth_provider.dart';
+import '../../providers/connectivity_provider.dart';
+import '../subscription/paywall_screen.dart';
 import '../course/providers/course_provider.dart';
 import '../profile/providers/profile_provider.dart';
 import 'home_course_tile.dart';
@@ -21,24 +24,24 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  late final PageController _pageController;
+  PageController? _pageController;
   int _selectedIndex = 0;
-  bool _hasScrolledToActive = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _pageController = PageController(viewportFraction: 0.92);
-  }
 
   @override
   void dispose() {
-    _pageController.dispose();
+    _pageController?.dispose();
     super.dispose();
   }
 
-  Future<void> _openCourse(String courseId) async {
+  Future<void> _openCourse(String courseId, {bool isPremium = false}) async {
     if (!mounted) return;
+    if (isPremium) {
+      final hasAccess = ref.read(hasPremiumAccessProvider);
+      if (!hasAccess) {
+        showPaywall(context);
+        return;
+      }
+    }
     context.push('/course/$courseId');
   }
 
@@ -70,6 +73,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         color: AppColors.primaryColor,
       ),
     );
+  }
+
+  Future<void> _retryHomeContent() async {
+    await ref.read(connectivityCheckProvider).checkConnectivity();
+    ref.invalidate(connectivityProvider);
+    ref.invalidate(coursesWithDetailsProvider);
+    ref.invalidate(activeCourseWithDetailsProvider);
+    ref.invalidate(hasAttemptedAnyCourseProvider);
+    ref.invalidate(profileProvider);
+  }
+
+  bool _isOfflineHomeError(Object error) {
+    if (error is CoursesOfflineException) return true;
+
+    final message = error.toString().toLowerCase();
+    return message.contains('socketexception') ||
+        message.contains('failed host lookup') ||
+        message.contains('no internet') ||
+        message.contains('network') ||
+        message.contains('connection') ||
+        message.contains('timeout') ||
+        message.contains('timed out') ||
+        message.contains('unreachable');
   }
 
   @override
@@ -156,16 +182,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             Expanded(
               child: coursesAsync.when(
                 loading: _buildLoadingIndicator,
-                error: (error, _) => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Text(
-                      'Failed to load courses.\n$error',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppColors.textColor),
+                error: (error, _) {
+                  if (_isOfflineHomeError(error)) {
+                    return _HomeOfflineModeCard(
+                      onRetry: _retryHomeContent,
+                    );
+                  }
+
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Text(
+                        'Failed to load courses.\n$error',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: AppColors.textColor),
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
                 data: (courses) {
                   if (courses.isEmpty) {
                     return const Center(
@@ -203,14 +237,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       : (activeIndex >= 0 ? activeIndex + 1 : 1)
                           .clamp(0, sortedCourses.length);
 
-                  if (!_hasScrolledToActive) {
-                    _hasScrolledToActive = true;
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (!mounted) return;
-                      if (_pageController.hasClients && targetIndex != 0) {
-                        _pageController.jumpToPage(targetIndex);
-                      }
-                    });
+                  if (_pageController == null) {
+                    _pageController = PageController(
+                      viewportFraction: 0.92,
+                      initialPage: targetIndex,
+                    );
+                    _selectedIndex = targetIndex;
                   }
 
                   final isOnIntroSlide = _selectedIndex == 0;
@@ -248,7 +280,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           builder: (context, constraints) {
                             final pageViewHeight =
                                 (constraints.maxHeight * 0.85)
-                                    .clamp(420.0, 560.0);
+                                    .clamp(440.0, 590.0);
 
                             return SingleChildScrollView(
                               child: Column(
@@ -256,9 +288,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   SizedBox(
                                     height: pageViewHeight,
                                     child: PageView.builder(
-                                      controller: _pageController,
+                                      controller: _pageController!,
                                       itemCount: sortedCourses.length + 1,
                                       onPageChanged: (index) {
+                                        stopAllAudio(ref);
                                         setState(() {
                                           _selectedIndex = index;
                                         });
@@ -334,7 +367,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                               allLessonsComplete,
                                           allAssessmentsComplete:
                                               allAssessmentsComplete,
-                                          onTap: () => _openCourse(course.id),
+                                          isPremium: course.isPremium,
+                                          onTap: () => _openCourse(
+                                            course.id,
+                                            isPremium: course.isPremium,
+                                          ),
                                           previewUrl:
                                               course.soundUrlPreview ?? '',
                                           previewSourceId:
@@ -357,7 +394,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           },
                         ),
                       ),
-                      if (!isOnIntroSlide)
+                      if (!isOnIntroSlide &&
+                          const ['Letter', 'Word', 'Sentence', 'Writing']
+                              .contains(selectedCourse.course.type))
                         SafeArea(
                           top: false,
                           minimum: const EdgeInsets.only(bottom: 8),
@@ -367,6 +406,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             lessonsCount: selectedCourse.totalLessons,
                             isCompleted: isCourseCompleted,
                             isEligible: isEligible,
+                            isPremiumLocked: selectedCourse.course.isPremium &&
+                                !ref.read(hasPremiumAccessProvider),
                             allowLockedAccessOverride: debugOverrideEnabled,
                             eligibilityText: debugOverrideEnabled
                                 ? 'Debug override enabled for locked courses'
@@ -375,14 +416,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     : 'Complete previous levels to unlock this level'),
                             buttonText: courseButtonText,
                             onStartCourse: isEligible
-                                ? () => _openCourse(selectedCourse.course.id)
+                                ? () => _openCourse(
+                                      selectedCourse.course.id,
+                                      isPremium:
+                                          selectedCourse.course.isPremium,
+                                    )
                                 : null,
                             onReviewCourse: () => context.push(
                               '/course/${selectedCourse.course.id}',
                               extra: {'isCompletedCourse': true},
                             ),
-                            onRestartCourse: () =>
-                                _openCourse(selectedCourse.course.id),
+                            onRestartCourse: () => _openCourse(
+                              selectedCourse.course.id,
+                              isPremium: selectedCourse.course.isPremium,
+                            ),
+                            onUnlockPremium: () => showPaywall(context),
                           ),
                         ),
                     ],
@@ -423,6 +471,148 @@ class _CoursePageIndicator extends StatelessWidget {
           ),
         );
       }),
+    );
+  }
+}
+
+class _HomeOfflineModeCard extends StatelessWidget {
+  final Future<void> Function() onRetry;
+
+  const _HomeOfflineModeCard({
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardHeight =
+            (constraints.maxHeight * 0.76).clamp(300.0, 430.0).toDouble();
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: (constraints.maxHeight - 44).clamp(
+                0.0,
+                double.infinity,
+              ),
+            ),
+            child: Center(
+              child: Container(
+                width: double.infinity,
+                height: cardHeight,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 28,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: AppColors.lightGrey.withValues(alpha: 0.8),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.errorLightShade,
+                      ),
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.wifi_off_rounded,
+                        color: AppColors.errorColor,
+                        size: 30,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    const Text(
+                      "You're offline",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Color(0xFF171717),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Check your connection or view your downloaded lessons.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.greyText,
+                        fontSize: 14,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      alignment: WrapAlignment.center,
+                      children: [
+                        OutlinedButton(
+                          onPressed: () => context.push('/downloaded-lessons'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primaryColor,
+                            side: const BorderSide(
+                              color: AppColors.primaryColor,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 14,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(28),
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          child: const Text('View downloads'),
+                        ),
+                        ElevatedButton(
+                          onPressed: onRetry,
+                          style: ElevatedButton.styleFrom(
+                            elevation: 0,
+                            backgroundColor: AppColors.primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 14,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(28),
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

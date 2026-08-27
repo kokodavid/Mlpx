@@ -1,7 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:milpress/features/course/screens/course_screen.dart';
 import 'package:milpress/features/course/screens/course_details_screen.dart';
 import 'package:milpress/features/home/home_screen.dart';
 import 'package:milpress/features/assessment/assessment_screen.dart';
@@ -14,6 +15,8 @@ import 'package:milpress/features/lesson/lesson_screen.dart';
 import 'package:milpress/features/lessons_v2/screens/lesson_attempt_screen.dart';
 import 'package:milpress/features/lessons_v2/models/lesson_models.dart';
 import 'package:milpress/features/lessons_v2/screens/lesson_complete_v2_screen.dart';
+import 'package:milpress/features/lessons_v2/providers/lesson_audio_providers.dart';
+import 'package:milpress/providers/audio_session_provider.dart';
 import 'package:milpress/splash_screen.dart';
 import 'package:milpress/features/authentication/login_screen.dart';
 import 'package:milpress/features/authentication/signup_screen.dart';
@@ -28,6 +31,8 @@ import 'package:milpress/features/profile/profile_page.dart';
 import 'package:milpress/features/profile/screens/about_screen.dart';
 import 'package:milpress/features/profile/screens/edit_profile_screen.dart';
 import 'package:milpress/features/profile/screens/change_password_screen.dart';
+import 'package:milpress/features/weekly_goal/screens/streak_goal_prompt_screen.dart';
+import 'package:milpress/features/weekly_goal/screens/streak_page.dart';
 import 'package:milpress/features/weekly_goal/screens/weekly_goal_screen.dart';
 import 'package:milpress/features/course_assessment/screens/assessment_play_screen.dart';
 import '../features/authentication/email_verification_screen.dart';
@@ -42,7 +47,6 @@ enum AppRoute {
   accountCreated,
   main,
   home,
-  course,
   courseDetails,
   review,
   lesson,
@@ -56,6 +60,8 @@ enum AppRoute {
   about,
   lessonHistory,
   weeklyGoal,
+  streakGoalPrompt,
+  streakPage,
   courseAssessment,
   editProfile,
   changePassword,
@@ -65,6 +71,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/splash',
     debugLogDiagnostics: true,
+    observers: [_AudioNavigationObserver(ref)],
     redirect: (context, state) {
       final uri = state.uri;
 
@@ -134,25 +141,16 @@ final routerProvider = Provider<GoRouter>((ref) {
           builder: (context, state) => const HomeScreen(),
         ),
       ),
-      // Course routes - allow guest access
+      // Course detail route - allows guest access
       GoRoute(
-        path: '/course',
-        name: AppRoute.course.name,
+        path: '/course/:courseId',
+        name: AppRoute.courseDetails.name,
         builder: AuthGuard.allowGuest(
-          builder: (context, state) => const CourseScreen(),
+          builder: (context, state) {
+            final courseId = state.pathParameters['courseId']!;
+            return CourseDetailsScreen(courseId: courseId);
+          },
         ),
-        routes: [
-          GoRoute(
-            path: ':courseId',
-            name: AppRoute.courseDetails.name,
-            builder: AuthGuard.allowGuest(
-              builder: (context, state) {
-                final courseId = state.pathParameters['courseId']!;
-                return CourseDetailsScreen(courseId: courseId);
-              },
-            ),
-          ),
-        ],
       ),
       // Review route - allows guest access
       // GoRoute(
@@ -329,6 +327,25 @@ final routerProvider = Provider<GoRouter>((ref) {
           builder: (context, state) => const WeeklyGoalScreen(),
         ),
       ),
+      GoRoute(
+        path: '/streak-goal-prompt',
+        name: AppRoute.streakGoalPrompt.name,
+        builder: AuthGuard.requireAuthenticatedUser(
+          builder: (context, state) {
+            final extra = state.extra as Map<String, dynamic>? ?? {};
+            return StreakGoalPromptScreen(
+              nextLessonId: extra['nextLessonId'] as String? ?? '',
+            );
+          },
+        ),
+      ),
+      GoRoute(
+        path: '/streak-page',
+        name: AppRoute.streakPage.name,
+        builder: AuthGuard.requireAuthenticatedUser(
+          builder: (context, state) => const StreakPage(),
+        ),
+      ),
       // Course assessment route - requires authenticated user
       GoRoute(
         path: '/course-assessment/:assessmentId',
@@ -375,3 +392,42 @@ final routerProvider = Provider<GoRouter>((ref) {
     ),
   );
 });
+
+class _AudioNavigationObserver extends NavigatorObserver {
+  final Ref ref;
+
+  _AudioNavigationObserver(this.ref);
+
+  void _stopAudio() {
+    Future.microtask(() {
+      unawaited(ref.read(audioSessionProvider.notifier).stopActiveSession());
+      unawaited(ref.read(lessonAudioControllerProvider).stop());
+    });
+  }
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPush(route, previousRoute);
+    if (previousRoute != null) {
+      _stopAudio();
+    }
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPop(route, previousRoute);
+    _stopAudio();
+  }
+
+  @override
+  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didRemove(route, previousRoute);
+    _stopAudio();
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+    _stopAudio();
+  }
+}

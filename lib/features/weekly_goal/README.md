@@ -1,6 +1,6 @@
-# Weekly Goal Feature
+# Streak Goal Feature
 
-This feature stores a user's weekly lesson goal and supports custom values.
+This feature stores a user's streak day goal and supports custom values.
 
 ## Supabase Schema
 
@@ -40,6 +40,6 @@ for each row execute procedure public.set_updated_at();
 ```
 
 ## Notes
-- Use `goal_type = 'lessons_per_week'` for this feature.
+- Use `goal_type = 'streak_days'` for this feature.
 - `timezone` should store an IANA timezone string (e.g. `Africa/Nairobi`).
 - `week_start = 1` assumes Monday-based weeks.

@@ -1,5 +1,5 @@
 class UserGoalModel {
-  static const String lessonsPerWeekGoalType = 'lessons_per_week';
+  static const String streakDaysGoalType = 'streak_days';
 
   final String id;
   final String userId;

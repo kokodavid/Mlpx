@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:milpress/features/lessons_v2/widgets/lesson_asset_image.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../../models/lesson_models.dart';
 import '../../widgets/tracing_canvas.dart';
@@ -190,37 +191,13 @@ class _SvgTab extends StatelessWidget {
           ? const Icon(Icons.image_not_supported, color: AppColors.textColor)
           : ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: isSvg
-                  ? SvgPicture.network(
-                      url,
-                      width: 80,
-                      height: 80,
-                      fit: BoxFit.cover,
-                      placeholderBuilder: (context) => const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    )
-                  : Image.network(
-                      url,
-                      width: 110,
-                      height: 110,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) {
-                          return child;
-                        }
-                        return const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.copBlue,
-                          ),
-                        );
-                      },
-                    ),
+              child: LessonAssetImage(
+                source: url,
+                width: isSvg ? 80 : 110,
+                height: isSvg ? 80 : 110,
+                fit: BoxFit.cover,
+                placeholder: const Icon(Icons.image_not_supported),
+              ),
             ),
     );
   }

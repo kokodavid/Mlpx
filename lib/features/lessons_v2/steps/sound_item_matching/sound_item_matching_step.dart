@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:milpress/features/lessons_v2/widgets/lesson_audio_buttons.dart';
+import 'package:milpress/features/lessons_v2/widgets/lesson_step_widget.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../../models/lesson_models.dart';
 import 'model.dart';
@@ -43,9 +44,7 @@ class _SoundItemMatchingStepState extends State<SoundItemMatchingStep> {
   void initState() {
     super.initState();
     _config = SoundItemMatchingConfig.fromMap(widget.step.config);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _publishUiState();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _publishUiState());
   }
 
   void _publishUiState() {
@@ -59,24 +58,17 @@ class _SoundItemMatchingStepState extends State<SoundItemMatchingStep> {
   }
 
   void _handleOptionTap(int index) {
-    if (_hasAnswered) {
-      return;
-    }
-
+    if (_hasAnswered) return;
     final option = _currentActivity.options[index];
     setState(() {
       _selectedOptionIndex = index;
-      if (option.isCorrect) {
-        _score += 1;
-      }
+      if (option.isCorrect) _score += 1;
     });
     _publishUiState();
   }
 
   void _handleReview() {
-    setState(() {
-      _selectedOptionIndex = null;
-    });
+    setState(() => _selectedOptionIndex = null);
     _publishUiState();
   }
 
@@ -85,12 +77,10 @@ class _SoundItemMatchingStepState extends State<SoundItemMatchingStep> {
       _handleReview();
       return;
     }
-
     if (_isLastActivity) {
       widget.onAdvanceRequested();
       return;
     }
-
     setState(() {
       _currentActivityIndex += 1;
       _selectedOptionIndex = null;
@@ -102,147 +92,99 @@ class _SoundItemMatchingStepState extends State<SoundItemMatchingStep> {
   Widget build(BuildContext context) {
     final activity = _currentActivity;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight - 28),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_config.title.isNotEmpty) ...[
+            LessonStepTitle(title: _config.title),
+            const SizedBox(height: 12),
+          ],
+          LessonStepCard(
+            elevation: 2,
+            borderRadius: 28,
+            color: const Color(0xFFF6F6F6),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _MatchingHeader(
+                LessonStepProgressHeader(
                   current: _currentActivityIndex + 1,
                   total: _config.activities.length,
+                  itemLabel: 'Activity',
                   score: _score,
+                  barColor: AppColors.copBlue,
+                  barBackgroundColor: const Color(0xFFF3E8DD),
+                  barHeight: 10,
                 ),
-                const SizedBox(height: 22),
+                const SizedBox(height: 20),
                 _PromptBlock(
                   prompt: activity.prompt,
                   targetSound: activity.targetSound,
                   promptAudioUrl: activity.promptAudioUrl,
                   sourceId: '${widget.step.key}-prompt-$_currentActivityIndex',
                 ),
-                const SizedBox(height: 24),
-                Center(
-                  child: _SoundButton(
-                    sourceId:
-                        '${widget.step.key}-content-$_currentActivityIndex',
-                    audioUrl: activity.contentAudioUrl,
-                  ),
+                const SizedBox(height: 8),
+                const LessonStepChevronDown(
+                  color: Color(0xFF8A8A8A),
+                  size: 24,
                 ),
+                const SizedBox(height: 8),
+                LessonStepTipBanner(text: activity.tipText),
                 const SizedBox(height: 12),
-                const Center(
-                  child: Icon(
-                    Icons.keyboard_double_arrow_down_rounded,
-                    color: AppColors.copBlue,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _TipBanner(text: activity.tipText),
-                const SizedBox(height: 14),
                 Row(
                   children: [
                     for (var index = 0;
                         index < activity.options.length;
                         index++) ...[
                       Expanded(
-                        child: _OptionButton(
+                        child: OptionButton(
                           label: activity.options[index].label,
+                          variant: OptionButtonVariant.answerChip,
                           state: _optionState(index),
-                          onPressed: () => _handleOptionTap(index),
+                          filledFeedbackStates: true,
+                          onTap: () => _handleOptionTap(index),
                         ),
                       ),
                       if (index < activity.options.length - 1)
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 8),
                     ],
                   ],
                 ),
-                const SizedBox(height: 14),
-                if (_hasAnswered)
-                  _FeedbackBar(
-                    isCorrect: _isCorrect,
-                    message: _isCorrect
-                        ? '"${_selectedOption.label}" matches the ${activity.displayTargetSound} sound.'
-                        : 'Try again and listen for the ${activity.displayTargetSound} sound.',
-                    actionLabel: _isCorrect ? 'Continue' : 'Review',
-                    onActionPressed:
-                        _isCorrect ? _handleContinue : _handleReview,
-                  ),
               ],
             ),
           ),
-        );
-      },
-    );
-  }
-
-  _OptionVisualState _optionState(int index) {
-    if (!_hasAnswered) {
-      return _OptionVisualState.idle;
-    }
-    if (_selectedOptionIndex == index) {
-      return _currentActivity.options[index].isCorrect
-          ? _OptionVisualState.correct
-          : _OptionVisualState.incorrect;
-    }
-    return _OptionVisualState.idle;
-  }
-}
-
-class _MatchingHeader extends StatelessWidget {
-  final int current;
-  final int total;
-  final int score;
-
-  const _MatchingHeader({
-    required this.current,
-    required this.total,
-    required this.score,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final safeTotal = total <= 0 ? 1 : total;
-    final safeCurrent = current.clamp(1, safeTotal);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              'Activity $safeCurrent of $safeTotal',
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppColors.textColor,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const Spacer(),
-            Text(
-              'Score: $score/$safeTotal',
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppColors.primaryColor,
-                fontWeight: FontWeight.w600,
-              ),
+          if (_hasAnswered) ...[
+            const SizedBox(height: 12),
+            LessonFeedbackBar(
+              isCorrect: _isCorrect,
+              title: _isCorrect ? 'Excellent!' : 'Try Again!',
+              subtitle: _isCorrect
+                  ? '${_selectedOption.label} - '
+                      '${activity.displayTargetSound} - '
+                      '${_selectedOption.label}'
+                  : null,
+              message: _isCorrect
+                  ? 'The ${activity.targetSound.replaceAll('/', '')} in ${_selectedOption.label} makes the ${activity.displayTargetSound} sound.'
+                  : 'Listen again for ${activity.displayTargetSound} like in \'apple\'.',
+              actionLabel: _isCorrect ? 'Continue' : 'Review',
+              onActionPressed: _isCorrect ? _handleContinue : _handleReview,
             ),
           ],
-        ),
-        const SizedBox(height: 10),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: LinearProgressIndicator(
-            value: safeCurrent / safeTotal,
-            minHeight: 10,
-            backgroundColor: const Color(0xFFF3E8DD),
-            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.copBlue),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
+  }
+
+  OptionButtonState _optionState(int index) {
+    if (!_hasAnswered) return OptionButtonState.idle;
+    if (_selectedOptionIndex == index) {
+      return _currentActivity.options[index].isCorrect
+          ? OptionButtonState.correct
+          : OptionButtonState.incorrect;
+    }
+    return OptionButtonState.idle;
   }
 }
 
@@ -261,226 +203,89 @@ class _PromptBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayTargetSound = '/$targetSound/';
-    final targetIndex = prompt.indexOf(displayTargetSound);
+    final vowel = targetSound.replaceAll('/', '');
     const defaultStyle = TextStyle(
-      fontSize: 22,
+      fontSize: 20,
       fontWeight: FontWeight.w700,
       color: Color(0xFF171B22),
       height: 1.3,
     );
 
+    final slashPattern = '/$vowel/';
+    final slashIndex =
+        prompt.toLowerCase().indexOf(slashPattern.toLowerCase());
+    final lowercasePrompt = prompt.toLowerCase();
+    final vowelPhraseIndex =
+        lowercasePrompt.lastIndexOf('the vowel $slashPattern');
+    final soundPhraseIndex = vowelPhraseIndex >= 0
+        ? vowelPhraseIndex
+        : lowercasePrompt.lastIndexOf('the $slashPattern');
+    final spaceBeforeSound =
+        slashIndex > 0 ? prompt.lastIndexOf(' ', slashIndex - 1) : -1;
+    int lineBreakIndex = -1;
+    if (soundPhraseIndex > 0) {
+      lineBreakIndex = soundPhraseIndex;
+    } else if (spaceBeforeSound > 0) {
+      lineBreakIndex = prompt.lastIndexOf(' ', spaceBeforeSound - 1) + 1;
+    }
+
     return Column(
       children: [
-        if (targetIndex >= 0)
+        if (slashIndex >= 0)
           Text.rich(
             TextSpan(
               style: defaultStyle,
               children: [
-                TextSpan(text: prompt.substring(0, targetIndex)),
                 TextSpan(
-                  text: displayTargetSound,
-                  style: const TextStyle(color: AppColors.primaryColor),
+                  text: lineBreakIndex > 0
+                      ? '${prompt.substring(0, lineBreakIndex).trimRight()}\n'
+                      : prompt.substring(0, slashIndex),
+                ),
+                if (lineBreakIndex > 0)
+                  TextSpan(text: prompt.substring(lineBreakIndex, slashIndex)),
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.baseline,
+                  baseline: TextBaseline.alphabetic,
+                  child: Text.rich(
+                    TextSpan(
+                      style: defaultStyle,
+                      children: [
+                        const TextSpan(text: '/'),
+                        TextSpan(
+                          text: vowel,
+                          style: const TextStyle(
+                            color: AppColors.primaryColor,
+                          ),
+                        ),
+                        const TextSpan(text: '/'),
+                      ],
+                    ),
+                  ),
                 ),
                 TextSpan(
-                  text:
-                      prompt.substring(targetIndex + displayTargetSound.length),
+                  text: prompt.substring(slashIndex + slashPattern.length),
                 ),
               ],
             ),
             textAlign: TextAlign.center,
           )
         else
-          Text(
-            prompt,
-            textAlign: TextAlign.center,
-            style: defaultStyle,
-          ),
+          Text(prompt, textAlign: TextAlign.center, style: defaultStyle),
         if (promptAudioUrl.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          LessonAudioInlineButton(
-            sourceId: sourceId,
-            url: promptAudioUrl,
-            backgroundColor: const Color(0xFFF8F8F8),
+          const SizedBox(height: 28),
+          Center(
+            child: LessonAudioInlineButton(
+              sourceId: sourceId,
+              url: promptAudioUrl,
+              isCircular: false,
+              buttonSize: 50,
+              backgroundColor: const Color(0xFF1B2A3B),
+              iconColor: Colors.white,
+              defaultIcon: Icons.volume_up_rounded,
+            ),
           ),
         ],
       ],
-    );
-  }
-}
-
-class _SoundButton extends StatelessWidget {
-  final String sourceId;
-  final String audioUrl;
-
-  const _SoundButton({
-    required this.sourceId,
-    required this.audioUrl,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return LessonAudioInlineButton(
-      sourceId: sourceId,
-      url: audioUrl,
-      backgroundColor: AppColors.copBlue,
-    );
-  }
-}
-
-class _TipBanner extends StatelessWidget {
-  final String text;
-
-  const _TipBanner({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFCFCFC),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFD9D0C7)),
-      ),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          fontSize: 14,
-          color: AppColors.textColor,
-          height: 1.3,
-        ),
-      ),
-    );
-  }
-}
-
-enum _OptionVisualState { idle, correct, incorrect }
-
-class _OptionButton extends StatelessWidget {
-  final String label;
-  final _OptionVisualState state;
-  final VoidCallback onPressed;
-
-  const _OptionButton({
-    required this.label,
-    required this.state,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final backgroundColor = switch (state) {
-      _OptionVisualState.idle => Colors.white,
-      _OptionVisualState.correct => AppColors.successColor,
-      _OptionVisualState.incorrect => AppColors.errorColor,
-    };
-    final borderColor = switch (state) {
-      _OptionVisualState.idle => const Color(0xFFEAE6E0),
-      _OptionVisualState.correct => AppColors.successColor,
-      _OptionVisualState.incorrect => AppColors.errorColor,
-    };
-    final textColor =
-        state == _OptionVisualState.idle ? AppColors.textColor : Colors.white;
-
-    return SizedBox(
-      height: 54,
-      child: OutlinedButton(
-        onPressed: state == _OptionVisualState.idle ? onPressed : null,
-        style: OutlinedButton.styleFrom(
-          backgroundColor: backgroundColor,
-          disabledBackgroundColor: backgroundColor,
-          side: BorderSide(color: borderColor),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(color: textColor),
-        ),
-      ),
-    );
-  }
-}
-
-class _FeedbackBar extends StatelessWidget {
-  final bool isCorrect;
-  final String message;
-  final String actionLabel;
-  final VoidCallback onActionPressed;
-
-  const _FeedbackBar({
-    required this.isCorrect,
-    required this.message,
-    required this.actionLabel,
-    required this.onActionPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final borderColor =
-        isCorrect ? AppColors.successColor : AppColors.errorColor;
-    final backgroundColor =
-        isCorrect ? const Color(0xFFF2F8EE) : const Color(0xFFFFF1F0);
-
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            isCorrect ? Icons.check_rounded : Icons.close_rounded,
-            color: borderColor,
-            size: 24,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              message,
-              style: TextStyle(
-                fontSize: 14,
-                height: 1.35,
-                color: borderColor,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          SizedBox(
-            height: 48,
-            child: ElevatedButton(
-              onPressed: onActionPressed,
-              style: ElevatedButton.styleFrom(
-                elevation: 0,
-                backgroundColor: borderColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-              ),
-              child: Text(
-                actionLabel,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

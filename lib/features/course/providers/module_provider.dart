@@ -3,6 +3,7 @@ import 'package:milpress/features/course/course_models/complete_course_model.dar
 import 'package:milpress/features/course/course_models/module_model.dart';
 import 'package:milpress/features/course/course_models/lesson_model.dart';
 import 'package:milpress/features/course/course_models/lesson_quiz_model.dart';
+import 'package:milpress/features/course/services/course_offline_storage_service.dart';
 import 'package:milpress/features/user_progress/services/module_progress_bridge.dart';
 import 'package:milpress/features/user_progress/services/user_progress_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -542,9 +543,21 @@ final lessonFromSupabaseProvider =
   return lesson;
 });
 
+final _cachedModuleFromOfflineProvider =
+    FutureProvider.family<ModuleWithLessons?, String>((ref, moduleId) async {
+  final offlineStorage = CourseOfflineStorageService();
+  return offlineStorage.readModule(moduleId);
+});
+
 // Provider to get a specific module with its lessons and quizzes from Supabase
 final moduleFromSupabaseProvider =
     FutureProvider.family<ModuleWithLessons?, String>((ref, moduleId) async {
+  final cachedModule =
+      await ref.watch(_cachedModuleFromOfflineProvider(moduleId).future);
+  if (cachedModule != null) {
+    return cachedModule;
+  }
+
   final module =
       await _fetchModuleWithLessons(Supabase.instance.client, moduleId);
   if (module == null) {

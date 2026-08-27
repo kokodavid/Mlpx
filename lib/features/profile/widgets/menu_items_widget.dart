@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:milpress/features/lessons_v2/providers/lesson_v2_download_provider.dart';
 import '../../../utils/app_colors.dart';
 import '../../reviews/providers/bookmark_provider.dart';
 
@@ -10,6 +11,8 @@ class MenuItemsWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bookmarkCount = ref.watch(bookmarkCountProvider).valueOrNull ?? 0;
+    final downloadedLessonsCount =
+        ref.watch(downloadedLessonsV2CountProvider).valueOrNull ?? 0;
     return Column(
       children: [
         // Card : Profile Info
@@ -65,6 +68,15 @@ class MenuItemsWidget extends ConsumerWidget {
             //   badge: const _Badge(count: 0),
             //   onTap: () => context.push('/lesson-history'),
             // ),
+
+            _buildMenuItem(
+              context: context,
+              icon: Icons.file_download_outlined,
+              title: 'Downloaded Lessons',
+              subtitle: 'See your downloaded lessons',
+              badge: _Badge(count: downloadedLessonsCount),
+              onTap: () => context.push('/downloaded-lessons'),
+            ),
           ],
         ),
 

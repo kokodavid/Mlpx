@@ -329,13 +329,14 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
                               ...List.generate(moduleLessons.length,
                                   (lessonIdx) {
                                 final lesson = moduleLessons[lessonIdx];
+                                final isLessonCompleted =
+                                    completedLessonIds.contains(lesson.id);
 
                                 return Column(
                                   children: [
                                     InkWell(
                                       onTap: () {
-                                        if (!completedLessonIds
-                                            .contains(lesson.id)) {
+                                        if (!isLessonCompleted) {
                                           // ScaffoldMessenger.of(context)
                                           //     .showSnackBar(
                                           //   const SnackBar(
@@ -365,13 +366,11 @@ class _AllModulesWidgetState extends ConsumerState<AllModulesWidget> {
                                         child: Row(
                                           children: [
                                             Icon(
-                                              completedLessonIds
-                                                      .contains(lesson.id)
+                                              isLessonCompleted
                                                   ? Icons.check_circle
                                                   : Icons.circle_outlined,
                                               size: 20,
-                                              color: completedLessonIds
-                                                      .contains(lesson.id)
+                                              color: isLessonCompleted
                                                   ? AppColors.correctAnswerColor
                                                   : AppColors.textColor,
                                             ),

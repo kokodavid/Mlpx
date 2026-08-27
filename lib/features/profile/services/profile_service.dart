@@ -1,15 +1,26 @@
 import 'dart:io';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:milpress/providers/connectivity_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/profile_model.dart';
+import 'profile_offline_storage_service.dart';
 
 class ProfileService {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final ProfileOfflineStorageService _offlineStorageService =
+      ProfileOfflineStorageService();
+  final Connectivity _connectivity = Connectivity();
 
   /// Get current user's profile data
   Future<ProfileModel?> getCurrentUserProfile() async {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) return null;
+
+      final connectivityResult = await _connectivity.checkConnectivity();
+      if (isOfflineResult(connectivityResult)) {
+        return _offlineStorageService.readProfile();
+      }
 
       final response = await _supabase
           .from('profiles')
@@ -18,11 +29,13 @@ class ProfileService {
           .single();
 
       if (response != null) {
-        return ProfileModel.fromJson({
+        final profile = ProfileModel.fromJson({
           ...response,
           'id': user.id,
           'email': user.email,
         });
+        await _offlineStorageService.saveProfile(profile);
+        return profile;
       }
 
       final names = _splitFullName(user.userMetadata?['full_name'] ?? '');
@@ -37,11 +50,12 @@ class ProfileService {
       );
 
       await _supabase.from('profiles').upsert(newProfile.toJson());
+      await _offlineStorageService.saveProfile(newProfile);
 
       return newProfile;
     } catch (e) {
       print('Error fetching profile: $e');
-      return null;
+      return _offlineStorageService.readProfile();
     }
   }
 
@@ -64,6 +78,7 @@ class ProfileService {
           .upsert(profile.toJson())
           .eq('id', user.id);
 
+      await _offlineStorageService.saveProfile(profile);
       return true;
     } catch (e) {
       print('Error updating profile: $e');
@@ -86,13 +101,19 @@ class ProfileService {
           .from('avatars')
           .upload(filePath, File(imagePath));
 
-      final imageUrl =
-      _supabase.storage.from('avatars').getPublicUrl(filePath);
+      final imageUrl = _supabase.storage.from('avatars').getPublicUrl(filePath);
 
       await _supabase
           .from('profiles')
           .update({'avatar_url': imageUrl})
           .eq('id', user.id);
+
+      final cachedProfile = await _offlineStorageService.readProfile();
+      if (cachedProfile != null) {
+        await _offlineStorageService.saveProfile(
+          cachedProfile.copyWith(avatarUrl: imageUrl),
+        );
+      }
 
       return imageUrl;
     } catch (e) {

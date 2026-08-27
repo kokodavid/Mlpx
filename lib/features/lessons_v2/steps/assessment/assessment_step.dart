@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:milpress/features/lessons_v2/widgets/lesson_asset_image.dart';
 import 'package:milpress/utils/app_colors.dart';
 import '../../models/lesson_models.dart';
 import '../../widgets/lesson_audio_buttons.dart';
@@ -352,21 +353,20 @@ class _AssessmentOption extends StatelessWidget {
               child: Container(
                 width: 90,
                 alignment: Alignment.center,
-                child: imageUrl.isEmpty
-                    ? const Icon(
-                        Icons.image_outlined,
-                        size: 26,
-                        color: AppColors.textColor,
-                      )
-                    : ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.network(
-                          imageUrl,
-                          width: 90,
-                          height: 100,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: LessonAssetImage(
+                    source: imageUrl,
+                    width: 90,
+                    height: 100,
+                    fit: BoxFit.contain,
+                    placeholder: const Icon(
+                      Icons.image_outlined,
+                      size: 26,
+                      color: AppColors.textColor,
+                    ),
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 6),
